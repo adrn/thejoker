@@ -36,4 +36,5 @@ python setup.py install
 
 ## License
 
-Copyright 2016 the Authors. Licensed under the terms of the MIT License (see LICENSE).
+Copyright 2016 the Authors. Licensed under the terms of [the MIT
+License](https://github.com/adrn/thejoker/blob/master/LICENSE).
