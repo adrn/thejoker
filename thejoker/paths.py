@@ -34,3 +34,6 @@ class Paths(object):
         for path in [self.cache, self.plots, self.figures]:
             if not exists(path):
                 os.makedirs(str(path))
+
+        # store paths for special cache files
+        self.troup_allVisit = os.path.join(self.root, "data", "troup-allVisit.h5")
