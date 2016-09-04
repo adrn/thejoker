@@ -1,0 +1,16 @@
+name: thejoker
+
+channels:
+  - astropy
+
+dependencies:
+  - numpy
+  - cython
+  - matplotlib
+  - scipy
+  - h5py
+  - pip
+  - pip:
+    - emcee
+    - corner
+
