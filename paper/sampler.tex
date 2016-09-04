@@ -30,7 +30,7 @@
 \newcommand{\project}[1]{\textsl{#1}}
 \newcommand{\acronym}[1]{{\small{#1}}}
 \newcommand{\apogee}{\project{\acronym{APOGEE}}}
-\newcommand{\thecolander}{\project{The~Colander}}
+\newcommand{\samplername}{\project{The~Joker}}
 \newcommand{\emcee}{\project{emcee}}
 \newcommand{\dr}{\acronym{DR13}}
 
@@ -46,7 +46,7 @@
 
 \begin{document}
 
-\title{\thecolander: A custom Monte Carlo sampler \\
+\title{\samplername: A custom Monte Carlo sampler \\
   for binary-star and exoplanet radial velocity data}
 \author{Adrian~M.~Price-Whelan\altaffilmark{\pu,\adrn},
         David~W.~Hogg\altaffilmark{\ccpp,\mpia},
@@ -210,18 +210,18 @@ to be outliers and unaccounted sources of noise.
 We will return to these assumptions, and the consequences of relaxing
 them, in the Discussion Section.
 
-In the two-body celestial mechanics problem (\citealt{kepler}; and
+In the two-body celestial mechanics problem (\citealt{Kepler:1609}; and
 here we are working in a parameterization similar to that of
-\citealt{winn}), and under our above-stated assumptions, the
+\citealt{Murray:2010}), and under our above-stated assumptions, the
 radial-velocity expectation can be parameterized by six parameters,
 which we choose to be period $P$, projected semi-major axis $\asini$,
 a phase $\phi_0$ corresponding to a time of pericenter passage, the
-eccentricity $e$, an argument of perihelion $\varpi$, and a constant
+eccentricity $e$, an argument of perihelion $\omega$, and a constant
 system barycenter radial velocity $v_0$.
 The radial velocity $v_r$ at time $t$ is then given by
 \begin{equation}
-  v_r(t) = \asini \, (1-e\,\cos E) \cos(\varpi + f) \, \frac{\dd f}{\dd t} +
-    \asini \sin(\varpi + f)\, e \, \sin E \, \frac{\dd E}{\dd t}
+  v_r(t) = \asini \, (1-e\,\cos E) \cos(\omega + f) \, \frac{\dd f}{\dd t} +
+    \asini \sin(\omega + f)\, e \, \sin E \, \frac{\dd E}{\dd t}
 \end{equation}
 where $f$ and $E$ are the mean and eccentric anomalies, respectively.
 Of these parameters, four ($P$, $\phi_0$, $e$, $\varpi$) are
@@ -250,8 +250,8 @@ What do we do after SMC? Resampling or \emcee.
 
 \section{Experiments and results}
 
-Introduce the \apogee\ data (\citealt{apogee,apogeedr12,sdssiii,dr12}), and
-our poster-child (\citealt{troup}).
+Introduce the \apogee\ data (\citealt{Majewski:2015,Holtzman:2015,Eisenstein:2011,Alam:2015}), and
+our poster-child (\citealt{Troup:2016}).
 
 Show results as a function of $N$.
 
@@ -278,24 +278,7 @@ This project was started at AstroHackWeek 2016, organized by Kyle
 Barbary (UCB) and Phil Marshall (SLAC) at the Berkeley Institute for
 Data Science.
 
-%\begin{thebibliography}{99}\raggedright
-%
-%\bibitem[Alam et al.(2015)]{dr12}
-%  Alam,~S., Albareti,~F.~D., Allende~Prieto,~C., et al.\ 2015, \apjs, 219, 12
-%\bibitem[Eisenstein et al.(2011)]{sdssiii}
-%  Eisenstein, D.~J., Weinberg, D.~H., Agol, E., et al.\ 2011, \aj, 142, 72
-%\bibitem[Holtzman et al.(2015)]{apogeedr12}
-%  Holtzman, J.~A., Shetrone, M., Johnson, J.~A., et al.\ 2015, \aj, 150, 148
-%\bibitem[Kepler(1609)]{kepler}
-%  Kepler, J.\ 1609, \textit{Astronomia nova\ldots}
-%\bibitem[Kipping(2013)]{kipping}
-%  Kipping, D.~M.\ 2013, \mnras, 434, L51
-%\bibitem[Majewski et al.(2015)]{apogee}
-%  Majewski,~S.~R., Schiavon,~R.~P., Frinchaboy,~P.~M., et al.\ 2015, arXiv:1509.05420
-%\bibitem[Troup et al.(2016)]{troup}
-%  Troup, N.~W., Nidever, D.~L., De Lee, N., et al.\ 2016, \aj, 151, 85
-%\bibitem[Winn(2010)]{winn}
-%  Winn, J.~N.\ 2010, Exoplanets, 55
-%\end{thebibliography}
+\bibliographystyle{apj}
+\bibliography{thejoker}
 
 \end{document}
