@@ -53,6 +53,10 @@ def get_good_samples(nonlinear_p, data, pool):
     results = pool.map(marginal_ll_worker, tasks)
     marg_ll = np.ravel(results)
 
+    print(marg_ll.shape, nonlinear_p.shape)
+
+    assert len(marg_ll) == len(nonlinear_p)
+
     uu = np.random.uniform(size=len(nonlinear_p))
     good_samples_bool = uu < np.exp(marg_ll - marg_ll.max())
     good_samples = nonlinear_p[np.where(good_samples_bool)]
