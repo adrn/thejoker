@@ -27,7 +27,9 @@
 \sloppy\sloppypar\frenchspacing
 
 % better links
-\usepackage[backref,breaklinks,colorlinks,citecolor=blue]{hyperref}
+\usepackage[backref,breaklinks,colorlinks,citecolor=black]{hyperref}
+\usepackage[all]{hypcap}
+\renewcommand*{\backref}[1]{[#1]}
 
 % define macros for text
 \newcommand{\project}[1]{\textsl{#1}}
