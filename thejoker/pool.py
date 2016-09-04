@@ -38,8 +38,7 @@ import signal
 import functools
 import multiprocessing
 import multiprocessing.pool
-import logging
-log = logging.getLogger(__name__)
+from astropy import log
 
 __all__ = ['MPIPool', 'MPIOptimizedPool', 'MultiPool', 'SerialPool']
 
