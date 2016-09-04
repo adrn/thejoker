@@ -10,7 +10,6 @@ import os
 from astropy import log as logger
 import h5py
 import numpy as np
-import corner
 
 # Project
 from thejoker import Paths
