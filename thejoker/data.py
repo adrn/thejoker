@@ -28,10 +28,10 @@ class RVData(object):
     rv : `~astropy.units.Quantity` [speed]
         Radial velocity measurements.
     ivar : `~astropy.units.Quantity` [1/speed^2]
-        Inverse v
+        Inverse variance.
     """
     @u.quantity_input(rv=u.km/u.s)
-    def __init__(self, t, rv, ivar=None, stddev=None):
+    def __init__(self, t, rv, ivar=None, stddev=None, metadata=None):
         if isinstance(t, at.Time):
             _t = t.tcb.mjd
         else:
@@ -51,6 +51,8 @@ class RVData(object):
 
         elif stddev is not None:
             self._ivar = 1 / stddev.decompose(usys).value**2
+
+        self.metadata = metadata
 
     @property
     def t(self):
@@ -110,7 +112,7 @@ class RVData(object):
         return len(self._t)
 
     @classmethod
-    def from_apogee(cls, path_or_data, apogee_id=None):
+    def from_apogee(cls, path_or_data, apogee_id=None, store_metadata=False):
         """
         Parameters
         ----------
@@ -129,7 +131,7 @@ class RVData(object):
                 _allvisit = fits.getdata(path_or_data, 1)
                 data = _allvisit[_allvisit['APOGEE_ID'].astype(str) == apogee_id]
 
-            elif os.path.splitext(path_or_data)[1].lower() in ['.hdf5', 'h5']:
+            elif os.path.splitext(path_or_data)[1].lower() in ['.hdf5', '.h5']:
                 with h5py.File(path_or_data, 'r') as f:
                     data = f[apogee_id][:]
 
@@ -144,4 +146,7 @@ class RVData(object):
         t = at.Time(np.array(data['JD']), format='jd', scale='tcb')
 
         idx = np.isfinite(rv.value) & np.isfinite(t.value) & np.isfinite(ivar.value)
-        return cls(t[idx], rv[idx], ivar[idx])
+        if store_metadata:
+            return cls(t[idx], rv[idx], ivar[idx], metadata=data)
+        else:
+            return cls(t[idx], rv[idx], ivar[idx])
