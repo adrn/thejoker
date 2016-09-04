@@ -119,7 +119,7 @@ def main(APOGEE_ID, pool, n_samples=1, seed=42, overwrite=False):
 
     # TODO: we may want to "curate" which datapoints are saved...
     idx = np.random.permutation(len(all_data))
-    for n_delete in range(len(all_data))[0:1]:
+    for n_delete in range(len(all_data)):
         if n_delete == 0:
             data = all_data
         else:
