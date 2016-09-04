@@ -3,7 +3,7 @@ from setuptools import setup
 with open('README.md') as f:
     long_description = f.read()
 
-setup(name='ebak',
+setup(name='thejoker',
       version='0.1.dev',
       author='adrn',
       author_email='adrn@princeton.edu',
