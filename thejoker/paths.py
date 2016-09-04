@@ -19,7 +19,13 @@ class Paths(object):
     """
 
     def __init__(self, script__file__):
+
         self.root = abspath(join(split(abspath(script__file__))[0], ".."))
+
+        # first, make sure we're in the scripts directory:
+        if not exists(join(self.root, "scripts")):
+            raise IOError("You must run this script from inside the scripts directory:\n{}"
+                          .format(join(self.root, "scripts")))
 
         self.cache = join(self.root, "cache")
         self.plots = join(self.root, "plots")
