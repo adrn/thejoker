@@ -1,7 +1,6 @@
 # Standard library
 from collections import OrderedDict
 import os
-from os.path import abspath, join, split, exists
 import time
 import sys
 
@@ -15,49 +14,44 @@ import h5py
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-# from cycler import cycler
 import numpy as np
 import corner
-from gala.util import get_pool
 
 # Project
-from ebak import SimulatedRVOrbit
-from ebak.singleline.data import RVData
-from ebak.sampler import tensor_vector_scalar, marginal_ln_likelihood
-from ebak.units import usys
+from thejoker import Paths
+paths = Paths(__file__)
+from thejoker.data import RVData
+from thejoker.sampler import tensor_vector_scalar, marginal_ln_likelihood
+from thejoker.util import quantity_from_hdf5
+from thejoker.units import usys
+# from ebak import SimulatedRVOrbit
 
-_basepath = split(abspath(join(__file__, "..")))[0]
-if not exists(join("..", "scripts")):
-    raise IOError("You must run this script from inside the scripts directory:\n{}"
-                  .format(join(_basepath, "scripts")))
+plt.style.use('../thejoker/thejoker.mplstyle')
 
-# HACKS: Hard-set paths
-ALLVISIT_DATA_PATH = join(_basepath, "data", "allVisit-l30e.2.fits")
-PLOT_PATH = join(_basepath, "plots", "sampler")
-CACHE_PATH = join(_basepath, "cache")
-for PATH in [PLOT_PATH, CACHE_PATH]:
-    if not exists(PATH):
-        os.mkdir(PATH)
-
-P_min = 16. # day
-P_max = 8192. # day
 jitter = 0.5*u.km/u.s # TODO: set this same as Troup
-
-# _palette = ['r', 'g', 'b']
+chunk_size = 1024 # should be 32 KB per chunk of nonlinear parameters
 
 def marginal_ll_worker(task):
-    nl_p, data = task
-    try:
-        ATA,p,chi2 = tensor_vector_scalar(nl_p, data)
-        ll = marginal_ln_likelihood(ATA, chi2)
-    except:
-        ll = np.nan
+    nl_p_chunk, data = task
+    n_chunk = len(nl_p_chunk)
+
+    ll = np.zeros(n_chunk)
+    for i in range(n_chunk):
+        try:
+            ATA,p,chi2 = tensor_vector_scalar(nl_p_chunk[i], data)
+            ll[i] = marginal_ln_likelihood(ATA, chi2)
+        except:
+            ll[i] = np.nan
+
     return ll
 
 def get_good_samples(nonlinear_p, data, pool):
-    tasks = [[nonlinear_p[i], data] for i in range(len(nonlinear_p))]
+    n_total = len(nonlinear_p)
+    tasks = [[nonlinear_p[i*chunk_size:(i+1)*chunk_size], data]
+             for i in range(n_total//chunk_size+1)]
+
     results = pool.map(marginal_ll_worker, tasks)
-    marg_ll = np.squeeze(results)
+    marg_ll = np.ravel(results)
 
     uu = np.random.uniform(size=len(nonlinear_p))
     good_samples_bool = uu < np.exp(marg_ll - marg_ll.max())
@@ -68,69 +62,64 @@ def get_good_samples(nonlinear_p, data, pool):
     return good_samples
 
 def samples_to_orbital_params_worker(task):
-    nl_p, data = task
-    P, phi0, ecc, omega = nl_p
+    nl_p_chunk, data = task
+    n_chunk = len(nl_p_chunk)
 
-    ATA,p,_ = tensor_vector_scalar(nl_p, data)
+    pars = np.zeros((n_chunk, 6))
+    for i in range(n_chunk):
+        nl_p = nl_p_chunk[i]
+        P, phi0, ecc, omega = nl_p
+        ATA,p,_ = tensor_vector_scalar(nl_p, data)
 
-    cov = np.linalg.inv(ATA)
-    v0,asini = np.random.multivariate_normal(p, cov)
+        cov = np.linalg.inv(ATA)
+        v0,asini = np.random.multivariate_normal(p, cov)
 
-    if asini < 0:
-        # logger.warning("Swapping asini")
-        asini = np.abs(asini)
-        omega += np.pi
+        if asini < 0:
+            # logger.warning("Swapping asini")
+            asini = np.abs(asini)
+            omega += np.pi
 
-    return [P, asini, ecc, omega, phi0, -v0] # TODO: sign of v0?
+        pars[i] = [P, asini, ecc, omega, phi0, v0]
+
+    return pars
 
 def samples_to_orbital_params(nonlinear_p, data, pool):
-    tasks = [[nonlinear_p[i], data] for i in range(len(nonlinear_p))]
+    n_total = len(nonlinear_p)
+    tasks = [[nonlinear_p[i*chunk_size:(i+1)*chunk_size], data]
+             for i in range(n_total//chunk_size+1)]
     orbit_pars = pool.map(samples_to_orbital_params_worker, tasks)
-    return np.array(orbit_pars).T
-
-def _getq(f, key):
-    if 'unit' in f[key].attrs and f[key].attrs['unit'] is not None:
-        unit = u.Unit(f[key].attrs['unit'])
-    else:
-        unit = 1.
-    return f[key][:] * unit
+    orbit_pars = np.array(orbit_pars)
+    return orbit_pars.reshape(-1, orbit_pars.shape[-1])
 
 def main(APOGEE_ID, pool, n_samples=1, seed=42, overwrite=False):
 
-    output_filename = join(CACHE_PATH, "{}.h5".format(APOGEE_ID))
-
-    # MPI shite
-    # pool = get_pool(mpi=mpi, threads=n_procs)
-    # need load-balancing - see: https://groups.google.com/forum/#!msg/mpi4py/OJG5eZ2f-Pg/EnhN06Ozg2oJ
+    output_filename = os.path.join(paths.root, "cache", "{}.h5".format(APOGEE_ID))
 
     # load data from APOGEE data
-    logger.debug("Reading data from Troup catalog and allVisit files...")
-    all_data = RVData.from_apogee(ALLVISIT_DATA_PATH, apogee_id=APOGEE_ID)
+    logger.debug("Reading data from Troup allVisit file...")
+    all_data = RVData.from_apogee(paths.troup_allVisit, apogee_id=APOGEE_ID)
+    # HACK: in above, only troup stars accepted for now
 
-    # HACK: add extra jitter to velocities
+    # HACK: add extra scatter to velocities
     data_var = all_data.stddev**2 + jitter**2
     all_data._ivar = (1 / data_var).to(all_data.ivar.unit).value
 
-    # a time grid to plot RV curves of the model - used way later
-    t_grid = np.linspace(all_data._t.min()-50, all_data._t.max()+50, 1024)
-
-    # TODO: break this out into a separate "make-prior-samples.py" script:
-    # sample from priors in nonlinear parameters
-    P = np.exp(np.random.uniform(np.log(P_min), np.log(P_max), size=n_samples))
-    phi0 = np.random.uniform(0, 2*np.pi, size=n_samples)
-    # MAGIC NUMBERS below: Kipping et al. 2013 (MNRAS 434 L51)
-    ecc = np.random.beta(a=0.867, b=3.03, size=n_samples)
-    omega = np.random.uniform(0, 2*np.pi, size=n_samples)
+    # read prior samples from cached file of samples
+    with h5py.File(paths.prior_samples) as f:
+        P = quantity_from_hdf5(f, 'P', n_samples).decompose(usys).value
+        ecc = quantity_from_hdf5(f, 'ecc', n_samples)
+        phi0 = quantity_from_hdf5(f, 'phi0', n_samples).decompose(usys).value
+        omega = quantity_from_hdf5(f, 'omega', n_samples).decompose(usys).value
 
     # pack the nonlinear parameters into an array
-    nl_p = np.vstack((P, phi0, ecc, omega)).T
+    nonlinear_p = np.vstack((P, phi0, ecc, omega)).T
     # Note: the linear parameters are (v0, asini)
 
-    logger.info("Number of prior samples: {}".format(n_samples))
+    logger.debug("Number of prior samples: {}".format(n_samples))
 
     # TODO: we may want to "curate" which datapoints are saved...
     idx = np.random.permutation(len(all_data))
-    for n_delete in range(len(all_data)):
+    for n_delete in range(len(all_data))[0:1]:
         if n_delete == 0:
             data = all_data
         else:
@@ -147,7 +136,7 @@ def main(APOGEE_ID, pool, n_samples=1, seed=42, overwrite=False):
                 del f[str(n_delete)]
 
         if not skip_compute:
-            nl_samples = get_good_samples(nl_p, data, pool) # TODO: save?
+            nl_samples = get_good_samples(nonlinear_p, data, pool) # TODO: save?
             if len(nl_samples) == 0:
                 logger.error("Failed to find any good samples!")
                 pool.close()
@@ -166,13 +155,18 @@ def main(APOGEE_ID, pool, n_samples=1, seed=42, overwrite=False):
                 g = f.create_group(str(n_delete))
 
                 for i,(name,unit) in enumerate(par_spec.items()):
-                    g.create_dataset(name, data=orbital_params[i])
+                    g.create_dataset(name, data=orbital_params.T[i])
                     if unit is not None:
                         g[name].attrs['unit'] = str(unit)
+
+        return
 
         # --------------------------------------------------------------------
         # make some plots, yo
         MAX_N_LINES = 128
+
+        # a time grid to plot RV curves of the model
+        t_grid = np.linspace(all_data._t.min()-50, all_data._t.max()+50, 1024)
 
         # plot samples
         fig = plt.figure(figsize=(6,6))
@@ -246,7 +240,7 @@ def main(APOGEE_ID, pool, n_samples=1, seed=42, overwrite=False):
 if __name__ == "__main__":
     from argparse import ArgumentParser
     import logging
-    from ebak.pool import Pool
+    from thejoker.pool import Pool
 
     # Define parser object
     parser = ArgumentParser(description="")
@@ -284,7 +278,7 @@ if __name__ == "__main__":
     if args.mpi:
         logger.info("Running with MPI")
         _kwargs = {'pool': 'MPIPool'}
-    elif args.n_procs != 0:
+    elif args.n_procs != 1:
         logger.info("Running with multiprocessing on {} cores".format(args.n_procs))
         _kwargs = {'pool': 'MultiPool', 'processes': args.n_procs}
     else:
