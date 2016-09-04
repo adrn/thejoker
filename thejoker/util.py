@@ -3,6 +3,7 @@ from __future__ import division, print_function
 __author__ = "adrn <adrn@astro.columbia.edu>"
 
 # Third-party
+import astropy.units as u
 import numpy as np
 
 __all__ = ['find_t0', 'quantity_from_hdf5']
@@ -26,7 +27,7 @@ def find_t0(phi0, P, epoch):
 
     return epoch + guess
 
-def quantity_from_hdf5(f, key):
+def quantity_from_hdf5(f, key, n=None):
     """
     Return an Astropy Quantity object from a key in an HDF5 file,
     group, or dataset. This checks to see if the input file/group/dataset
@@ -37,6 +38,8 @@ def quantity_from_hdf5(f, key):
     f : :class:`h5py.File`, :class:`h5py.Group`, :class:`h5py.DataSet`
     key : str
         The key name.
+    n : int (optional)
+        The number of rows to load.
 
     Returns
     -------
@@ -49,4 +52,7 @@ def quantity_from_hdf5(f, key):
     else:
         unit = 1.
 
-    return f[key][:] * unit
+    if n is not None:
+        return f[key][:n] * unit
+    else:
+        return f[key][:] * unit

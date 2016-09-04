@@ -37,3 +37,4 @@ class Paths(object):
 
         # store paths for special cache files
         self.troup_allVisit = os.path.join(self.root, "data", "troup-allVisit.h5")
+        self.prior_samples = os.path.join(self.root, "data", "prior-samples.h5")
