@@ -1,5 +1,4 @@
-# The Joker
-## [YO-ker]
+# The Joker [YO-ker] /'joʊkər/
 
 A custom Monte Carlo sampler for the two-body problem.
 
