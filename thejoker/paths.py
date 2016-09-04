@@ -32,5 +32,5 @@ class Paths(object):
         self.figures = join(self.root, "paper", "figures")
 
         for path in [self.cache, self.plots, self.figures]:
-            if not path.exists:
+            if not exists(path):
                 os.makedirs(str(path))
