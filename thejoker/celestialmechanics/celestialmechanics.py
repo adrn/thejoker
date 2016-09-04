@@ -220,7 +220,7 @@ def rv_from_elements(times, P, asini, e, omega, phi0, rv0):
     e : numeric
         Eccentricity.
     omega : numeric [radian]
-        Perihelion argument parameter from Winn.
+        Argument of periapse.
     phi0 : numeric [radian]
         Phase at pericenter.
     rv0 : numeric [AU/day]
@@ -239,7 +239,6 @@ def rv_from_elements(times, P, asini, e, omega, phi0, rv0):
     phase = 2 * np.pi * times / P
 
     dMdt = 2. * np.pi / P
-    # Ms = (times - time0) * dMdt
     Ms = phase - phi0
 
     Es = eccentric_anomaly_from_mean_anomaly(Ms, e)
