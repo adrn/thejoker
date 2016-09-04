@@ -5,6 +5,8 @@ __author__ = "adrn <adrn@astro.columbia.edu>"
 # Third-party
 import numpy as np
 
+__all__ = ['find_t0', 'quantity_from_hdf5']
+
 def find_t0(phi0, P, epoch):
     """
     This is carefully written to not subtract large numbers, but might
@@ -23,3 +25,28 @@ def find_t0(phi0, P, epoch):
         iter += 1
 
     return epoch + guess
+
+def quantity_from_hdf5(f, key):
+    """
+    Return an Astropy Quantity object from a key in an HDF5 file,
+    group, or dataset. This checks to see if the input file/group/dataset
+    contains a ``'unit'`` attribute (e.g., in `f.attrs`).
+
+    Parameters
+    ----------
+    f : :class:`h5py.File`, :class:`h5py.Group`, :class:`h5py.DataSet`
+    key : str
+        The key name.
+
+    Returns
+    -------
+    q : `astropy.units.Quantity`, `numpy.ndarray`
+        If a unit attribute exists, this returns a Quantity. Otherwise, it
+        returns a numpy array.
+    """
+    if 'unit' in f[key].attrs and f[key].attrs['unit'] is not None:
+        unit = u.Unit(f[key].attrs['unit'])
+    else:
+        unit = 1.
+
+    return f[key][:] * unit
