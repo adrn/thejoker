@@ -114,6 +114,7 @@ def main(APOGEE_ID, pool, n_samples=1, seed=42, overwrite=False):
     # a time grid to plot RV curves of the model - used way later
     t_grid = np.linspace(all_data._t.min()-50, all_data._t.max()+50, 1024)
 
+    # TODO: break this out into a separate "make-prior-samples.py" script:
     # sample from priors in nonlinear parameters
     P = np.exp(np.random.uniform(np.log(P_min), np.log(P_max), size=n_samples))
     phi0 = np.random.uniform(0, 2*np.pi, size=n_samples)
