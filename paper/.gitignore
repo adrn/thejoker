@@ -1,0 +1,11 @@
+# Latex
+*.aux
+*.bbl
+*.blg
+*.brf
+*.log
+*.out
+*.pdf
+*.synctex.gz
+
+gitstuff.tex
