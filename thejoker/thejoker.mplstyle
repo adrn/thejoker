@@ -1,0 +1,24 @@
+figure.dpi: 300
+figure.facecolor: white
+figure.edgecolor: white
+axes.facecolor: ffffff
+axes.edgecolor: 333333
+
+# Line styles
+lines.linestyle: -
+lines.color: k
+lines.marker: .
+lines.markeredgewidth: 0.
+lines.markersize: 5
+patch.facecolor: k
+patch.edgecolor: none
+
+axes.titlesize: 26
+axes.labelsize: 22
+
+xtick.labelsize: 18
+xtick.color: 555555
+ytick.labelsize: 18
+ytick.color: 555555
+
+axes.prop_cycle: cycler('color', ['222222', '2166AC', '006837', 'B2182B', '762A83', 'E08214', '80CDC1', 'C51B7D', 'FEE08B'])
