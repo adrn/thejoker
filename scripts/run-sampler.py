@@ -291,5 +291,10 @@ if __name__ == "__main__":
         n_samples = int(eval(args.n_samples)) # LOL what's security?
 
     with Pool(**_kwargs) as pool:
+        if not pool.is_master():
+            # Wait for instructions from the master process.
+            pool.wait()
+            sys.exit(0)
+
         main(APOGEE_ID=args.apogee_id, n_samples=n_samples, pool=pool,
              seed=args.seed, overwrite=args.overwrite)
