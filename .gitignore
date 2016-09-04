@@ -53,3 +53,4 @@ distribute-*.tar.gz
 # Custom
 cache
 plots
+data
