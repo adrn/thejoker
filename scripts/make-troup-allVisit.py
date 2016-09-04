@@ -19,7 +19,6 @@ paths = Paths(__file__)
 def main():
     allVisit_path = os.path.join(paths.root, "data", "allVisit-l30e.2.fits")
     troup_csv_path = os.path.join(paths.root, "data", "troup16-dr12.csv")
-    output_path = os.path.join(paths.root, "data", "troup-allVisit.h5")
 
     if not os.path.exists(allVisit_path):
         download_cmd = ("wget https://data.sdss.org/sas/dr13/apogee/spectro/redux/r6/allVisit-l30e.2.fits -O {}"
@@ -31,7 +30,7 @@ def main():
     troup = np.genfromtxt(troup_csv_path, delimiter=",", names=True, dtype=None)
     allVisit = fits.getdata(allVisit_path, 1)
 
-    with h5py.File(output_path, 'w') as f:
+    with h5py.File(paths.troup_allVisit, 'w') as f:
         for apogee_id in troup['APOGEE_ID'].astype(str):
             idx = allVisit['APOGEE_ID'].astype(str) == apogee_id
             f.create_dataset(apogee_id, data=allVisit[idx])
