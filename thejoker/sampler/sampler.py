@@ -3,9 +3,8 @@ from astropy import log as logger
 import numpy as np
 from scipy.interpolate import interp1d
 
-from .. import EPOCH
 from ..util import find_t0
-from ..celestialmechanics import rv_from_elements
+from ..celestialmechanics import rv_from_elements, EPOCH
 
 __all__ = ['design_matrix', 'tensor_vector_scalar', 'marginal_ln_likelihood',
            'period_grid']

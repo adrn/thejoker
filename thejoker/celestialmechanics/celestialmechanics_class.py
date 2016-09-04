@@ -13,16 +13,15 @@ import astropy.time as at
 import astropy.units as u
 import matplotlib.pyplot as plt
 import numpy as np
-from gala.units import UnitSystem
 
 # Project
 from .celestialmechanics import rv_from_elements
-from .util import find_t0
-from .units import usys
+from ..util import find_t0
+from ..units import usys
 
-__all__ = ['RVOrbit', 'SimulatedRVOrbit']
+__all__ = ['RVOrbit', 'SimulatedRVOrbit', 'EPOCH']
 
-_G = G.decompose(usys).value
+_G = usys.get_constant('G')
 EPOCH = 55555. # Magic Number: used for un-modding phi0
 
 class RVOrbit(object):
