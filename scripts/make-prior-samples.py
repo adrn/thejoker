@@ -17,10 +17,8 @@ paths = Paths(__file__)
 
 def main(n_samples, seed, overwrite=False):
 
-    cache_file = os.path.join(paths.cache, "prior-samples.h5")
-
-    if os.path.exists(cache_file) and not overwrite:
-        with h5py.File(cache_file, 'r') as f:
+    if os.path.exists(paths.prior_samples) and not overwrite:
+        with h5py.File(paths.prior_samples, 'r') as f:
             n_samples = len(f['P'])
 
         raise IOError("File already exists with {} prior samples. Use '--overwrite' "
@@ -36,7 +34,7 @@ def main(n_samples, seed, overwrite=False):
     ecc = np.random.beta(a=0.867, b=3.03, size=n_samples)
     omega = np.random.uniform(0, 2*np.pi, size=n_samples)
 
-    with h5py.File(cache_file, 'w') as f:
+    with h5py.File(paths.prior_samples, 'w') as f:
         d = f.create_dataset('P', data=P)
         d.attrs['unit'] = 'day'
 
