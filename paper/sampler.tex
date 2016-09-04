@@ -1,0 +1,301 @@
+\documentclass[12pt, preprint]{aastex}
+
+% to-do list
+% ----------
+% - zeroth draft
+
+% style notes
+% -----------
+
+% fix aastex
+\setlength{\parindent}{1.4em}
+\linespread{1.15} % close to 10/13 spacing in ``manuscript''
+\setlength{\parskip}{0ex}
+\makeatletter % you know you are living your life wrong when you need to do this
+\def\revtex@pageid{%
+ \xdef\@thefnmark{\null}%
+ \@footnotetext{%
+  This \revtex@genre\space was prepared with the
+  \revtex@org\space \LaTeX\ macros v\revtex@ver, with modifications by David~W.~Hogg.%
+ }%
+}%
+\def\abstractname{Abstract}%
+\makeatother
+\sloppy\sloppypar\frenchspacing
+
+% better links
+\usepackage[backref,breaklinks,colorlinks,citecolor=blue]{hyperref}
+
+% define macros for text
+\newcommand{\project}[1]{\textsl{#1}}
+\newcommand{\acronym}[1]{{\small{#1}}}
+\newcommand{\apogee}{\project{\acronym{APOGEE}}}
+\newcommand{\thecolander}{\project{The~Colander}}
+\newcommand{\emcee}{\project{emcee}}
+\newcommand{\dr}{\acronym{DR13}}
+
+% define macros for math
+\newcommand{\meterspersecond}{\mathrm{m\,s^{-1}}}
+\newcommand{\asini}{\ensuremath{a\,\sin i}}
+\newcommand{\given}{\,|\,}
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\transpose}[1]{{#1}^{\mathsf{T}}}
+\newcommand{\inv}[1]{{#1}^{-1}}
+\newcommand{\msun}{\mathrm{M}_\odot}
+\newcommand{\bs}[1]{\boldsymbol{#1}}
+
+\begin{document}
+
+\title{\thecolander: A custom Monte Carlo sampler \\
+  for binary-star and exoplanet radial velocity data}
+\author{Adrian~M.~Price-Whelan\altaffilmark{\pu,\adrn},
+        David~W.~Hogg\altaffilmark{\ccpp,\mpia},
+        Daniel~Foreman-Mackey\altaffilmark{\uw,\sagan},
+        Hans-Walter~Rix\altaffilmark{\mpia}
+}
+
+% Affiliations
+\newcommand{\pu}{1}
+\newcommand{\adrn}{2}
+\newcommand{\ccpp}{3}
+\newcommand{\mpia}{4}
+\newcommand{\uw}{5}
+\newcommand{\sagan}{6}
+
+\altaffiltext{\pu}{Department of Astrophysical Sciences,
+                   Princeton University, Princeton, NJ 08544, USA}
+\altaffiltext{\adrn}{To whom correspondence should be addressed:
+                     \texttt{adrn@princeton.edu}}
+\altaffiltext{\ccpp}{Center for Cosmology and Particle Physics,
+                     Department of Physics,
+                     New York University, 4 Washington Place,
+                     New York, NY 10003, USA}
+\altaffiltext{\mpia}{Max-Planck-Institut f\"ur Astronomie,
+                     K\"onigstuhl 17, D-69117 Heidelberg, Germany}
+\altaffiltext{\uw}{Astronomy Department, University of Washington,
+                   Seattle, WA 98195, USA}
+\altaffiltext{\sagan}{Sagan Fellow}
+
+\begin{abstract}
+% Context
+Given sparse radial-velocity measurements of a star, there are often
+many qualitatively different stellar or exoplanet companion orbit
+models that are consistent with the data.
+The consequent multimodality of the likelihood function leads to
+extremely challenging search, optimization, and MCMC posterior
+sampling in the space of orbital parameters.
+% Aims
+Here we create a custom-build Monte Carlo sampler that can produce a
+posterior sampling for orbital parameters given even small numbers of
+noisy radial-velocity measurements (and hence very complex likelihood
+function).
+The goal is to obtain provably correct samplings in the space of
+orbital parameters.
+% Methods
+We build a variant of simple Monte Carlo sampling, in which we densely
+sample the non-linear orbital parameters, and perform rejection
+sampling using a marginalized likelihood, marginalizing out the linear
+orbital parameters.
+In practice and generically, the sampling obtained by the simple Monte
+Carlo is---in the case of sparse or uninformative data---substantial
+and multimodal, or else---in the case of informative
+data---insubstantial but unimodal.
+In the unimodal case, we follow the simple Monte Carlo with standard
+Markov Chain Monte Carlo to make the sampling more substantial.
+% Results
+The method produces correct samplings in orbital
+parameters for (good) data sets that include as few as three noisy time
+points.
+We give some examples that show how the posterior probability depends
+extremely strongly on the number and time coverage of the
+observations.
+We discuss extensions to the method that could handle issues with the
+noise model or outliers.
+\end{abstract}
+
+\keywords{
+  binaries: spectroscopic
+  ---
+  methods: data analysis
+  ---
+  methods: statistical
+  ---
+  planets and satellites: fundamental parameters
+  ---
+  surveys
+  ---
+  techniques: radial velocities
+}
+
+\section{Introduction}
+
+Precise radial-velocity measurements of stars have transformed
+astrophysics in the last decades:
+They have permitted the discovery of the first planets around other stars,
+including especially the unanticipated but common hot jupiters,
+and been used to discover or confirm hundreds
+(perhaps thousands?) of planets.
+Radial velocity measurements have also been used to find substellar,
+degenerate, and black-hole companions to more normal stars, and hold
+the promise of delivering the full population statistics for binary
+(and trinary) star systems.
+
+With many new stellar spectroscopic surveys operating or under
+construction, we expect to have good quality spectra for millions
+of stars in the next few years.
+Most of these surveys have at least some targets---and many have many
+targets---that get observed multiple times.
+These surveys can (as an auxilliary or primary goal of their observing
+strategies) generate discoveries of planetary, substellar, and stellar
+companions.
+These discoveries, in turn, will feed population inferences, follow-up
+programs, and projects to refine precise stellar models.
+
+However, when radial-velocity observations are not designed with
+unambiguous detection and discovery in mind, usually there are
+multiple possible binary-star models that are consistent with any
+small number of radial-velocity measurements that show stellar
+acceleration.
+That is, a small number of (even very good) radial velocity
+measurements will lead to posterior beliefs about companion orbits and
+masses that put substantial plausibility onto multiple qualitatively
+different solutions, or (in other words) create a likelihood function
+that is highly multi-model in the relevant parameter spaces.
+There are currently no safe methods known for exploring these highly
+multimodal functions and delivering correct posterior samplings and
+reliable probabilistic statements about detection and
+characterization.
+
+Here we make an attempt at correcting these problems.
+Our approach is to build custom posterior sampling methods that
+capitalize on the structure of the binary-star (or star--exoplanet)
+kinematics to create provably---or highly probably---correct
+samplings.
+
+The structure of the paper is as follows:
+We state clearly our assumptions, and demonstrate that we have a
+method that is correct under those assumptions.
+We perform experiments with the method to understand its properties
+and limitations.
+We finish by discussing the value of the method, and the changes we
+would have to make if we weakened our assumptions, or if we don't
+weaken our assumptions but they indeed prove to be far from correct.
+
+\section{Assumptions and method}
+
+In order to set up a well-posed problem and build a path to a
+definite solution, we make a set of non-trivial assumptions about the
+stellar systems we are observing.
+\begin{enumerate}
+\item We assume that we have measurements of the radial velocity of a
+  star, and that the time dependence of the expectation of that radial
+  velocity is well described by the gravitational orbit of a pair of
+  point masses (the Kepler problem). We assume that the times are
+  (effectively) perfectly known, and in an inertial frame (for
+  example, Solar-System barycentric MJD).
+\item We assume that each star has only zero or one companions, and
+  that the radial-velocity measurements are not contaminated by nor
+  affected by any other bodies.
+\item We assume that the noise contributions to individual
+  radial-velocity measurements are well described as draws from
+  zero-mean normal (Gaussian) distributions with correctly known
+  variances. We assume that there are no outliers.
+\item In addition to all these, we put particular, fairly sensible
+  prior probability density functions on all the orbital parameters,
+  described below.
+\end{enumerate}
+Each of these assumptions can be challenged, and in particular we
+expect some stars to have additional companions, and we expect there
+to be outliers and unaccounted sources of noise.
+We will return to these assumptions, and the consequences of relaxing
+them, in the Discussion Section.
+
+In the two-body celestial mechanics problem (\citealt{kepler}; and
+here we are working in a parameterization similar to that of
+\citealt{winn}), and under our above-stated assumptions, the
+radial-velocity expectation can be parameterized by six parameters,
+which we choose to be period $P$, projected semi-major axis $\asini$,
+a phase $\phi_0$ corresponding to a time of pericenter passage, the
+eccentricity $e$, an argument of perihelion $\varpi$, and a constant
+system barycenter radial velocity $v_0$.
+The radial velocity $v_r$ at time $t$ is then given by
+\begin{equation}
+  v_r(t) = \asini \, (1-e\,\cos E) \cos(\varpi + f) \, \frac{\dd f}{\dd t} +
+    \asini \sin(\varpi + f)\, e \, \sin E \, \frac{\dd E}{\dd t}
+\end{equation}
+where $f$ and $E$ are the mean and eccentric anomalies, respectively.
+Of these parameters, four ($P$, $\phi_0$, $e$, $\varpi$) are
+non-linearly related to the radial-velocity expectation, and two
+($\asini$, $v_0$) are linearly related.
+
+Fundamentally, our method is to perform \emph{simple Monte Carlo} in
+the non-linear parameters, and analytically marginalize out the linear
+parameters.
+
+Our method will capitalize on the following aspects of the problem
+structure:
+\begin{itemize}
+\item There are linear and non-linear parameters, and we can treat
+  them differently.
+\item There is a finite, time-sampling-imposed minimum size or
+  resolution---in the period direction---of any features in the
+  likelihood function.
+\end{itemize}
+
+What is simple monte carlo?
+
+What are our explicit priors?
+
+What do we do after SMC? Resampling or \emcee.
+
+\section{Experiments and results}
+
+Introduce the \apogee\ data (\citealt{apogee,apogeedr12,sdssiii,dr12}), and
+our poster-child (\citealt{troup}).
+
+Show results as a function of $N$.
+
+Show switch-over from SMC to \emcee.
+
+\section{Discussion}
+
+What did we find?
+
+What can this system be used for? Discovery, characterization, and
+hierarchial inference.
+
+Of the assumptions, probably the most severe is the Gaussian noise
+with known variance. \textbf{This is wrong, very wrong!} Ideas about
+ameliorating this, and what those options would cost us. Advice for
+those using the system despite these issues.
+
+\acknowledgements
+It is a pleasure to thank
+  Ben Weaver (NOAO),
+for valuable discussions.
+This research was partially supported by [many grants].
+This project was started at AstroHackWeek 2016, organized by Kyle
+Barbary (UCB) and Phil Marshall (SLAC) at the Berkeley Institute for
+Data Science.
+
+%\begin{thebibliography}{99}\raggedright
+%
+%\bibitem[Alam et al.(2015)]{dr12}
+%  Alam,~S., Albareti,~F.~D., Allende~Prieto,~C., et al.\ 2015, \apjs, 219, 12
+%\bibitem[Eisenstein et al.(2011)]{sdssiii}
+%  Eisenstein, D.~J., Weinberg, D.~H., Agol, E., et al.\ 2011, \aj, 142, 72
+%\bibitem[Holtzman et al.(2015)]{apogeedr12}
+%  Holtzman, J.~A., Shetrone, M., Johnson, J.~A., et al.\ 2015, \aj, 150, 148
+%\bibitem[Kepler(1609)]{kepler}
+%  Kepler, J.\ 1609, \textit{Astronomia nova\ldots}
+%\bibitem[Kipping(2013)]{kipping}
+%  Kipping, D.~M.\ 2013, \mnras, 434, L51
+%\bibitem[Majewski et al.(2015)]{apogee}
+%  Majewski,~S.~R., Schiavon,~R.~P., Frinchaboy,~P.~M., et al.\ 2015, arXiv:1509.05420
+%\bibitem[Troup et al.(2016)]{troup}
+%  Troup, N.~W., Nidever, D.~L., De Lee, N., et al.\ 2016, \aj, 151, 85
+%\bibitem[Winn(2010)]{winn}
+%  Winn, J.~N.\ 2010, Exoplanets, 55
+%\end{thebibliography}
+
+\end{document}
