@@ -1,4 +1,5 @@
-# The Joker [YO-ker]
+# The Joker
+## [YO-ker]
 
 A custom Monte Carlo sampler for the two-body problem.
 
