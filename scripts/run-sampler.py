@@ -159,7 +159,7 @@ def main(APOGEE_ID, pool, n_samples=1, seed=42, overwrite=False):
                     if unit is not None:
                         g[name].attrs['unit'] = str(unit)
 
-        return
+        continue
 
         # --------------------------------------------------------------------
         # make some plots, yo
