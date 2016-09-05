@@ -230,6 +230,8 @@ def main(APOGEE_ID, pool, n_samples=1, seed=42, overwrite=False):
         ax_lnP_asini.set_ylabel(r'$\ln (a \sin i)$')
 
         fig.tight_layout()
+        if not os.path.exists(os.path.join(paths.plots, APOGEE_ID)):
+            os.makedirs(os.path.join(paths.plots, APOGEE_ID))
         fig.savefig(os.path.join(paths.plots, APOGEE_ID, 'delete-{}.png'.format(n_delete)), dpi=150)
 
         # fig = corner.corner(np.hstack((np.log(nl_p[:,0:1]), nl_p[:,1:])),
