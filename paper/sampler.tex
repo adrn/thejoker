@@ -26,7 +26,8 @@
 \makeatother
 \sloppy\sloppypar\frenchspacing
 
-% better links
+% packages
+\usepackage{amsmath}
 \usepackage[backref,breaklinks,colorlinks,citecolor=black]{hyperref}
 \usepackage[all]{hypcap}
 \renewcommand*{\backref}[1]{[#1]}
@@ -90,9 +91,9 @@ The consequent multimodality of the likelihood function leads to
 extremely challenging search, optimization, and MCMC posterior
 sampling in the space of orbital parameters.
 % Aims
-Here we create a custom-build Monte Carlo sampler that can produce a
+Here we create a custom-built Monte Carlo sampler that can produce a
 posterior sampling for orbital parameters given even small numbers of
-noisy radial-velocity measurements (and hence very complex likelihood
+noisy radial-velocity measurements (and hence a very complex likelihood
 function).
 The goal is to obtain provably correct samplings in the space of
 orbital parameters.
@@ -137,7 +138,7 @@ noise model or outliers.
 Precise radial-velocity measurements of stars have transformed
 astrophysics in the last decades:
 They have permitted the discovery of the first planets around other stars,
-including especially the unanticipated but common hot jupiters,
+including especially the unanticipated but common ``hot Jupiters,''
 and been used to discover or confirm hundreds
 (perhaps thousands?) of planets.
 Radial velocity measurements have also been used to find substellar,
@@ -149,7 +150,7 @@ With many new stellar spectroscopic surveys operating or under
 construction, we expect to have good quality spectra for millions
 of stars in the next few years.
 Most of these surveys have at least some targets---and many have many
-targets---that get observed multiple times.
+targets---that are observed multiple times.
 These surveys can (as an auxilliary or primary goal of their observing
 strategies) generate discoveries of planetary, substellar, and stellar
 companions.
@@ -190,12 +191,12 @@ weaken our assumptions but they indeed prove to be far from correct.
 
 In order to set up a well-posed problem and build a path to a
 definite solution, we make a set of non-trivial assumptions about the
-stellar systems we are observing.
+stellar systems we will use and observations thereof.
 \begin{enumerate}
 \item We assume that we have measurements of the radial velocity of a
   star, and that the time dependence of the expectation of that radial
   velocity is well described by the gravitational orbit of a pair of
-  point masses (the Kepler problem). We assume that the times are
+  point masses (the two-body problem). We assume that the times are
   (effectively) perfectly known, and in an inertial frame (for
   example, Solar-System barycentric MJD).
 \item We assume that each star has only zero or one companions, and
@@ -223,13 +224,21 @@ which we choose to be period $P$, projected semi-major axis $\asini$,
 a phase $\phi_0$ corresponding to a time of pericenter passage, the
 eccentricity $e$, an argument of perihelion $\omega$, and a constant
 system barycenter radial velocity $v_0$.
-The radial velocity $v_r$ at time $t$ is then given by
+The radial velocity $v_r$ at time $t$ is then given by \citep[see also Eq. 63 in ][]{Murray:2010}
 \begin{equation}
-  v_r(t) = \asini \, (1-e\,\cos E) \cos(\omega + f) \, \frac{\dd f}{\dd t} +
-    \asini \sin(\omega + f)\, e \, \sin E \, \frac{\dd E}{\dd t}
+  v_r(t) = v_0 + K\,(\cos(\omega + f) + e\,\cos\omega)
 \end{equation}
-where $f$ and $E$ are the mean and eccentric anomalies, respectively.
-Of these parameters, four ($P$, $\phi_0$, $e$, $\varpi$) are
+where $K$ is the velocity semi-amplitude and $f$ is the true anomaly given by
+\begin{align}
+  K &= \frac{2\pi \asini}{P\,\sqrt{1-e^2}}\\
+  \cos f &= \frac{\cos E - e}{1 - e\, \cos E}
+\end{align}
+and the eccentric anomaly, $E$, must be solved for with the mean anomaly, $M$,
+\begin{align}
+  M = \frac{2\pi t}{P} - \phi_0\\
+  M = E - e\,\sin E.
+\end{align}
+Of these parameters, four ($P$, $\phi_0$, $e$, $\omega$) are
 non-linearly related to the radial-velocity expectation, and two
 ($\asini$, $v_0$) are linearly related.
 
