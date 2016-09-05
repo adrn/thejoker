@@ -324,6 +324,7 @@ class MPIPool2(GenericPool):
         self.comm = comm
 
         self.master = 0
+        self.rank = self.comm.Get_rank()
         self.workers = set(range(self.comm.size))
         self.workers.discard(self.master)
 
