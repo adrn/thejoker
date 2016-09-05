@@ -149,7 +149,7 @@ def main(APOGEE_ID, pool_kwargs, n_samples=1, seed=42, overwrite=False):
                 logger.error("Failed to find any good samples!")
                 pool.close()
                 sys.exit(1)
-            orbital_params = samples_to_orbital_params(nl_samples, data, pool)
+            orbital_params = samples_to_orbital_params(nl_samples, data, pool, chunk_size)
 
             # save the orbital parameters out to a cache file
             par_spec = OrderedDict()
@@ -261,10 +261,11 @@ if __name__ == "__main__":
 
     # Define parser object
     parser = ArgumentParser(description="")
-    parser.add_argument("-v", "--verbose", action="store_true", dest="verbose",
-                        default=False, help="Be chatty! (default = False)")
-    parser.add_argument("-q", "--quiet", action="store_true", dest="quiet",
-                        default=False, help="Be quiet! (default = False)")
+
+    vq_group = parser.add_mutually_exclusive_group()
+    vq_group.add_argument('-v', '--verbose', action='count', default=0, dest='verbosity')
+    vq_group.add_argument('-q', '--quiet', action='count', default=0, dest='quietness')
+
     parser.add_argument("-o", "--overwrite", dest="overwrite", default=False,
                         action="store_true", help="Overwrite any existing data.")
     parser.add_argument("--seed", dest="seed", default=42, type=int,
@@ -284,11 +285,19 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Set logger level based on verbose flags
-    if args.verbose:
-        logger.setLevel(logging.DEBUG)
-    elif args.quiet:
-        logger.setLevel(logging.ERROR)
-    else:
+    if args.verbosity != 0:
+        if args.verbosity == 1:
+            logger.setLevel(logging.DEBUG)
+        else: # anything >= 2
+            logger.setLevel(1)
+
+    elif args.quietness != 0:
+        if args.quietness == 1:
+            logger.setLevel(logging.WARNING)
+        else: # anything >= 2
+            logger.setLevel(logging.ERROR)
+
+    else: # default
         logger.setLevel(logging.INFO)
 
     np.random.seed(args.seed)
