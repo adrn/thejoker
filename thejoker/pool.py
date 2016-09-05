@@ -374,7 +374,11 @@ class MPIPool2(GenericPool):
         Evaluate a function at various points in parallel. Results are
         returned in the requested order (i.e. y[i] = f(x[i])).
         """
-        assert self.is_master()
+
+        # If not the master just wait for instructions.
+        if not self.is_master():
+            self.wait()
+            return
 
         workerset = self.workers.copy()
         tasklist = [(tid, (func, arg)) for tid, arg in enumerate(iterable)]
