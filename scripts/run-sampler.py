@@ -21,6 +21,7 @@ from thejoker.util import quantity_from_hdf5
 from thejoker.units import usys
 from thejoker.celestialmechanics import SimulatedRVOrbit
 from thejoker.config import P_min
+from thejoker.pool import choose_pool
 
 plt.style.use('../thejoker/thejoker.mplstyle')
 
@@ -89,7 +90,9 @@ def samples_to_orbital_params(nonlinear_p, data, pool):
     orbit_pars = np.concatenate(orbit_pars)
     return orbit_pars.reshape(-1, orbit_pars.shape[-1])
 
-def main(APOGEE_ID, pool, n_samples=1, seed=42, overwrite=False):
+def main(APOGEE_ID, pool_kwargs, n_samples=1, seed=42, overwrite=False):
+
+    pool = choose_pool(**pool_kwargs)
 
     output_filename = os.path.join(paths.root, "cache", "{}.h5".format(APOGEE_ID))
 
@@ -122,6 +125,8 @@ def main(APOGEE_ID, pool, n_samples=1, seed=42, overwrite=False):
             data = all_data
         else:
             data = all_data[idx[:-n_delete]]
+            pool = choose_pool(**pool_kwargs)
+
         logger.debug("Removing {}/{} data points".format(n_delete, len(all_data)))
 
         # see if we already did this:
@@ -156,6 +161,10 @@ def main(APOGEE_ID, pool, n_samples=1, seed=42, overwrite=False):
                     g.create_dataset(name, data=orbital_params.T[i])
                     if unit is not None:
                         g[name].attrs['unit'] = str(unit)
+
+        pool.close()
+
+        continue
 
         # --------------------------------------------------------------------
         # make some plots, yo
@@ -244,7 +253,6 @@ def main(APOGEE_ID, pool, n_samples=1, seed=42, overwrite=False):
 if __name__ == "__main__":
     from argparse import ArgumentParser
     import logging
-    from thejoker.pool import Pool, MPIPool
 
     # Define parser object
     parser = ArgumentParser(description="")
@@ -279,27 +287,13 @@ if __name__ == "__main__":
         logger.setLevel(logging.INFO)
 
     np.random.seed(args.seed)
-    if args.mpi:
-        logger.info("Running with MPI")
-        _kwargs = {'pool': 'MPIPool', 'loadbalance': True}
-    elif args.n_procs != 1:
-        logger.info("Running with multiprocessing on {} cores".format(args.n_procs))
-        _kwargs = {'pool': 'MultiPool', 'processes': args.n_procs}
-    else:
-        logger.info("Running serial")
-        _kwargs = {'pool': 'SerialPool'}
 
     try:
         n_samples = int(args.n_samples)
     except:
         n_samples = int(eval(args.n_samples)) # LOL what's security?
 
-    with Pool(**_kwargs) as pool:
-        if isinstance(pool, MPIPool):
-            if not pool.is_master():
-                # Wait for instructions from the master process.
-                pool.wait()
-                sys.exit(0)
+    pool_kwargs = dict(mpi=args.mpi, processes=args.n_procs)
 
-        main(APOGEE_ID=args.apogee_id, n_samples=n_samples, pool=pool,
-             seed=args.seed, overwrite=args.overwrite)
+    main(APOGEE_ID=args.apogee_id, n_samples=n_samples, pool_kwargs=pool_kwargs,
+         seed=args.seed, overwrite=args.overwrite)

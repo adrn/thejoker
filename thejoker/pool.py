@@ -1,30 +1,27 @@
 # -*- coding: utf-8 -*-
-'''
-Author: Rodrigo Luger
+"""
+Original author: Rodrigo Luger
+
 Included in this project and licensed under MIT with his permission.
 
+Implementations of four different types of processing pools:
 
-pool.py
--------
+    - MPIPool: An MPI pool borrowed from ``emcee``. This pool passes Python
+      objects back and forth to the workers and communicates once per task.
 
-An implementation of four different types of pools:
+    - MPIOptimizedPool: An attempt at an optimized version of the MPI pool,
+      specifically for passing arrays of numpy floats. If the length of the
+      array passed to the ``map`` method is larger than the number of processes,
+      the iterable is passed in chunks, which are processed *serially* on each
+      processor. This minimizes back-and-forth communication and should increase
+      the speed a bit.
 
-    - An MPI pool borrowed from ``emcee``. This pool passes Python objects
-      back and forth to the workers and communicates once per task.
+    - MultiPool: A multiprocessing for local parallelization, borrowed from
+      ``emcee``
 
-    - An attempt at an optimized version of the MPI pool, specifically for
-      passing arrays of numpy floats. If the length of the array passed
-      to the ``map`` method is larger than the number of processes, the iterable
-      is passed in chunks, which are processed *serially* on each processor.
-      This minimizes back-and-forth communication and should increase the speed
-      a bit.
+    - SerialPool: A serial pool, which uses the built-in ``map`` function
 
-    - A multiprocessing for local parallelization, borrowed from ``emcee``
-
-    - A serial pool, which uses the built-in ``map`` function
-
-
-'''
+"""
 
 from __future__ import division, print_function, absolute_import, unicode_literals
 import numpy as np
@@ -40,14 +37,15 @@ import multiprocessing
 import multiprocessing.pool
 from astropy import log
 
-__all__ = ['MPIPool', 'MPIOptimizedPool', 'MultiPool', 'SerialPool']
+__all__ = ['MPIPool', 'MPIPool2', 'MPIOptimizedPool', 'MultiPool',
+           'SerialPool', 'choose_pool']
 
 # Tags and messages
-TAG_TASK     = 0
+TAG_TASK = 0
 TAG_NEW_FUNC = 1
 TAG_NEW_DIMS = 2
-TAG_CLOSE    = 3
-MSG_EMPTY    = lambda : np.empty(1, dtype = 'float64')
+TAG_CLOSE = 3
+MSG_EMPTY = lambda: np.empty(1, dtype='float64')
 
 class _close_pool_message(object):
     def __repr__(self):
@@ -57,122 +55,53 @@ class _function_wrapper(object):
     def __init__(self, function):
         self.function = function
 
-def _error_function(*args):
-    '''
-    The default worker function. Should be replaced
+def _placeholder_function(*args):
+    """
+    The placeholder worker function. Should be replaced
     with the desired mapping function on the first
     call.
-
-    '''
-
-    raise Exception("Pool was sent tasks before being told what "
-                    "function to apply.")
-
-def _test_function(x):
-    '''
-    Wastes a random amount of time, then
-    returns the average of ``x``.
-
-    '''
-
-    for i in range(np.random.randint(99999)):
-        j = i ** 2
-
-    return np.sum(x) / float(len(x))
-
-def _initializer_wrapper(actual_initializer, *rest):
     """
-    We ignore SIGINT. It's up to our parent to kill us in the typical
-    condition of this arising from ``^C`` on a terminal. If someone is
-    manually killing us with that signal, well... nothing will happen.
-
-    """
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
-    if actual_initializer is not None:
-        actual_initializer(*rest)
+    raise Exception("Pool was sent tasks before being told what function to apply.")
 
 class GenericPool(object):
-    '''
-    A generic multiprocessing pool object with a ``map`` method.
-
-    '''
+    """ A generic multiprocessing pool object with a ``map`` method. """
 
     def __init__(self, **kwargs):
-        '''
-
-        '''
-
         self.rank = 0
 
     @staticmethod
     def enabled():
-        '''
-
-        '''
-
         return False
 
     def is_master(self):
-        '''
-
-        '''
-
         return self.rank == 0
 
     def is_worker(self):
-        '''
-
-        '''
-
         return self.rank != 0
 
     def wait(self):
-        '''
-
-        '''
-
         return NotImplementedError('Method ``wait`` must be called from subclasses.')
 
     def map(self, *args, **kwargs):
-        '''
-
-        '''
-
         return NotImplementedError('Method ``map`` must be called from subclasses.')
 
     def close(self):
-        '''
-
-        '''
-
         pass
 
     def __enter__(self):
-        '''
-
-        '''
-
         return self
 
     def __exit__(self, *args):
-        '''
-
-        '''
-
         self.close()
 
 class MPIPool(GenericPool):
     """
-    A pool that distributes tasks over a set of MPI processes. MPI is an
-    API for distributed memory parallelism.  This pool will let you run
-    emcee without shared memory, letting you use much larger machines
-    with emcee.
+    A pool that distributes tasks over a set of MPI processes. MPI is an API for
+    distributed memory parallelism.  This pool will let you run processes
+    without shared memory, letting you use much larger machines.
 
-    The pool only support the :func:`map` method at the moment because
-    this is the only functionality that emcee needs. That being said,
-    this pool is fairly general and it could be used for other purposes.
-
-    Contributed by `Joe Zuntz <https://github.com/joezuntz>`_.
+    The pool only supports the :func:`map` method at the moment. That being
+    said, this pool is fairly general and it could be used for other purposes.
 
     :param comm: (optional)
         The ``mpi4py`` communicator.
@@ -182,21 +111,23 @@ class MPIPool(GenericPool):
         out one task to each cpu first and then sending out the rest
         as the cpus get done.
     """
-    def __init__(self, comm=None, loadbalance=False, debug=False,
-                 wait_on_start = True, exit_on_end = True, **kwargs):
+    def __init__(self, comm=None, loadbalance=True,
+                 wait_on_start=True, exit_on_end=True, **kwargs):
+
         if MPI is None:
             raise ImportError("Please install mpi4py")
 
         self.comm = MPI.COMM_WORLD if comm is None else comm
         self.rank = self.comm.Get_rank()
         self.size = self.comm.Get_size() - 1
-        self.function = _error_function
+        self.function = _placeholder_function
         self.loadbalance = loadbalance
-        self.debug = debug
+
         if self.size == 0:
             raise ValueError("Tried to create an MPI pool, but there "
                              "was only one MPI process available. "
                              "Need at least two.")
+
         self.exit_on_end = exit_on_end
 
         # Enter main loop for workers?
@@ -206,65 +137,53 @@ class MPIPool(GenericPool):
 
     @staticmethod
     def enabled():
-        '''
-
-        '''
-
         if MPI is not None:
             if MPI.COMM_WORLD.size > 1:
                 return True
         return False
 
     def wait(self):
-        """
-        If this isn't the master process, wait for instructions.
+        """ If this isn't the master process, wait for instructions. """
 
-        """
         if self.is_master():
             raise RuntimeError("Master node told to await jobs.")
 
         status = MPI.Status()
 
+        # The main event loop:
         while True:
-            # Event loop.
-            # Sit here and await instructions.
-            if self.debug:
-              log.debug("Worker {0} waiting for task.".format(self.rank))
+            # Sit and await instructions
+            log.debug("Worker {0} waiting for task.".format(self.rank))
 
             # Blocking receive to wait for instructions.
             task = self.comm.recv(source=0, tag=MPI.ANY_TAG, status=status)
 
-            if self.debug:
-              log.debug("Worker {0} got task {1} with tag {2}."
-                        .format(self.rank, type(task), status.tag))
+            log.debug("Worker {0} got task {1} with tag {2}."
+                      .format(self.rank, type(task), status.tag))
 
-            # Check if message is special sentinel signaling end.
-            # If so, stop.
+            # Check if message is special sentinel signaling end; if so, stop
             if isinstance(task, _close_pool_message):
-                if self.debug:
-                  log.debug("Worker {0} told to quit.".format(self.rank))
+                log.debug("Worker {0} told to quit.".format(self.rank))
                 break
 
             # Check if message is special type containing new function
-            # to be applied
+            #   to be applied
             if isinstance(task, _function_wrapper):
                 self.function = task.function
-                if self.debug:
-                  log.debug("Worker {0} replaced its task function: {1}."
-                            .format(self.rank, self.function))
+                log.debug("Worker {0} replaced its task function: {1}."
+                          .format(self.rank, self.function))
                 continue
 
             # If not a special message, just run the known function on
-            # the input and return it asynchronously.
+            #   the input and return it asynchronously.
             result = self.function(task)
-            if self.debug:
-              log.debug("Worker {0} sending answer {1} with tag {2}."
-                        .format(self.rank, type(result), status.tag))
-            self.comm.isend(result, dest=0, tag=status.tag)
+            log.debug("Worker {0} sending answer {1} with tag {2}."
+                      .format(self.rank, type(result), status.tag))
+            self.comm.isend(result, dest=0, tag=status.tag) # send to master
 
-        # Kill the process?
+        # kill the process if exit on end
         if self.exit_on_end:
-            sys.exit()
+            sys.exit(0)
 
     def map(self, function, tasks):
         """
@@ -278,17 +197,17 @@ class MPIPool(GenericPool):
             The list of elements.
 
         """
-        ntask = len(tasks)
+        n_tasks = len(tasks)
 
         # If not the master just wait for instructions.
         if not self.is_master():
             self.wait()
             return
 
+        # Replace the function to apply with the input
         if function is not self.function:
-            if self.debug:
-              log.debug("Master replacing pool function with {0}."
-                        .format(function))
+            log.debug("Master replacing pool function with {0}."
+                      .format(function))
 
             self.function = function
             F = _function_wrapper(function)
@@ -303,30 +222,25 @@ class MPIPool(GenericPool):
             #       https://gist.github.com/4176241
             MPI.Request.waitall(requests)
 
-        if (not self.loadbalance) or (ntask <= self.size):
-            # Do not perform load-balancing - the default load-balancing
-            # scheme emcee uses.
+        if (not self.loadbalance) or (n_tasks <= self.size):
 
-            # Send all the tasks off and wait for them to be received.
-            # Again, see the bug in the above gist.
+            # Send all the tasks off and wait for them to be received:
             requests = []
             for i, task in enumerate(tasks):
                 worker = i % self.size + 1
-                if self.debug:
-                  log.debug("Sent task {0} to worker {1} with tag {2}."
-                            .format(type(task), worker, i))
+                log.debug("Sent task {0} to worker {1} with tag {2}."
+                          .format(type(task), worker, i))
                 r = self.comm.isend(task, dest=worker, tag=i)
                 requests.append(r)
 
             MPI.Request.waitall(requests)
 
-            # Now wait for the answers.
+            # Receive the responses:
             results = []
-            for i in range(ntask):
+            for i in range(n_tasks):
                 worker = i % self.size + 1
-                if self.debug:
-                  log.debug("Master waiting for worker {0} with tag {1}"
-                            .format(worker, i))
+                log.debug("Master waiting for worker {0} with tag {1}"
+                          .format(worker, i))
                 result = self.comm.recv(source=worker, tag=i)
 
                 results.append(result)
@@ -334,43 +248,44 @@ class MPIPool(GenericPool):
             return results
 
         else:
+
             # Perform load-balancing. The order of the results are likely to
-            # be different from the previous case.
+            #   be different from the case with no load-balancing
             for i, task in enumerate(tasks[0:self.size]):
                 worker = i+1
-                if self.debug:
-                  log.debug("Sent task {0} to worker {1} with tag {2}."
-                            .format(type(task), worker, i))
+                log.debug("Sent task {0} to worker {1} with tag {2}."
+                          .format(type(task), worker, i))
+
                 # Send out the tasks asynchronously.
                 self.comm.isend(task, dest=worker, tag=i)
 
             ntasks_dispatched = self.size
-            results = [None]*ntask
-            for itask in range(ntask):
+            results = [None]*n_tasks
+            for itask in range(n_tasks):
                 status = MPI.Status()
+
                 # Receive input from workers.
                 try:
-                  result = self.comm.recv(source=MPI.ANY_SOURCE,
-                                          tag=MPI.ANY_TAG, status=status)
+                    result = self.comm.recv(source=MPI.ANY_SOURCE,
+                                            tag=MPI.ANY_TAG, status=status)
                 except Exception as e:
-                  self.close()
-                  raise e
+                    self.close()
+                    raise e
 
                 worker = status.source
                 i = status.tag
                 results[i] = result
-                if self.debug:
-                  log.debug("Master received from worker {0} with tag {1}"
-                            .format(worker, i))
 
-                # Now send the next task to this idle worker (if there are any
-                # left).
-                if ntasks_dispatched < ntask:
+                log.debug("Master received from worker {0} with tag {1}"
+                          .format(worker, i))
+
+                # Send the next task to this idle worker (if there are any left)
+                if ntasks_dispatched < n_tasks:
                     task = tasks[ntasks_dispatched]
                     i = ntasks_dispatched
-                    if self.debug:
-                      log.debug("Sent task {0} to worker {1} with tag {2}."
-                                .format(type(task), worker, i))
+                    log.debug("Sent task {0} to worker {1} with tag {2}."
+                              .format(type(task), worker, i))
+
                     # Send out the tasks asynchronously.
                     self.comm.isend(task, dest=worker, tag=i)
                     ntasks_dispatched += 1
@@ -392,6 +307,113 @@ class MPIPool(GenericPool):
         if self.is_master():
             for i in range(self.size):
                 self.comm.isend(_close_pool_message(), dest=i + 1)
+
+class MPIPool2(GenericPool):
+    """
+    This implementation is based on the code here:
+    https://github.com/juliohm/HUM/blob/master/pyhum/utils.py#L24
+    """
+
+    def __init__(self, comm=None, wait_on_start=True):
+
+        if MPI is None:
+            raise ImportError("Please install mpi4py")
+
+        self.comm = MPI.COMM_WORLD if comm is None else comm
+        self.master = 0
+        self.workers = set(range(comm.size))
+        self.workers.discard(self.master)
+
+        self.size = self.comm.Get_size() - 1
+
+        if self.size == 0:
+            raise ValueError("Tried to create an MPI pool, but there "
+                             "was only one MPI process available. "
+                             "Need at least two.")
+
+        # Enter main loop for workers?
+        if wait_on_start:
+            if self.is_worker():
+                self.wait()
+
+    def wait(self):
+        """
+        Make the workers listen to the master.
+        """
+        if self.is_master():
+            return
+
+        worker = self.comm.rank
+        status = MPI.Status()
+        while True:
+            log.debug("Worker {0} waiting for task".format(worker))
+
+            task = self.comm.recv(source=self.master, tag=MPI.ANY_TAG, status=status)
+
+            if task is None:
+                log.debug("Worker {0} told to quit work".format(worker))
+                break
+
+            func, arg = task
+            log.debug("Worker {0} got task {1} with tag {2}"
+                      .format(worker, arg, status.tag))
+
+            result = func(arg)
+
+            log.debug("Worker {0} sending answer {1} with tag {2}"
+                      .format(worker, result, status.tag))
+
+            self.comm.ssend(result, self.master, status.tag)
+
+    def map(self, func, iterable):
+        """
+        Evaluate a function at various points in parallel. Results are
+        returned in the requested order (i.e. y[i] = f(x[i])).
+        """
+        assert self.is_master()
+
+        workerset = self.workers.copy()
+        tasklist = [(tid, (func, arg)) for tid, arg in enumerate(iterable)]
+        resultlist = [None] * len(tasklist)
+        pending = len(tasklist)
+
+        while pending:
+            if workerset and tasklist:
+                worker = workerset.pop()
+                taskid, task = tasklist.pop()
+                log.debug("Sent task {0} to worker {1} with tag {2}"
+                          .format(task[1], worker, taskid))
+                self.comm.send(task, dest=worker, tag=taskid)
+
+            if tasklist:
+                flag = self.comm.Iprobe(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG)
+                if not flag:
+                    continue
+            else:
+                self.comm.Probe(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG)
+
+            status = MPI.Status()
+            result = self.comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=status)
+            worker = status.source
+            taskid = status.tag
+            log.debug("Master received from worker {0} with tag {1}"
+                      .format(worker, taskid))
+
+            workerset.add(worker)
+            resultlist[taskid] = result
+            pending -= 1
+
+        return resultlist
+
+    def close(self):
+        """
+        Tell all the workers to quit work.
+        """
+        if self.is_worker():
+            return
+
+        for worker in self.workers:
+            self.comm.send(None, worker, 0)
 
 class MPIOptimizedPool(GenericPool):
     '''
@@ -424,7 +446,7 @@ class MPIOptimizedPool(GenericPool):
         self.comm = comm
         self.workers = set(range(comm.size))
         self.workers.discard(0)
-        self.function = _error_function
+        self.function = _placeholder_function
         self.dims = (1,1)
         self.size = self.comm.Get_size() - 1
         self.rank = self.comm.Get_rank()
@@ -684,39 +706,33 @@ class MPIOptimizedPool(GenericPool):
             self.comm.send(None, dest = worker, tag = TAG_CLOSE)
 
 class SerialPool(GenericPool):
-    '''
-
-    '''
 
     def __init__(self, **kwargs):
-        '''
-
-        '''
-
         self.size = 0
         self.rank = 0
 
     @staticmethod
     def enabled():
-        '''
-
-        '''
-
         return True
 
     def wait(self):
-        '''
-
-        '''
-
         raise Exception('``SerialPool`` told to wait!')
 
     def map(self, function, iterable):
-        '''
-
-        '''
-
         return list(map(function, iterable))
+
+# ----------------------------------------------------------------------------
+
+def _initializer_wrapper(actual_initializer, *rest):
+    """
+    We ignore SIGINT. It's up to our parent to kill us in the typical
+    condition of this arising from ``^C`` on a terminal. If someone is
+    manually killing us with that signal, well... nothing will happen.
+
+    """
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    if actual_initializer is not None:
+        actual_initializer(*rest)
 
 class MultiPool(multiprocessing.pool.Pool):
     """
@@ -748,7 +764,7 @@ class MultiPool(multiprocessing.pool.Pool):
                  **kwargs):
         new_initializer = functools.partial(_initializer_wrapper, initializer)
         super(MultiPool, self).__init__(processes, new_initializer,
-                                                initargs, **kwargs)
+                                        initargs, **kwargs)
         self.size = 0
 
     @staticmethod
@@ -785,41 +801,49 @@ class MultiPool(multiprocessing.pool.Pool):
                 self.join()
                 raise
 
-def Pool(pool = 'AnyPool', **kwargs):
-    '''
-    Chooses between the different pools (excluding the optimized MPI
-    pool). If ``pool == 'AnyPool'``, chooses based on availability.
+def choose_pool(mpi=False, processes=1, **kwargs):
+    """
+    Chooses between the different pools.
+    """
 
-    '''
+    if mpi and MPIPool.enabled():
+        log.info("Running with MPI")
+        return MPIPool2(**kwargs)
 
-    if pool == 'MPIPool':
-        return MPIPool(**kwargs)
-    elif pool == 'MultiPool':
-        return MultiPool(**kwargs)
-    elif pool == 'SerialPool':
-        return SerialPool(**kwargs)
-    elif pool == 'AnyPool':
-        if MPIPool.enabled():
-            return MPIPool(**kwargs)
-        elif MultiPool.enabled():
-            return MultiPool(**kwargs)
-        else:
-            return SerialPool(**kwargs)
+    elif processes > 1 and MultiPool.enabled():
+        log.info("Running with multiprocessing on {} cores".format(processes))
+        return MultiPool(processes=processes, **kwargs)
+
     else:
-        raise ValueError('Invalid pool ``%s``.' % pool)
+        log.info("Running serial")
+        return SerialPool(**kwargs)
 
-if __name__ == '__main__':
+# ----------------------------------------------------------------------------
 
-    # Instantiate the pool
-    with Pool() as pool:
+def _test_function(x):
+    '''
+    Wastes a random amount of time, then
+    returns the average of ``x``.
 
-        # The iterable we'll apply ``_test_function`` to
-        walkers = np.array([[i, i] for i in range(100)], dtype = 'float64')
+    '''
 
-        # Use the pool to map ``walkers`` onto the function
-        res = pool.map(_test_function, walkers)
+    for i in range(np.random.randint(99999)):
+        j = i ** 2
 
-        # Check if the parallelization worked
-        assert np.allclose(res, [TestFunction(w) for w in walkers])
+    return np.sum(x) / float(len(x))
 
-        print("%s: success!" % type(pool).__name__)
+# if __name__ == '__main__':
+
+    # # Instantiate the pool
+    # with choose_pool() as pool:
+
+    #     # The iterable we'll apply ``_test_function`` to
+    #     walkers = np.array([[i, i] for i in range(100)], dtype = 'float64')
+
+    #     # Use the pool to map ``walkers`` onto the function
+    #     res = pool.map(_test_function, walkers)
+
+    #     # Check if the parallelization worked
+    #     assert np.allclose(res, [TestFunction(w) for w in walkers])
+
+    #     print("%s: success!" % type(pool).__name__)
