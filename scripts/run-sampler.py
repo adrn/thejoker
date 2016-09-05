@@ -51,9 +51,7 @@ def get_good_samples(nonlinear_p, data, pool):
              for i in range(n_total//chunk_size+1)]
 
     results = pool.map(marginal_ll_worker, tasks)
-    marg_ll = np.ravel(results)
-
-    print(marg_ll.shape, nonlinear_p.shape)
+    marg_ll = np.concatenate(results)
 
     assert len(marg_ll) == len(nonlinear_p)
 
@@ -92,7 +90,7 @@ def samples_to_orbital_params(nonlinear_p, data, pool):
     tasks = [[nonlinear_p[i*chunk_size:(i+1)*chunk_size], data]
              for i in range(n_total//chunk_size+1)]
     orbit_pars = pool.map(samples_to_orbital_params_worker, tasks)
-    orbit_pars = np.array(orbit_pars)
+    orbit_pars = np.concatenate(orbit_pars)
     return orbit_pars.reshape(-1, orbit_pars.shape[-1])
 
 def main(APOGEE_ID, pool, n_samples=1, seed=42, overwrite=False):
@@ -244,7 +242,7 @@ def main(APOGEE_ID, pool, n_samples=1, seed=42, overwrite=False):
 if __name__ == "__main__":
     from argparse import ArgumentParser
     import logging
-    from thejoker.pool import Pool
+    from thejoker.pool import Pool, MPIPool
 
     # Define parser object
     parser = ArgumentParser(description="")
@@ -295,10 +293,11 @@ if __name__ == "__main__":
         n_samples = int(eval(args.n_samples)) # LOL what's security?
 
     with Pool(**_kwargs) as pool:
-        if not pool.is_master():
-            # Wait for instructions from the master process.
-            pool.wait()
-            sys.exit(0)
+        if isinstance(pool, MPIPool):
+            if not pool.is_master():
+                # Wait for instructions from the master process.
+                pool.wait()
+                sys.exit(0)
 
         main(APOGEE_ID=args.apogee_id, n_samples=n_samples, pool=pool,
              seed=args.seed, overwrite=args.overwrite)
