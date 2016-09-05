@@ -89,7 +89,9 @@ def marginal_ln_likelihood(ATA, chi2):
     """
     sign,logdet = np.linalg.slogdet(ATA)
     if not np.all(sign == 1.):
-        logger.warning('logdet sign < 0')
+        logger.debug('logdet sign < 0')
+        return np.nan
+
     return -0.5*np.atleast_1d(chi2) + 0.5*logdet
 
 def period_grid(data, P_min=1, P_max=1E4, resolution=2):
