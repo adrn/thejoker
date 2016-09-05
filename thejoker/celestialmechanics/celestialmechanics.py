@@ -238,18 +238,12 @@ def rv_from_elements(times, P, asini, e, omega, phi0, rv0):
     times = np.array(times)
     phase = 2 * np.pi * times / P
 
-    dMdt = 2. * np.pi / P
     Ms = phase - phi0
 
     Es = eccentric_anomaly_from_mean_anomaly(Ms, e)
     fs = true_anomaly_from_eccentric_anomaly(Es, e)
 
-    dEdts = d_eccentric_anomaly_d_mean_anomaly(Es, e) * dMdt
-    dfdts = d_true_anomaly_d_eccentric_anomaly(Es, fs, e) * dEdts
+    K = 2*np.pi*asini / (P * np.sqrt(1-e**2))
+    vz = K * (np.cos(omega + fs) + e*np.cos(omega))
 
-    rs = asini * (1. - e * np.cos(Es))
-    drdts = asini * e * np.sin(Es) * dEdts
-
-    rvs = rs * np.cos(omega + fs) * dfdts + np.sin(omega + fs) * drdts
-
-    return rvs + rv0
+    return vz + rv0

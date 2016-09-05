@@ -101,9 +101,9 @@ class RVOrbit(object):
     # convenience methods
     @staticmethod
     def mf_asini_ecc_to_P_K(mf, asini, ecc):
-         P = 2*np.pi * asini**(3./2) / np.sqrt(G * mf)
-         K = 2*np.pi * asini / (P * np.sqrt(1-ecc**2))
-         return P, K
+        P = 2*np.pi * asini**(3./2) / np.sqrt(G * mf)
+        K = 2*np.pi * asini / (P * np.sqrt(1-ecc**2))
+        return P, K
 
     @staticmethod
     def P_K_ecc_to_mf_asini_ecc(P, K, ecc):
