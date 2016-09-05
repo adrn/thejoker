@@ -26,7 +26,6 @@ from thejoker.pool import choose_pool
 plt.style.use('../thejoker/thejoker.mplstyle')
 
 jitter = 0.5*u.km/u.s # TODO: set this same as Troup
-chunk_size = 1024 # should be 32 KB per chunk of nonlinear parameters
 
 def marginal_ll_worker(task):
     nl_p_chunk, data = task
@@ -42,7 +41,7 @@ def marginal_ll_worker(task):
 
     return ll
 
-def get_good_samples(nonlinear_p, data, pool):
+def get_good_samples(nonlinear_p, data, pool, chunk_size):
     n_total = len(nonlinear_p)
     tasks = [[nonlinear_p[i*chunk_size:(i+1)*chunk_size], data]
              for i in range(n_total//chunk_size+1)]
@@ -82,7 +81,7 @@ def samples_to_orbital_params_worker(task):
 
     return pars
 
-def samples_to_orbital_params(nonlinear_p, data, pool):
+def samples_to_orbital_params(nonlinear_p, data, pool, chunk_size):
     n_total = len(nonlinear_p)
     tasks = [[nonlinear_p[i*chunk_size:(i+1)*chunk_size], data]
              for i in range(n_total//chunk_size+1)]
@@ -93,6 +92,12 @@ def samples_to_orbital_params(nonlinear_p, data, pool):
 def main(APOGEE_ID, pool_kwargs, n_samples=1, seed=42, overwrite=False):
 
     pool = choose_pool(**pool_kwargs)
+
+    if pool.size > 0:
+        # try chunking by the pool size
+        chunk_size = n_samples // pool.size
+    else:
+        chunk_size = 1
 
     output_filename = os.path.join(paths.root, "cache", "{}.h5".format(APOGEE_ID))
 
@@ -139,7 +144,7 @@ def main(APOGEE_ID, pool_kwargs, n_samples=1, seed=42, overwrite=False):
                 del f[str(n_delete)]
 
         if not skip_compute:
-            nl_samples = get_good_samples(nonlinear_p, data, pool) # TODO: save?
+            nl_samples = get_good_samples(nonlinear_p, data, pool, chunk_size) # TODO: save?
             if len(nl_samples) == 0:
                 logger.error("Failed to find any good samples!")
                 pool.close()
