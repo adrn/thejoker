@@ -279,7 +279,7 @@ if __name__ == "__main__":
     np.random.seed(args.seed)
     if args.mpi:
         logger.info("Running with MPI")
-        _kwargs = {'pool': 'MPIPool'}
+        _kwargs = {'pool': 'MPIPool', 'loadbalance': True}
     elif args.n_procs != 1:
         logger.info("Running with multiprocessing on {} cores".format(args.n_procs))
         _kwargs = {'pool': 'MultiPool', 'processes': args.n_procs}
