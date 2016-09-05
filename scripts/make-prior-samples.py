@@ -14,6 +14,7 @@ import numpy as np
 # Project
 from thejoker import Paths
 paths = Paths(__file__)
+from thejoker.config import P_min, P_max
 
 def main(n_samples, seed, overwrite=False):
 
@@ -25,8 +26,6 @@ def main(n_samples, seed, overwrite=False):
                       "to overwrite this file.".format(n_samples))
 
     # sample from priors in nonlinear parameters
-    P_min = 16. # day - MAGIC NUMBER
-    P_max = 8192. # day - MAGIC NUMBER
     P = np.exp(np.random.uniform(np.log(P_min), np.log(P_max), size=n_samples))
     phi0 = np.random.uniform(0, 2*np.pi, size=n_samples)
 
@@ -68,4 +67,3 @@ if __name__ == "__main__":
         n_samples = int(eval(args.n_samples)) # LOL what's security?
 
     main(n_samples=n_samples, seed=args.seed, overwrite=args.overwrite)
-
