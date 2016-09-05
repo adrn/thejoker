@@ -243,7 +243,7 @@ non-linearly related to the radial-velocity expectation, and two
 ($\asini$, $v_0$) are linearly related.
 
 Fundamentally, our method is to perform \emph{simple Monte Carlo} in
-the non-linear parameters, and analytically marginalize out the linear
+the non-linear parameters, and analytically marginalize over the linear
 parameters.
 
 Our method will capitalize on the following aspects of the problem
@@ -259,6 +259,14 @@ structure:
 What is simple monte carlo?
 
 What are our explicit priors?
+
+\begin{align}
+    p(\ln P) &= \mathcal{U}(\ln P_{\rm min}, \ln P_{\rm max})\\
+    p(e) &= {\rm Beta}(a, b) = \frac{\Gamma(a+b)}{\Gamma(a) \, \Gamma(b)} \, e^{a-1} \, (1 - e)^{b-1}\\
+    p(\omega) &= \mathcal{U}(0, 2\pi) ~ [{\rm rad}]\\
+    p(\phi_0) &= \mathcal{U}(0, 2\pi) ~ [{\rm rad}]\\
+\end{align}
+where $\mathcal{U}(x_1, x_2)$ is the uniform distribution over the domain $(x_1, x_2)$.
 
 What do we do after SMC? Resampling or \emcee.
 
