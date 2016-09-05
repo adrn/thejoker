@@ -816,7 +816,12 @@ def choose_pool(mpi=False, processes=1, **kwargs):
 
     if mpi and MPIPool.enabled():
         log.info("Running with MPI")
-        return MPIPool2(**kwargs)
+        pool = MPIPool2(**kwargs)
+
+        if not pool.is_master():
+            sys.exit(0)
+
+        return pool
 
     elif processes > 1 and MultiPool.enabled():
         log.info("Running with multiprocessing on {} cores".format(processes))
