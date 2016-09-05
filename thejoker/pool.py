@@ -319,9 +319,12 @@ class MPIPool2(GenericPool):
         if MPI is None:
             raise ImportError("Please install mpi4py")
 
-        self.comm = MPI.COMM_WORLD if comm is None else comm
+        if comm is None:
+            comm = MPI.COMM_WORLD
+        self.comm = comm
+
         self.master = 0
-        self.workers = set(range(comm.size))
+        self.workers = set(range(self.comm.size))
         self.workers.discard(self.master)
 
         self.size = self.comm.Get_size() - 1
