@@ -1,21 +1,16 @@
 # Standard library
 from collections import OrderedDict
 import os
-import time
 import sys
 
 # Third-party
 from astropy import log as logger
 from astropy.io import fits
-import astropy.table as tbl
-import astropy.coordinates as coord
 import astropy.units as u
 import h5py
-
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import numpy as np
-import corner
 
 # Project
 from thejoker import Paths
@@ -24,7 +19,8 @@ from thejoker.data import RVData
 from thejoker.sampler import tensor_vector_scalar, marginal_ln_likelihood
 from thejoker.util import quantity_from_hdf5
 from thejoker.units import usys
-# from ebak import SimulatedRVOrbit
+from thejoker.celestialmechanics import SimulatedRVOrbit
+from thejoker.config import P_min
 
 plt.style.use('../thejoker/thejoker.mplstyle')
 
@@ -161,8 +157,6 @@ def main(APOGEE_ID, pool, n_samples=1, seed=42, overwrite=False):
                     if unit is not None:
                         g[name].attrs['unit'] = str(unit)
 
-        continue
-
         # --------------------------------------------------------------------
         # make some plots, yo
         MAX_N_LINES = 128
@@ -183,16 +177,21 @@ def main(APOGEE_ID, pool, n_samples=1, seed=42, overwrite=False):
         with h5py.File(output_filename, 'r') as f:
             g = f[str(n_delete)]
 
-            P = _getq(g,'P')
-            asini = _getq(g,'asini')
-            ecc = _getq(g,'ecc')
-            omega = _getq(g,'omega')
-            phi0 = _getq(g,'phi0')
-            v0 = _getq(g,'v0')
+            P = quantity_from_hdf5(g, 'P')
+            asini = quantity_from_hdf5(g, 'asini')
+            ecc = quantity_from_hdf5(g, 'ecc')
+            omega = quantity_from_hdf5(g, 'omega')
+            phi0 = quantity_from_hdf5(g, 'phi0')
+            v0 = quantity_from_hdf5(g, 'v0')
 
+            # the number of lines to plot is at most 128, but may be fewer if we don't have
+            #   enough good samples
             n_lines = min(len(P), MAX_N_LINES)
 
+            # plot all of the points
             n_pts = len(P)
+
+            # scale the transparency of the lines, points based on these klugy functions
             pt_alpha = min(0.9, max(0.1, 0.8 + 0.9*(np.log(2)-np.log(n_pts))/(np.log(1024)-np.log(2))))
             Q = 4. # HACK
             line_alpha = 0.05 + Q / (n_lines + Q)
@@ -202,6 +201,7 @@ def main(APOGEE_ID, pool, n_samples=1, seed=42, overwrite=False):
             ax_lnP_asini.plot(np.log(P.to(u.day).value), np.log(asini.to(u.au).value),
                               marker='.', color='k', alpha=pt_alpha, ms=5, ls='none')
 
+            # plot orbits over the data
             for i in range(len(P)):
                 orbit = SimulatedRVOrbit(P=P[i], a_sin_i=asini[i], ecc=ecc[i],
                                          omega=omega[i], phi0=phi0[i], v0=v0[[i]])
@@ -230,7 +230,7 @@ def main(APOGEE_ID, pool, n_samples=1, seed=42, overwrite=False):
         ax_lnP_asini.set_ylabel(r'$\ln (a \sin i)$')
 
         fig.tight_layout()
-        fig.savefig(join(PLOT_PATH, 'delete-{}.png'.format(n_delete)), dpi=300)
+        fig.savefig(os.path.join(paths.plots, APOGEE_ID, 'delete-{}.png'.format(n_delete)), dpi=150)
 
         # fig = corner.corner(np.hstack((np.log(nl_p[:,0:1]), nl_p[:,1:])),
         #                     labels=['$\ln P$', r'$\phi_0$', '$e$', r'$\omega$'])
