@@ -216,24 +216,26 @@ to be outliers and unaccounted sources of noise.
 We will return to these assumptions, and the consequences of relaxing
 them, in the Discussion Section.
 
-In the two-body celestial mechanics problem (\citealt{Kepler:1609}; and
-here we are working in a parameterization similar to that of
+In the two-body celestial mechanics problem (\citealt{Kepler:1609};
+and here we are working in a parameterization similar to that of
 \citealt{Murray:2010}), and under our above-stated assumptions, the
 radial-velocity expectation can be parameterized by six parameters,
 which we choose to be period $P$, projected semi-major axis $\asini$,
 a phase $\phi_0$ corresponding to a time of pericenter passage, the
 eccentricity $e$, an argument of perihelion $\omega$, and a constant
-system barycenter radial velocity $v_0$.
-The radial velocity $v_r$ at time $t$ is then given by \citep[see also Eq. 63 in ][]{Murray:2010}
+system barycenter radial velocity $v_0$.  The radial velocity $v_r$ at
+time $t$ is then given by \citep[see also Eq. 63 in ][]{Murray:2010}
 \begin{equation}
   v_r(t) = v_0 + K\,(\cos(\omega + f) + e\,\cos\omega)
 \end{equation}
-where $K$ is the velocity semi-amplitude and $f$ is the true anomaly given by
+where $K$ is the velocity semi-amplitude and $f$ is the true anomaly
+given by
 \begin{align}
   K &= \frac{2\pi \asini}{P\,\sqrt{1-e^2}}\\
   \cos f &= \frac{\cos E - e}{1 - e\, \cos E}
 \end{align}
-and the eccentric anomaly, $E$, must be solved for with the mean anomaly, $M$,
+and the eccentric anomaly, $E$, must be solved for with the mean
+anomaly, $M$,
 \begin{align}
   M = \frac{2\pi t}{P} - \phi_0\\
   M = E - e\,\sin E.
@@ -262,17 +264,20 @@ What are our explicit priors?
 
 \begin{align}
     p(\ln P) &= \mathcal{U}(\ln P_{\rm min}, \ln P_{\rm max})\\
-    p(e) &= {\rm Beta}(a, b) = \frac{\Gamma(a+b)}{\Gamma(a) \, \Gamma(b)} \, e^{a-1} \, (1 - e)^{b-1}\\
     p(\omega) &= \mathcal{U}(0, 2\pi) ~ [{\rm rad}]\\
     p(\phi_0) &= \mathcal{U}(0, 2\pi) ~ [{\rm rad}]\\
+    p(e) &= {\rm Beta}(a, b) = \frac{\Gamma(a+b)}{\Gamma(a) \, \Gamma(b)} \, e^{a-1} \, (1 - e)^{b-1}
 \end{align}
-where $\mathcal{U}(x_1, x_2)$ is the uniform distribution over the domain $(x_1, x_2)$.
+where $\mathcal{U}(x_1, x_2)$ is the uniform distribution over the
+domain $(x_1, x_2)$ and the prior over eccentricity is the Beta
+distribution with $a=0.867$, $b=3.03$ \citep{Kipping:2013}.
 
 What do we do after SMC? Resampling or \emcee.
 
 \section{Experiments and results}
 
-Introduce the \apogee\ data (\citealt{Majewski:2015,Holtzman:2015,Eisenstein:2011,Alam:2015}), and
+Introduce the \apogee\ data
+(\citealt{Majewski:2015,Holtzman:2015,Eisenstein:2011,Alam:2015}), and
 our poster-child (\citealt{Troup:2016}).
 
 Show results as a function of $N$.
@@ -294,9 +299,9 @@ those using the system despite these issues.
 \vspace{1.5em}
 
 The code used in this project is available from
-\url{https://github.com/adrn/thejoker} under the MIT open-source software
-license. This version of the paper was generated with git commit
-\texttt{\githash} (\gitdate).
+\url{https://github.com/adrn/thejoker} under the MIT open-source
+software license. This version of the paper was generated with git
+commit \texttt{\githash} (\gitdate).
 
 \acknowledgements
 It is a pleasure to thank
