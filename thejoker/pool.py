@@ -23,6 +23,10 @@ Implementations of four different types of processing pools:
 
 """
 
+import logging
+VERBOSE = 5
+logging.addLevelName(VERBOSE, "VERBOSE")
+
 from __future__ import division, print_function, absolute_import, unicode_literals
 import numpy as np
 import sys
@@ -153,32 +157,32 @@ class MPIPool(GenericPool):
         # The main event loop:
         while True:
             # Sit and await instructions
-            log.debug("Worker {0} waiting for task.".format(self.rank))
+            log.log(VERBOSE, "Worker {0} waiting for task.".format(self.rank))
 
             # Blocking receive to wait for instructions.
             task = self.comm.recv(source=0, tag=MPI.ANY_TAG, status=status)
 
-            log.debug("Worker {0} got task {1} with tag {2}."
-                      .format(self.rank, type(task), status.tag))
+            log.log(VERBOSE, "Worker {0} got task {1} with tag {2}."
+                    .format(self.rank, type(task), status.tag))
 
             # Check if message is special sentinel signaling end; if so, stop
             if isinstance(task, _close_pool_message):
-                log.debug("Worker {0} told to quit.".format(self.rank))
+                log.log(VERBOSE, "Worker {0} told to quit.".format(self.rank))
                 break
 
             # Check if message is special type containing new function
             #   to be applied
             if isinstance(task, _function_wrapper):
                 self.function = task.function
-                log.debug("Worker {0} replaced its task function: {1}."
-                          .format(self.rank, self.function))
+                log.log(VERBOSE, "Worker {0} replaced its task function: {1}."
+                        .format(self.rank, self.function))
                 continue
 
             # If not a special message, just run the known function on
             #   the input and return it asynchronously.
             result = self.function(task)
-            log.debug("Worker {0} sending answer {1} with tag {2}."
-                      .format(self.rank, type(result), status.tag))
+            log.log(VERBOSE, "Worker {0} sending answer {1} with tag {2}."
+                    .format(self.rank, type(result), status.tag))
             self.comm.isend(result, dest=0, tag=status.tag) # send to master
 
         # kill the process if exit on end
@@ -206,8 +210,8 @@ class MPIPool(GenericPool):
 
         # Replace the function to apply with the input
         if function is not self.function:
-            log.debug("Master replacing pool function with {0}."
-                      .format(function))
+            log.log(VERBOSE, "Master replacing pool function with {0}."
+                    .format(function))
 
             self.function = function
             F = _function_wrapper(function)
@@ -228,8 +232,8 @@ class MPIPool(GenericPool):
             requests = []
             for i, task in enumerate(tasks):
                 worker = i % self.size + 1
-                log.debug("Sent task {0} to worker {1} with tag {2}."
-                          .format(type(task), worker, i))
+                log.log(VERBOSE, "Sent task {0} to worker {1} with tag {2}."
+                        .format(type(task), worker, i))
                 r = self.comm.isend(task, dest=worker, tag=i)
                 requests.append(r)
 
@@ -239,8 +243,8 @@ class MPIPool(GenericPool):
             results = []
             for i in range(n_tasks):
                 worker = i % self.size + 1
-                log.debug("Master waiting for worker {0} with tag {1}"
-                          .format(worker, i))
+                log.log(VERBOSE, "Master waiting for worker {0} with tag {1}"
+                        .format(worker, i))
                 result = self.comm.recv(source=worker, tag=i)
 
                 results.append(result)
@@ -253,8 +257,8 @@ class MPIPool(GenericPool):
             #   be different from the case with no load-balancing
             for i, task in enumerate(tasks[0:self.size]):
                 worker = i+1
-                log.debug("Sent task {0} to worker {1} with tag {2}."
-                          .format(type(task), worker, i))
+                log.log(VERBOSE, "Sent task {0} to worker {1} with tag {2}."
+                        .format(type(task), worker, i))
 
                 # Send out the tasks asynchronously.
                 self.comm.isend(task, dest=worker, tag=i)
@@ -276,15 +280,15 @@ class MPIPool(GenericPool):
                 i = status.tag
                 results[i] = result
 
-                log.debug("Master received from worker {0} with tag {1}"
-                          .format(worker, i))
+                log.log(VERBOSE, "Master received from worker {0} with tag {1}"
+                        .format(worker, i))
 
                 # Send the next task to this idle worker (if there are any left)
                 if ntasks_dispatched < n_tasks:
                     task = tasks[ntasks_dispatched]
                     i = ntasks_dispatched
-                    log.debug("Sent task {0} to worker {1} with tag {2}."
-                              .format(type(task), worker, i))
+                    log.log(VERBOSE, "Sent task {0} to worker {1} with tag {2}."
+                            .format(type(task), worker, i))
 
                     # Send out the tasks asynchronously.
                     self.comm.isend(task, dest=worker, tag=i)
@@ -350,22 +354,22 @@ class MPIPool2(GenericPool):
         worker = self.comm.rank
         status = MPI.Status()
         while True:
-            log.debug("Worker {0} waiting for task".format(worker))
+            log.log(VERBOSE, "Worker {0} waiting for task".format(worker))
 
             task = self.comm.recv(source=self.master, tag=MPI.ANY_TAG, status=status)
 
             if task is None:
-                log.debug("Worker {0} told to quit work".format(worker))
+                log.log(VERBOSE, "Worker {0} told to quit work".format(worker))
                 break
 
             func, arg = task
-            log.debug("Worker {0} got task {1} with tag {2}"
-                      .format(worker, arg, status.tag))
+            log.log(VERBOSE, "Worker {0} got task {1} with tag {2}"
+                    .format(worker, arg, status.tag))
 
             result = func(arg)
 
-            log.debug("Worker {0} sending answer {1} with tag {2}"
-                      .format(worker, result, status.tag))
+            log.log(VERBOSE, "Worker {0} sending answer {1} with tag {2}"
+                    .format(worker, result, status.tag))
 
             self.comm.ssend(result, self.master, status.tag)
 
@@ -389,8 +393,8 @@ class MPIPool2(GenericPool):
             if workerset and tasklist:
                 worker = workerset.pop()
                 taskid, task = tasklist.pop()
-                log.debug("Sent task {0} to worker {1} with tag {2}"
-                          .format(task[1], worker, taskid))
+                log.log(VERBOSE, "Sent task {0} to worker {1} with tag {2}"
+                        .format(task[1], worker, taskid))
                 self.comm.send(task, dest=worker, tag=taskid)
 
             if tasklist:
@@ -404,8 +408,8 @@ class MPIPool2(GenericPool):
             result = self.comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=status)
             worker = status.source
             taskid = status.tag
-            log.debug("Master received from worker {0} with tag {1}"
-                      .format(worker, taskid))
+            log.log(VERBOSE, "Master received from worker {0} with tag {1}"
+                    .format(worker, taskid))
 
             workerset.add(worker)
             resultlist[taskid] = result
@@ -815,12 +819,11 @@ def choose_pool(mpi=False, processes=1, **kwargs):
     """
 
     if mpi and MPIPool.enabled():
-        log.info("Running with MPI")
         pool = MPIPool2(**kwargs)
-
         if not pool.is_master():
             sys.exit(0)
 
+        log.info("Running with MPI")
         return pool
 
     elif processes > 1 and MultiPool.enabled():
