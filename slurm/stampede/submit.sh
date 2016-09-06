@@ -14,6 +14,6 @@ cd $WORK/projects/ebak/scripts/
 
 source activate thejoker
 
-ibrun python run-sampler.py -v --id='2M03080601+7950502' --mpi -n 2**24
-ibrun python run-sampler.py -v --id='2M00110648+6609349' --mpi -n 2**24
-ibrun python run-sampler.py -v --id='2M00344509+8512058' --mpi -n 2**24
+ibrun python run-sampler.py -v --id='2M03080601+7950502' --mpi -n 2**24 -o
+#ibrun python run-sampler.py -v --id='2M00110648+6609349' --mpi -n 2**24
+#ibrun python run-sampler.py -v --id='2M00344509+8512058' --mpi -n 2**24
