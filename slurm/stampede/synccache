@@ -1,0 +1,3 @@
+#!/bin/bash
+
+rsync -zvr --max-size=512m stampede:/work/03470/tg827691/projects/thejoker/cache/ ~/projects/thejoker/cache/
