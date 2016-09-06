@@ -105,7 +105,16 @@ def main(APOGEE_ID, pool_kwargs, n_samples=1, seed=42, overwrite=False):
     # load data from APOGEE data
     logger.debug("Reading data from Troup allVisit file...")
     all_data = RVData.from_apogee(paths.troup_allVisit, apogee_id=APOGEE_ID)
+    troup_data = np.genfromtxt(os.path.join(paths.root, "data", "troup16-dr12.csv"),
+                               delimiter=",", names=True, dtype=None)
+    troup_data = troup_data[troup_data['APOGEE_ID'].astype(str) == APOGEE_ID]
     # HACK: in above, only troup stars accepted for now
+
+    # Troup's parameters
+    troup_P = np.random.normal(troup_data['PERIOD'], troup_data['PERIOD_ERR'], size=1024)*u.day
+    troup_ecc = np.random.normal(troup_data['ECC'], troup_data['ECC_ERR'], size=1024)
+    troup_K = np.random.normal(troup_data['SEMIAMP'], troup_data['SEMIAMP_ERR'], size=1024)*u.m/u.s
+    _,troup_asini = SimulatedRVOrbit.P_K_ecc_to_mf_asini_ecc(troup_P, troup_K, troup_ecc)
 
     # HACK: add extra scatter to velocities
     data_var = all_data.stddev**2 + jitter**2
@@ -215,11 +224,21 @@ def main(APOGEE_ID, pool_kwargs, n_samples=1, seed=42, overwrite=False):
             pt_alpha = min(1., 1. + 0.9*(np.log(2)-np.log(n_pts))/(np.log(200000)-np.log(2)))
             Q = 4. # HACK
             line_alpha = 0.05 + Q / (n_lines + Q)
-            pt_style = dict(marker='.', color='k', alpha=pt_alpha, ms=2, ls='none')
+            pt_style = dict(marker='.', color='#555555', alpha=pt_alpha, ms=2, ls='none')
+            troup_pt_style = pt_style.copy()
+            troup_pt_style['color'] = '#de2d26'
+            troup_pt_style['alpha'] = 0.4
 
             ax_lnP_e.plot(np.log(P.to(u.day).value), ecc, **pt_style)
             ax_lnP_asini.plot(np.log(P.to(u.day).value), np.log(asini.to(u.au).value),
                               **pt_style)
+
+            ax_lnP_e.plot(np.log(troup_P.to(u.day).value), troup_ecc, **troup_pt_style)
+            ax_lnP_asini.plot(np.log(troup_P.to(u.day).value), np.log(troup_asini.to(u.au).value),
+                              **troup_pt_style)
+
+            # plot Troup's parameters
+
             # corner.hist2d(np.log(P.to(u.day).value), ecc, ax=ax_lnP_e,
             #               range=[lnP_lim, e_lim], bins=32,
             #               fill_contours=True, plot_density=False)
@@ -233,7 +252,7 @@ def main(APOGEE_ID, pool_kwargs, n_samples=1, seed=42, overwrite=False):
                                          omega=omega[i], phi0=phi0[i], v0=v0[[i]])
                 model_rv = orbit.generate_rv_curve(t_grid).to(u.km/u.s).value
                 ax_rv.plot(t_grid, model_rv, linestyle='-', marker=None,
-                           alpha=line_alpha, color='#3182bd')
+                           alpha=line_alpha, color='#555555') #color='#3182bd')
 
                 if i >= MAX_N_LINES:
                     break
