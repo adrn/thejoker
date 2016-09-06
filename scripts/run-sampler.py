@@ -26,7 +26,8 @@ from thejoker.pool import choose_pool
 
 plt.style.use('../thejoker/thejoker.mplstyle')
 
-jitter = 0.5*u.km/u.s # TODO: set this same as Troup
+# jitter = 0.5*u.km/u.s # TODO: set this same as Troup
+jitter = 0.*u.km/u.s # Troup doesn't actually add any jitter!
 
 def marginal_ll_worker(task):
     nl_p_chunk, data = task
