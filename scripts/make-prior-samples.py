@@ -20,10 +20,15 @@ def main(n_samples, seed, overwrite=False):
 
     if os.path.exists(paths.prior_samples) and not overwrite:
         with h5py.File(paths.prior_samples, 'r') as f:
-            n_samples = len(f['P'])
+            if 'P' in f:
+                n_samples = len(f['P'])
+                end = True
+            else:
+                end = False
 
-        raise IOError("File already exists with {} prior samples. Use '--overwrite' "
-                      "to overwrite this file.".format(n_samples))
+        if end:
+            raise IOError("File already exists with {} prior samples. Use '--overwrite' "
+                          "to overwrite this file.".format(n_samples))
 
     # sample from priors in nonlinear parameters
     P = np.exp(np.random.uniform(np.log(P_min), np.log(P_max), size=n_samples))
