@@ -54,3 +54,4 @@ distribute-*.tar.gz
 cache
 plots
 data
+notebooks
