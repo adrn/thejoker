@@ -33,7 +33,6 @@ import numpy as np
 import sys
 try:
     from mpi4py import MPI
-    MPI = MPI
 except ImportError:
     MPI = None
 import signal
@@ -344,6 +343,13 @@ class MPIPool2(GenericPool):
         if wait_on_start:
             if self.is_worker():
                 self.wait()
+
+    @staticmethod
+    def enabled():
+        if MPI is not None:
+            if MPI.COMM_WORLD.size > 1:
+                return True
+        return False
 
     def wait(self):
         """
@@ -819,7 +825,10 @@ def choose_pool(mpi=False, processes=1, **kwargs):
     Chooses between the different pools.
     """
 
-    if mpi and MPIPool.enabled():
+    if mpi:
+        if not MPIPool2.enabled():
+            raise SystemError("Tried to run with MPI but MPIPool not enabled.")
+
         pool = MPIPool2(**kwargs)
         if not pool.is_master():
             sys.exit(0)
@@ -827,7 +836,7 @@ def choose_pool(mpi=False, processes=1, **kwargs):
         log.info("Running with MPI")
         return pool
 
-    elif processes > 1 and MultiPool.enabled():
+    elif processes != 1 and MultiPool.enabled():
         log.info("Running with multiprocessing on {} cores".format(processes))
         return MultiPool(processes=processes, **kwargs)
 
