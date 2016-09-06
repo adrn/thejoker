@@ -7,6 +7,7 @@ import sys
 from astropy import log as logger
 from astropy.io import fits
 import astropy.units as u
+import corner
 import h5py
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -20,7 +21,7 @@ from thejoker.sampler import tensor_vector_scalar, marginal_ln_likelihood
 from thejoker.util import quantity_from_hdf5
 from thejoker.units import usys
 from thejoker.celestialmechanics import SimulatedRVOrbit
-from thejoker.config import P_min
+from thejoker.config import P_min, P_max
 from thejoker.pool import choose_pool
 
 plt.style.use('../thejoker/thejoker.mplstyle')
@@ -143,6 +144,8 @@ def main(APOGEE_ID, pool_kwargs, n_samples=1, seed=42, overwrite=False):
                 del f[str(n_delete)]
 
         if not skip_compute:
+            logger.debug("- not completed - running sampler...")
+
             nl_samples = get_good_samples(nonlinear_p, data, pool, chunk_size) # TODO: save?
             if len(nl_samples) == 0:
                 logger.error("Failed to find any good samples!")
@@ -165,6 +168,8 @@ def main(APOGEE_ID, pool_kwargs, n_samples=1, seed=42, overwrite=False):
                     g.create_dataset(name, data=orbital_params.T[i])
                     if unit is not None:
                         g[name].attrs['unit'] = str(unit)
+        else:
+            logger.debug("- sampling already completed")
 
         # --------------------------------------------------------------------
         # make some plots, yo
@@ -174,7 +179,7 @@ def main(APOGEE_ID, pool_kwargs, n_samples=1, seed=42, overwrite=False):
         t_grid = np.linspace(all_data._t.min()-50, all_data._t.max()+50, 1024)
 
         # plot samples
-        fig = plt.figure(figsize=(6,6))
+        fig = plt.figure(figsize=(8,8))
         gs = gridspec.GridSpec(2, 2)
 
         ax_rv = plt.subplot(gs[0,:])
@@ -182,6 +187,10 @@ def main(APOGEE_ID, pool_kwargs, n_samples=1, seed=42, overwrite=False):
 
         ax_lnP_e = plt.subplot(gs[1,0])
         ax_lnP_asini = plt.subplot(gs[1,1])
+
+        lnP_lim = [np.log(P_min) - 0.1, np.log(P_max) + 0.1]
+        e_lim = [-0.05, 1.05]
+        lnasini_lim = [-6, 2]
 
         with h5py.File(output_filename, 'r') as f:
             g = f[str(n_delete)]
@@ -193,6 +202,8 @@ def main(APOGEE_ID, pool_kwargs, n_samples=1, seed=42, overwrite=False):
             phi0 = quantity_from_hdf5(g, 'phi0')
             v0 = quantity_from_hdf5(g, 'v0')
 
+            logger.debug("{} good samples".format(len(P)))
+
             # the number of lines to plot is at most 128, but may be fewer if we don't have
             #   enough good samples
             n_lines = min(len(P), MAX_N_LINES)
@@ -201,14 +212,20 @@ def main(APOGEE_ID, pool_kwargs, n_samples=1, seed=42, overwrite=False):
             n_pts = len(P)
 
             # scale the transparency of the lines, points based on these klugy functions
-            pt_alpha = min(0.9, max(0.1, 0.8 + 0.9*(np.log(2)-np.log(n_pts))/(np.log(1024)-np.log(2))))
+            pt_alpha = min(1., 1. + 0.9*(np.log(2)-np.log(n_pts))/(np.log(200000)-np.log(2)))
             Q = 4. # HACK
             line_alpha = 0.05 + Q / (n_lines + Q)
+            pt_style = dict(marker='.', color='k', alpha=pt_alpha, ms=2, ls='none')
 
-            ax_lnP_e.plot(np.log(P.to(u.day).value), ecc,
-                          marker='.', color='k', alpha=pt_alpha, ms=5, ls='none')
+            ax_lnP_e.plot(np.log(P.to(u.day).value), ecc, **pt_style)
             ax_lnP_asini.plot(np.log(P.to(u.day).value), np.log(asini.to(u.au).value),
-                              marker='.', color='k', alpha=pt_alpha, ms=5, ls='none')
+                              **pt_style)
+            # corner.hist2d(np.log(P.to(u.day).value), ecc, ax=ax_lnP_e,
+            #               range=[lnP_lim, e_lim], bins=32,
+            #               fill_contours=True, plot_density=False)
+            # corner.hist2d(np.log(P.to(u.day).value), np.log(asini.to(u.au).value),
+            #               ax=ax_lnP_asini, range=[lnP_lim, lnasini_lim], bins=32,
+            #               fill_contours=True, plot_density=False)
 
             # plot orbits over the data
             for i in range(len(P)):
@@ -228,20 +245,21 @@ def main(APOGEE_ID, pool_kwargs, n_samples=1, seed=42, overwrite=False):
         ax_rv.set_xlabel('MJD')
         ax_rv.set_ylabel('RV [km s$^{-1}$]')
 
-        ax_lnP_e.set_xlim(np.log(P_min) - 0.1, 6. + 0.1) # HACK
-        ax_lnP_e.set_ylim(-0.1, 1.)
+        ax_lnP_e.set_xlim(*lnP_lim) # HACK
+        ax_lnP_e.set_ylim(*e_lim)
         ax_lnP_e.set_xlabel(r'$\ln P$')
         ax_lnP_e.set_ylabel(r'$e$')
 
-        ax_lnP_asini.set_xlim(ax_lnP_e.get_xlim())
-        ax_lnP_asini.set_ylim(-6, 0)
+        ax_lnP_asini.set_xlim(*lnP_lim)
+        ax_lnP_asini.set_ylim(*lnasini_lim)
         ax_lnP_asini.set_xlabel(r'$\ln P$')
         ax_lnP_asini.set_ylabel(r'$\ln (a \sin i)$')
 
         fig.tight_layout()
 
         os.makedirs(os.path.join(paths.plots, APOGEE_ID), exist_ok=True)
-        fig.savefig(os.path.join(paths.plots, APOGEE_ID, 'delete-{:02d}.png'.format(n_delete)), dpi=150)
+        fig.savefig(os.path.join(paths.plots, APOGEE_ID, 'delete-{:02d}.png'.format(n_delete)),
+                    dpi=300)
 
         # fig = corner.corner(np.hstack((np.log(nl_p[:,0:1]), nl_p[:,1:])),
         #                     labels=['$\ln P$', r'$\phi_0$', '$e$', r'$\omega$'])
