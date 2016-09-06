@@ -144,9 +144,10 @@ class RVData(object):
         rv = np.array(data['VHELIO']) * u.km/u.s
         ivar = 1 / (np.array(data['VRELERR'])**2 * (u.km/u.s)**2)
         t = at.Time(np.array(data['JD']), format='jd', scale='tcb')
+        bmjd = t.mjd
 
         idx = np.isfinite(rv.value) & np.isfinite(t.value) & np.isfinite(ivar.value)
         if store_metadata:
-            return cls(t[idx], rv[idx], ivar[idx], metadata=data)
+            return cls(bmjd[idx], rv[idx], ivar[idx], metadata=data)
         else:
-            return cls(t[idx], rv[idx], ivar[idx])
+            return cls(bmjd[idx], rv[idx], ivar[idx])
