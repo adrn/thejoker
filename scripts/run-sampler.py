@@ -130,7 +130,6 @@ def main(APOGEE_ID, pool_kwargs, n_samples=1, seed=42, overwrite=False):
             data = all_data
         else:
             data = all_data[idx[:-n_delete]]
-            pool = choose_pool(**pool_kwargs)
 
         logger.debug("Removing {}/{} data points".format(n_delete, len(all_data)))
 
@@ -166,10 +165,6 @@ def main(APOGEE_ID, pool_kwargs, n_samples=1, seed=42, overwrite=False):
                     g.create_dataset(name, data=orbital_params.T[i])
                     if unit is not None:
                         g[name].attrs['unit'] = str(unit)
-
-        pool.close()
-
-        continue
 
         # --------------------------------------------------------------------
         # make some plots, yo
@@ -246,7 +241,7 @@ def main(APOGEE_ID, pool_kwargs, n_samples=1, seed=42, overwrite=False):
         fig.tight_layout()
         if not os.path.exists(os.path.join(paths.plots, APOGEE_ID)):
             os.makedirs(os.path.join(paths.plots, APOGEE_ID))
-        fig.savefig(os.path.join(paths.plots, APOGEE_ID, 'delete-{}.png'.format(n_delete)), dpi=150)
+        fig.savefig(os.path.join(paths.plots, APOGEE_ID, 'delete-{:02d}.png'.format(n_delete)), dpi=150)
 
         # fig = corner.corner(np.hstack((np.log(nl_p[:,0:1]), nl_p[:,1:])),
         #                     labels=['$\ln P$', r'$\phi_0$', '$e$', r'$\omega$'])
