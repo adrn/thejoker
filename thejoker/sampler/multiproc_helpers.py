@@ -24,7 +24,7 @@ def marginal_ll_worker(task):
 
 def get_good_samples(nonlinear_p, data, pool, chunk_size):
     n_total = len(nonlinear_p)
-    tasks = [[nonlinear_p[i*chunk_size:(i+1)*chunk_size], data]
+    tasks = [[nonlinear_p[i*chunk_size:(i+1)*chunk_size].copy(), data]
              for i in range(n_total//chunk_size+1)]
 
     results = pool.map(marginal_ll_worker, tasks)
