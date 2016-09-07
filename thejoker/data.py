@@ -76,11 +76,14 @@ class RVData(object):
 
     # ---
 
-    def plot(self, ax=None, **kwargs):
+    def plot(self, ax=None, rv_unit=None, **kwargs):
         """
         """
         if ax is None:
             fig,ax = plt.subplots(1,1)
+
+        if rv_unit is None:
+            rv_unit = self.rv.unit
 
         style = kwargs.copy()
         style.setdefault('linestyle', 'none')
@@ -89,8 +92,8 @@ class RVData(object):
         style.setdefault('color', 'k')
         style.setdefault('ecolor', '#666666')
 
-        ax.errorbar(self.t.value, self.rv.to(u.km/u.s).value,
-                    self.stddev.to(u.km/u.s).value, **style)
+        ax.errorbar(self.t.value, self.rv.to(rv_unit).value,
+                    self.stddev.to(rv_unit).value, **style)
 
         return ax
 
