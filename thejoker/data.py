@@ -31,7 +31,7 @@ class RVData(object):
         Inverse variance.
     """
     @u.quantity_input(rv=u.km/u.s)
-    def __init__(self, t, rv, ivar=None, stddev=None, metadata=None):
+    def __init__(self, t, rv, ivar=None, stddev=None, metadata=None, t_offset=None):
         if isinstance(t, at.Time):
             _t = t.tcb.mjd
         else:
@@ -54,9 +54,14 @@ class RVData(object):
 
         self.metadata = metadata
 
+        if t_offset is None:
+            t_offset = np.median(self._t)
+            self._t = self._t - t_offset
+        self.t_offset = t_offset
+
     @property
     def t(self):
-        return at.Time(self._t, scale='tcb', format='mjd')
+        return at.Time(self._t + self.t_offset, scale='tcb', format='mjd')
 
     @property
     def phase(self, t0, P):
