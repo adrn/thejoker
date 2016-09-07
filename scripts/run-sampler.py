@@ -98,6 +98,8 @@ def main(data_file, pool_kwargs, n_samples=1, seed=42, overwrite=False, continue
                     _data = f[name][:]
                     del f[name]
                     f[name] = np.concatenate((_data, orbital_params.T[i]))
+            else:
+                f.create_dataset(name, data=orbital_params.T[i])
 
             if unit is not None: # note: could get in to a weird state with mismatched units...
                 f[name].attrs['unit'] = str(unit)
