@@ -22,9 +22,8 @@ from thejoker.sampler import get_good_samples, samples_to_orbital_params, sample
 # jitter = 0.5*u.km/u.s # TODO: set this same as Troup
 jitter = 0.*u.km/u.s # Troup doesn't actually add any jitter!
 
-def main(data_file, pool_kwargs, n_samples=1, seed=42, overwrite=False, continue_sampling=False):
-
-    pool = choose_pool(**pool_kwargs)
+def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42,
+         overwrite=False, continue_sampling=False):
 
     # do this after choosing pool so all processes don't have same seed
     if args.seed is not None:
@@ -69,9 +68,14 @@ def main(data_file, pool_kwargs, n_samples=1, seed=42, overwrite=False, continue
     nonlinear_p = np.vstack((P, phi0, ecc, omega)).T
     # Note: the linear parameters are (v0, asini)
 
+    # cache the prior samples
+    with open(tmp_prior_filename, "w") as f:
+        f.create_dataset('samples', data=nonlinear_p)
+
     logger.debug("Running sampler...")
 
-    nl_samples = get_good_samples(nonlinear_p, data, pool, chunk_size) # TODO: save?
+    good_samples = get_good_samples(nonlinear_p, data, pool, chunk_size)
+    nl_samples = nonlinear_p[good_samples]
     if len(nl_samples) == 0:
         logger.error("Failed to find any good samples!")
         pool.close()
@@ -161,6 +165,10 @@ if __name__ == "__main__":
         n_samples = int(eval(args.n_samples)) # LOL what's security?
 
     pool_kwargs = dict(mpi=args.mpi, processes=args.n_procs)
+    pool = choose_pool(**pool_kwargs)
 
-    main(data_file=args.data_file, n_samples=n_samples, pool_kwargs=pool_kwargs,
-         seed=args.seed, overwrite=args.overwrite, continue_sampling=args._continue)
+    # TODO: use a context manager so tmp_prior_filename always gets deleted
+    with XXX as tmp_prior_filename:
+        main(data_file=args.data_file, pool=pool, n_samples=n_samples,
+             seed=args.seed, overwrite=args.overwrite, continue_sampling=args._continue,
+             tmp_prior_filename=tmp_prior_filename)
