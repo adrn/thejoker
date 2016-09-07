@@ -230,8 +230,9 @@ radial-velocity expectation can be parameterized by six parameters,
 which we choose to be period $P$, projected semi-major axis $\asini$,
 a phase $\phi_0$ corresponding to a time of pericenter passage, the
 eccentricity $e$, an argument of perihelion $\omega$, and a constant
-system barycenter radial velocity $v_0$.  The radial velocity $v_r$ at
-time $t$ is then given by (see also Eq. 63 in \citealt{Murray:2010})
+system barycenter radial velocity $v_0$.
+The radial velocity $v_r$ at time $t$ is then given by (see also
+equation~63 in \citealt{Murray:2010})
 \begin{equation}
   v_r(t) = v_0 + K\,[\cos(\omega + f) + e\,\cos\omega]
 \end{equation}
@@ -281,7 +282,7 @@ The rejection step works as follows:
 \item For each sample $k$, choose a random number $r_k$ between 0 and
   $L_{\rm max}$
 \item Reject the sample $k$ if $L_k < r_k$.
-\item The number of samples that survive the rejection is (hereafter) $T$.
+\item The number of samples that survive the rejection is (hereafter) $M$.
 \end{enumerate}
 Note that this algorithm is guaranteed to produce at least one
 surviving sample.
@@ -307,7 +308,7 @@ We sample the prior pdf directly and explicitly with standard
 In practice we usually take $2^{28}$ (that's about a quarter billion)
 samples in the prior-pdf sampling. Holy fuck that's a lot!
 
-The likelihood function is
+The unmarginalized likelihood function is
 \begin{equation}
 \ln L = -\frac{1}{2}\,\sum_{n=1}^N \frac{[v_n - v(t_n)]^2}{\sigma_n^2}
 \end{equation}
@@ -318,11 +319,30 @@ correctly known) Gaussian noise variance for data point $n$.
 Note that the form of this likelihood function is set entirely by
 the assumptions, given above.
 
-We set a minimum number of samples $T_{\rm min}$.
-Given this minimum, there are three possible outcomes at the end of
-the rejection sampling.
+HOGG: THE MARGINALIZED LIKELIHOOD IS...
 
-What do we do after SMC? Resampling or \emcee.
+We set a minimum number of samples $M_{\rm min}=128$.
+We also set a period resolution $\Delta = 8 * P^2 / (2\pi\,T)$
+Given this minimum, there are three possible outcomes at the end of
+the rejection sampling:
+\begin{itemize}
+\item $M\geq M_{\rm min}$ samples survive the rejection.
+  In this case, we are done.
+\item $M<M_{\rm min}$ samples survive the rejection, and these samples
+  span (maximum period minus minimum period) a period range that is
+  smaller than $\Delta$, we use the surviving samples (or sample) to
+  initialize a MCMC sampling using the \emcee\ package. We sample the
+  prior densely enough initially that if only a few samples survive,
+  we are fairly confident that the data are informative enough that
+  the posterior pdf is approximately unimodal for our purposes. That's
+  an assumption!
+\item $M<M_{\rm min}$ samples survive the rejection, and these samples
+  span a period range larger than $\Delta$, we iterate the Simple
+  Monte Carlo, concatenating the surviving samples, until the full set
+  is larger than $M_{\rm min}$. This is expensive!
+\end{itemize}
+
+When we trigger the intialization of \emcee, we do the following....HOGG
 
 \section{Experiments and results}
 
