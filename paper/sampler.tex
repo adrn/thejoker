@@ -4,11 +4,16 @@
 % ----------
 % - zeroth draft
 
-% This file generates by Makefile
-\include{gitstuff}
-
 % style notes
 % -----------
+% - This file generates by Makefile; don't be typing ``pdflatex'' or some bullshit.
+% - Line break between sentences to make the git diffs readable.
+% - Simple Monte Carlo gets a capital S to indicate that it is a defined thing.
+% - Use \, as a multiply operator.
+% - Reserve () for function arguments; use [] or {} for outer shit.
+% - Always prior pdf or posterior pdf, never prior or posterior.
+
+\include{gitstuff}
 
 % fix aastex
 \setlength{\parindent}{1.4em}
@@ -98,16 +103,16 @@ function).
 The goal is to obtain provably correct samplings in the space of
 orbital parameters.
 % Methods
-We build a variant of simple Monte Carlo sampling, in which we densely
+We build a variant of Simple Monte Carlo sampling, in which we densely
 sample the non-linear orbital parameters, and perform rejection
 sampling using a marginalized likelihood, marginalizing out the linear
 orbital parameters.
-In practice and generically, the sampling obtained by the simple Monte
+In practice and generically, the sampling obtained by the Simple Monte
 Carlo is---in the case of sparse or uninformative data---substantial
 and multimodal, or else---in the case of informative
 data---insubstantial but unimodal.
-In the unimodal case, we follow the simple Monte Carlo with standard
-Markov Chain Monte Carlo to make the sampling more substantial.
+In the unimodal case, we follow the Simple Monte Carlo with standard
+MCMC to make the sampling more substantial.
 % Results
 The method produces correct samplings in orbital
 parameters for (good) data sets that include as few as three noisy time
@@ -192,16 +197,18 @@ weaken our assumptions but they indeed prove to be far from correct.
 In order to set up a well-posed problem and build a path to a
 definite solution, we make a set of non-trivial assumptions about the
 stellar systems we will use and observations thereof.
-\begin{enumerate}
+\begin{itemize}
 \item We assume that we have measurements of the radial velocity of a
   star, and that the time dependence of the expectation of that radial
   velocity is well described by the gravitational orbit of a pair of
   point masses (the two-body problem). We assume that the times are
   (effectively) perfectly known, and in an inertial frame (for
   example, Solar-System barycentric MJD).
-\item We assume that each star has only zero or one companions, and
-  that the radial-velocity measurements are not contaminated by nor
-  affected by any other bodies.
+\item We assume that each star has exactly one companion, and that the
+  radial-velocity measurements are not contaminated by nor affected by
+  any other bodies. Since we permit the effective mass of the
+  exactly-one companion to go to zero, this assumption is really that
+  the star has zero or one companion.
 \item We assume that the noise contributions to individual
   radial-velocity measurements are well described as draws from
   zero-mean normal (Gaussian) distributions with correctly known
@@ -209,7 +216,7 @@ stellar systems we will use and observations thereof.
 \item In addition to all these, we put particular, fairly sensible
   prior probability density functions on all the orbital parameters,
   described below.
-\end{enumerate}
+\end{itemize}
 Each of these assumptions can be challenged, and in particular we
 expect some stars to have additional companions, and we expect there
 to be outliers and unaccounted sources of noise.
@@ -224,53 +231,85 @@ which we choose to be period $P$, projected semi-major axis $\asini$,
 a phase $\phi_0$ corresponding to a time of pericenter passage, the
 eccentricity $e$, an argument of perihelion $\omega$, and a constant
 system barycenter radial velocity $v_0$.  The radial velocity $v_r$ at
-time $t$ is then given by \citep[see also Eq. 63 in ][]{Murray:2010}
+time $t$ is then given by (see also Eq. 63 in \citealt{Murray:2010})
 \begin{equation}
-  v_r(t) = v_0 + K\,(\cos(\omega + f) + e\,\cos\omega)
+  v_r(t) = v_0 + K\,[\cos(\omega + f) + e\,\cos\omega]
 \end{equation}
 where $K$ is the velocity semi-amplitude and $f$ is the true anomaly
 given by
 \begin{align}
-  K &= \frac{2\pi \asini}{P\,\sqrt{1-e^2}}\\
+  K &= \frac{2\pi\,\asini}{P\,\sqrt{1-e^2}}\\
   \cos f &= \frac{\cos E - e}{1 - e\, \cos E}
 \end{align}
 and the eccentric anomaly, $E$, must be solved for with the mean
 anomaly, $M$,
 \begin{align}
-  M = \frac{2\pi t}{P} - \phi_0\\
+  M = \frac{2\pi\, t}{P} - \phi_0\\
   M = E - e\,\sin E.
 \end{align}
 Of these parameters, four ($P$, $\phi_0$, $e$, $\omega$) are
 non-linearly related to the radial-velocity expectation, and two
 ($\asini$, $v_0$) are linearly related.
 
-Fundamentally, our method is to perform \emph{simple Monte Carlo} in
+Fundamentally, our method is to perform \emph{Simple Monte Carlo} in
 the non-linear parameters, and analytically marginalize over the linear
 parameters.
-
-Our method will capitalize on the following aspects of the problem
+The method capitalizes on the following aspects of the problem
 structure:
 \begin{itemize}
-\item There are linear and non-linear parameters, and we can treat
-  them differently.
+\item There are both linear and non-linear parameters, and we can
+  treat them differently; in particular, it is possible to
+  analytically marginalize the linear parameters (provided that the
+  noise model is pleasant and the prior pdf is conjugate).
 \item There is a finite, time-sampling-imposed minimum size or
   resolution---in the period direction---of any features in the
-  likelihood function.
+  likelihood function. That is, there cannot be arbitrarily narrow
+  modes in the multimodal posterior pdf.
 \end{itemize}
 
-What is simple monte carlo?
+Simple Monte Carlo is a method in which the prior pdf is densely
+sampled, and then many of the samples are rejected by a
+rejection-sampling step that uses the likelihood as the rejection
+scalar.
+The rejection step works as follows:
+\begin{enumerate}
+\item For each sample $k$ in the prior pdf sampling there is a
+  likelihood value $L_k$ (a probability for the data given the
+  parameters, not logarithmic).
+\item There is a maximum value $L_{\mathrm{max}}$ that is the largest value of
+  $L_k$ found across all of the samples in the entire sampling.
+\item For each sample $k$, choose a random number $r_k$ between 0 and
+  $L_{\mathrm{max}}$
+\item Reject the sample $k$ if $L_k < r_k$.
+\end{enumerate}
+Note that this algorithm is guaranteed to produce at least one
+surviving sample.
+Provided that the original sampling of the prior pdf is dense enough,
+the samples that survive the rejection step are fair samples from the
+posterior pdf.
 
-What are our explicit priors?
-
+Our prior pdf in the non-linear parameters is very simple:
 \begin{align}
     p(\ln P) &= \mathcal{U}(\ln P_{\rm min}, \ln P_{\rm max})\\
     p(\omega) &= \mathcal{U}(0, 2\pi) ~ [{\rm rad}]\\
     p(\phi_0) &= \mathcal{U}(0, 2\pi) ~ [{\rm rad}]\\
-    p(e) &= {\rm Beta}(a, b) = \frac{\Gamma(a+b)}{\Gamma(a) \, \Gamma(b)} \, e^{a-1} \, (1 - e)^{b-1}
+    p(e) &= {\rm Beta}(a, b) = \frac{\Gamma(a+b)}{\Gamma(a) \, \Gamma(b)} \, e^{a-1} \, [1 - e]^{b-1}
 \end{align}
 where $\mathcal{U}(x_1, x_2)$ is the uniform distribution over the
 domain $(x_1, x_2)$ and the prior over eccentricity is the Beta
 distribution with $a=0.867$, $b=3.03$ \citep{Kipping:2013}.
+In different experiments we use different values for hyperparameters
+$P_{\rm min}$ and $P_{\rm max}$; we are explicit about our choices in
+each of the experiments described below.
+We sample the prior pdf directly and explicitly with standard
+\project{numpy.random} calls (\citealt{numpy}).
+In practice we usually take $2^28$ samples---holy fuck---in the prior
+pdf sampling.
+
+The likelihood function---given our assumptions (above) is
+\begin{equation}
+hogg
+\end{equation}
 
 What do we do after SMC? Resampling or \emcee.
 
@@ -291,17 +330,12 @@ What did we find?
 What can this system be used for? Discovery, characterization, and
 hierarchial inference.
 
+HOGG The assumption of single companion has the following issues...
+
 Of the assumptions, probably the most severe is the Gaussian noise
 with known variance. \textbf{This is wrong, very wrong!} Ideas about
 ameliorating this, and what those options would cost us. Advice for
 those using the system despite these issues.
-
-\vspace{1.5em}
-
-The code used in this project is available from
-\url{https://github.com/adrn/thejoker} under the MIT open-source
-software license. This version of the paper was generated with git
-commit \texttt{\githash} (\gitdate).
 
 \acknowledgements
 It is a pleasure to thank
@@ -311,6 +345,11 @@ This research was partially supported by [many grants].
 This project was started at AstroHackWeek 2016, organized by Kyle
 Barbary (UCB) and Phil Marshall (SLAC) at the Berkeley Institute for
 Data Science.
+
+The code used in this project is available from
+\url{https://github.com/adrn/thejoker} under the MIT open-source
+software license. This version of the paper was generated with git
+commit \texttt{\githash~(\gitdate)}.
 
 \bibliographystyle{apj}
 \bibliography{thejoker}
