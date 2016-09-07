@@ -56,6 +56,9 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42,
         rv_err = quantity_from_hdf5(f, 'rv_err')
     data = RVData(bmjd, rv, stddev=rv_err)
 
+    # TODO: here I need to appropriately set the random number generator seed
+    # np.random.seed(??)
+
     # generate prior samples on the fly
     logger.debug("Number of prior samples: {}".format(n_samples))
     prior_samples = sample_prior(n_samples)
