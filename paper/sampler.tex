@@ -288,8 +288,7 @@ Provided that the original sampling of the prior pdf is dense enough,
 the samples that survive the rejection step are fair samples from the
 posterior pdf.
 
-What are our explicit priors?
-
+Our prior pdf in the non-linear parameters is very simple:
 \begin{align}
     p(\ln P) &= \mathcal{U}(\ln P_{\rm min}, \ln P_{\rm max})\\
     p(\omega) &= \mathcal{U}(0, 2\pi) ~ [{\rm rad}]\\
@@ -299,6 +298,18 @@ What are our explicit priors?
 where $\mathcal{U}(x_1, x_2)$ is the uniform distribution over the
 domain $(x_1, x_2)$ and the prior over eccentricity is the Beta
 distribution with $a=0.867$, $b=3.03$ \citep{Kipping:2013}.
+In different experiments we use different values for hyperparameters
+$P_{\rm min}$ and $P_{\rm max}$; we are explicit about our choices in
+each of the experiments described below.
+We sample the prior pdf directly and explicitly with standard
+\project{numpy.random} calls (\citealt{numpy}).
+In practice we usually take $2^28$ samples---holy fuck---in the prior
+pdf sampling.
+
+The likelihood function---given our assumptions (above) is
+\begin{equation}
+hogg
+\end{equation}
 
 What do we do after SMC? Resampling or \emcee.
 
