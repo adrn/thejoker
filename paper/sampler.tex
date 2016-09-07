@@ -4,11 +4,12 @@
 % ----------
 % - zeroth draft
 
-% This file generates by Makefile
-\include{gitstuff}
-
 % style notes
 % -----------
+% - This file generates by Makefile; don't be typing ``pdflatex'' or some bullshit.
+% - Simple Monte Carlo gets a capital S to indicate that it is a defined thing.
+
+\include{gitstuff}
 
 % fix aastex
 \setlength{\parindent}{1.4em}
@@ -98,16 +99,16 @@ function).
 The goal is to obtain provably correct samplings in the space of
 orbital parameters.
 % Methods
-We build a variant of simple Monte Carlo sampling, in which we densely
+We build a variant of Simple Monte Carlo sampling, in which we densely
 sample the non-linear orbital parameters, and perform rejection
 sampling using a marginalized likelihood, marginalizing out the linear
 orbital parameters.
-In practice and generically, the sampling obtained by the simple Monte
+In practice and generically, the sampling obtained by the Simple Monte
 Carlo is---in the case of sparse or uninformative data---substantial
 and multimodal, or else---in the case of informative
 data---insubstantial but unimodal.
-In the unimodal case, we follow the simple Monte Carlo with standard
-Markov Chain Monte Carlo to make the sampling more substantial.
+In the unimodal case, we follow the Simple Monte Carlo with standard
+MCMC to make the sampling more substantial.
 % Results
 The method produces correct samplings in orbital
 parameters for (good) data sets that include as few as three noisy time
@@ -244,21 +245,29 @@ Of these parameters, four ($P$, $\phi_0$, $e$, $\omega$) are
 non-linearly related to the radial-velocity expectation, and two
 ($\asini$, $v_0$) are linearly related.
 
-Fundamentally, our method is to perform \emph{simple Monte Carlo} in
+Fundamentally, our method is to perform \emph{Simple Monte Carlo} in
 the non-linear parameters, and analytically marginalize over the linear
 parameters.
-
-Our method will capitalize on the following aspects of the problem
+The method capitalizes on the following aspects of the problem
 structure:
 \begin{itemize}
-\item There are linear and non-linear parameters, and we can treat
-  them differently.
+\item There are both linear and non-linear parameters, and we can
+  treat them differently; in particular, it is possible to
+  analytically marginalize the linear parameters (provided that the
+  noise model is pleasant and the prior pdf is conjugate).
 \item There is a finite, time-sampling-imposed minimum size or
   resolution---in the period direction---of any features in the
-  likelihood function.
+  likelihood function. That is, there cannot be arbitrarily narrow
+  modes in the multimodal posterior pdf.
 \end{itemize}
 
-What is simple monte carlo?
+Simple Monte Carlo is a method in which the prior pdf is densely
+sampled, and then many of the samples are rejected by a
+rejection-sampling step that uses the likelihood as the rejection
+scalar.
+Provided that the original sampling of the prior pdf is dense enough,
+the samples that survive the rejection step are fair samples from the
+posterior pdf.
 
 What are our explicit priors?
 
