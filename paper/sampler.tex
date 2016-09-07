@@ -276,11 +276,12 @@ The rejection step works as follows:
 \item For each sample $k$ in the prior pdf sampling there is a
   likelihood value $L_k$ (a probability for the data given the
   parameters, not logarithmic).
-\item There is a maximum value $L_{\mathrm{max}}$ that is the largest value of
+\item There is a maximum value $L_{\rm max}$ that is the largest value of
   $L_k$ found across all of the samples in the entire sampling.
 \item For each sample $k$, choose a random number $r_k$ between 0 and
-  $L_{\mathrm{max}}$
+  $L_{\rm max}$
 \item Reject the sample $k$ if $L_k < r_k$.
+\item The number of samples that survive the rejection is (hereafter) $T$.
 \end{enumerate}
 Note that this algorithm is guaranteed to produce at least one
 surviving sample.
@@ -303,13 +304,23 @@ $P_{\rm min}$ and $P_{\rm max}$; we are explicit about our choices in
 each of the experiments described below.
 We sample the prior pdf directly and explicitly with standard
 \project{numpy.random} calls (\citealt{numpy}).
-In practice we usually take $2^28$ samples---holy fuck---in the prior
-pdf sampling.
+In practice we usually take $2^{28}$ (that's about a quarter billion)
+samples in the prior-pdf sampling. Holy fuck that's a lot!
 
-The likelihood function---given our assumptions (above) is
+The likelihood function is
 \begin{equation}
-hogg
+\ln L = -\frac{1}{2}\,\sum_{n=1}^N \frac{[v_n - v(t_n)]^2}{\sigma_n^2}
 \end{equation}
+where $n$ indexes the individual data points $v_n$, $v(t)$ is the
+radial velocity prediction at time $t$ given the parameters, the
+data-point times are the $t_n$, and the $\sigma_n^2$ is the (presumed
+correctly known) Gaussian noise variance for data point $n$.
+Note that the form of this likelihood function is set entirely by
+the assumptions, given above.
+
+We set a minimum number of samples $T_{\rm min}$.
+Given this minimum, there are three possible outcomes at the end of
+the rejection sampling.
 
 What do we do after SMC? Resampling or \emcee.
 
