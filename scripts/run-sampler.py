@@ -17,14 +17,19 @@ from thejoker.util import quantity_from_hdf5
 from thejoker.units import usys
 from thejoker.celestialmechanics import SimulatedRVOrbit
 from thejoker.pool import choose_pool
-from thejoker.sampler import get_good_samples, samples_to_orbital_params
+from thejoker.sampler import get_good_samples, samples_to_orbital_params, sample_prior
 
 # jitter = 0.5*u.km/u.s # TODO: set this same as Troup
 jitter = 0.*u.km/u.s # Troup doesn't actually add any jitter!
 
-def main(data_file, pool_kwargs, n_samples=1, seed=42, overwrite=False):
+def main(data_file, pool_kwargs, n_samples=1, seed=42, overwrite=False, continue_sampling=False):
 
     pool = choose_pool(**pool_kwargs)
+
+    # do this after choosing pool so all processes don't have same seed
+    if args.seed is not None:
+        logger.debug("random number seed: {}".format(args.seed))
+        np.random.seed(args.seed)
 
     if pool.size > 0:
         # try chunking by the pool size
@@ -38,8 +43,9 @@ def main(data_file, pool_kwargs, n_samples=1, seed=42, overwrite=False):
     output_filename = os.path.join(paths.root, "cache", "{}.h5".format(name))
 
     # see if we already did this:
-    if os.path.exists(output_filename) and not overwrite:
-        logger.info("Sampling already performed. Use --overwrite to redo.")
+    if os.path.exists(output_filename) and not overwrite and not continue_sampling:
+        logger.info("Sampling already performed. Use --overwrite to redo or --continue "
+                    "to keep sampling.")
         pool.close()
         sys.exit(0)
 
@@ -51,14 +57,14 @@ def main(data_file, pool_kwargs, n_samples=1, seed=42, overwrite=False):
         rv_err = quantity_from_hdf5(f, 'rv_err')
     data = RVData(bmjd, rv, stddev=rv_err)
 
-    # read prior samples from cached file of samples
-    with h5py.File(paths.prior_samples) as f:
-        P = quantity_from_hdf5(f, 'P', n_samples).decompose(usys).value
-        ecc = quantity_from_hdf5(f, 'ecc', n_samples)
-        phi0 = quantity_from_hdf5(f, 'phi0', n_samples).decompose(usys).value
-        omega = quantity_from_hdf5(f, 'omega', n_samples).decompose(usys).value
-
+    # generate prior samples on the fly
     logger.debug("Number of prior samples: {}".format(n_samples))
+    prior_samples = sample_prior(n_samples)
+    P = prior_samples['P'].decompose(usys).value
+    ecc = prior_samples['ecc']
+    phi0 = prior_samples['phi0'].decompose(usys).value
+    omega = prior_samples['omega'].decompose(usys).value
+
     # pack the nonlinear parameters into an array
     nonlinear_p = np.vstack((P, phi0, ecc, omega)).T
     # Note: the linear parameters are (v0, asini)
@@ -84,9 +90,16 @@ def main(data_file, pool_kwargs, n_samples=1, seed=42, overwrite=False):
     with h5py.File(output_filename, 'a') as f:
         for i,(name,unit) in enumerate(par_spec.items()):
             if name in f:
-                del f[name]
-            f.create_dataset(name, data=orbital_params.T[i])
-            if unit is not None:
+                if overwrite: # delete old samples and overwrite
+                    del f[name]
+                    f.create_dataset(name, data=orbital_params.T[i])
+
+                elif continue_sampling: # append to existing samples
+                    _data = f[name][:]
+                    del f[name]
+                    f[name] = np.concatenate((_data, orbital_params.T[i]))
+
+            if unit is not None: # note: could get in to a weird state with mismatched units...
                 f[name].attrs['unit'] = str(unit)
 
     pool.close()
@@ -102,9 +115,13 @@ if __name__ == "__main__":
     vq_group.add_argument('-v', '--verbose', action='count', default=0, dest='verbosity')
     vq_group.add_argument('-q', '--quiet', action='count', default=0, dest='quietness')
 
-    parser.add_argument("-o", "--overwrite", dest="overwrite", default=False,
-                        action="store_true", help="Overwrite any existing data.")
-    parser.add_argument("--seed", dest="seed", default=42, type=int,
+    oc_group = parser.add_mutually_exclusive_group()
+    oc_group.add_argument("-o", "--overwrite", dest="overwrite", default=False,
+                          action="store_true", help="Overwrite any existing data.")
+    oc_group.add_argument("-c", "--continue", dest="_continue", default=False,
+                          action="store_true", help="Continue the sampler.")
+
+    parser.add_argument("--seed", dest="seed", default=None, type=int,
                         help="Random number seed")
 
     group = parser.add_mutually_exclusive_group()
@@ -136,8 +153,6 @@ if __name__ == "__main__":
     else: # default
         logger.setLevel(logging.INFO)
 
-    np.random.seed(args.seed)
-
     try:
         n_samples = int(args.n_samples)
     except:
@@ -146,4 +161,4 @@ if __name__ == "__main__":
     pool_kwargs = dict(mpi=args.mpi, processes=args.n_procs)
 
     main(data_file=args.data_file, n_samples=n_samples, pool_kwargs=pool_kwargs,
-         seed=args.seed, overwrite=args.overwrite)
+         seed=args.seed, overwrite=args.overwrite, continue_sampling=args._continue)
