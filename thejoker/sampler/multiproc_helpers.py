@@ -18,7 +18,7 @@ def _marginal_ll_worker(task):
     Parameters
     ----------
     task : iterable
-        A list containing the indices of samples to operated on, the filename
+        A list containing the indices of samples to be operated on, the filename
         containing the prior samples, and the data.
 
     Returns
@@ -98,6 +98,9 @@ def _orbital_params_worker(task):
         ``map``ped using one of the ``Pool`` classes by the functions below and
         is not supposed to be in the public API.
     """
+
+    # TODO: here I need to appropriately set the random number generator seed
+    # np.random.seed(??)
 
     idx, filename, data = task
     n_chunk = len(idx)
