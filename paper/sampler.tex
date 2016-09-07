@@ -103,11 +103,11 @@ We build a variant of Simple Monte Carlo sampling, in which we densely
 sample the non-linear orbital parameters, and perform rejection
 sampling using a marginalized likelihood, marginalizing out the linear
 orbital parameters.
-In practice and generically, the sampling obtained by the simple Monte
+In practice and generically, the sampling obtained by the Simple Monte
 Carlo is---in the case of sparse or uninformative data---substantial
 and multimodal, or else---in the case of informative
 data---insubstantial but unimodal.
-In the unimodal case, we follow the simple Monte Carlo with standard
+In the unimodal case, we follow the Simple Monte Carlo with standard
 MCMC to make the sampling more substantial.
 % Results
 The method produces correct samplings in orbital
@@ -254,7 +254,7 @@ structure:
 \item There are both linear and non-linear parameters, and we can
   treat them differently; in particular, it is possible to
   analytically marginalize the linear parameters (provided that the
-  noise model is simple and the prior pdf is conjugate).
+  noise model is pleasant and the prior pdf is conjugate).
 \item There is a finite, time-sampling-imposed minimum size or
   resolution---in the period direction---of any features in the
   likelihood function. That is, there cannot be arbitrarily narrow
