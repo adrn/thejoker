@@ -94,7 +94,7 @@ def marginal_ln_likelihood(ATA, chi2):
 
     return -0.5*np.atleast_1d(chi2) + 0.5*logdet
 
-def sample_prior(n=1):
+def sample_prior(n=1, P_min=P_min, P_max=P_max):
     """
     Generate samples from the prior. Logarithmic in period, uniform in
     phase and argument of pericenter, Beta distribution in eccentricity.
