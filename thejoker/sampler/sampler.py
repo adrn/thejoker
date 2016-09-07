@@ -1,13 +1,13 @@
 # Third-party
+import astropy.units as u
 from astropy import log as logger
 import numpy as np
-from scipy.interpolate import interp1d
 
-from ..util import find_t0
-from ..celestialmechanics import rv_from_elements, EPOCH
+from ..config import P_min, P_max
+from ..celestialmechanics import rv_from_elements
 
 __all__ = ['design_matrix', 'tensor_vector_scalar', 'marginal_ln_likelihood',
-           'period_grid']
+           'sample_prior', 'period_grid']
 
 def design_matrix(nonlinear_p, t):
     """
@@ -93,6 +93,32 @@ def marginal_ln_likelihood(ATA, chi2):
         return np.nan
 
     return -0.5*np.atleast_1d(chi2) + 0.5*logdet
+
+def sample_prior(n=1):
+    """
+    Generate samples from the prior. Logarithmic in period, uniform in
+    phase and argument of pericenter, Beta distribution in eccentricity.
+
+    Parameters
+    ----------
+    n : int
+        Number of samples to generate.
+
+    Returns
+    -------
+    prior_samples : dict
+    """
+    # sample from priors in nonlinear parameters
+    P = np.exp(np.random.uniform(np.log(P_min.to(u.day).value),
+                                 np.log(P_max.to(u.day).value),
+                                 size=n)) * u.day
+    phi0 = np.random.uniform(0, 2*np.pi, size=n) * u.radian
+
+    # MAGIC NUMBERS below: Kipping et al. 2013 (MNRAS 434 L51)
+    ecc = np.random.beta(a=0.867, b=3.03, size=n)
+    omega = np.random.uniform(0, 2*np.pi, size=n) * u.radian
+
+    return dict(P=P, phi0=phi0, ecc=ecc, omega=omega)
 
 def period_grid(data, P_min=1, P_max=1E4, resolution=2):
     """
