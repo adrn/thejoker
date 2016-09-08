@@ -234,19 +234,20 @@ system barycenter radial velocity $v_0$.
 The radial velocity $v$ at time $t$ is then given by (see also
 equation~63 in \citealt{Murray:2010})
 \begin{equation}
-  v(t) = v_0 + K\,[\cos(\omega + f) + e\,\cos\omega]
+  v(t;\theta) = v_0 + \kappa\,[\cos(\omega + f) + e\,\cos\omega]
 \end{equation}
-where $K$ is the velocity semi-amplitude and $f$ is the true anomaly
+where the $\theta$ represents a blob of all the free parameters,
+$\kappa$ is the velocity semi-amplitude and $f$ is the true anomaly
 given by
 \begin{align}
-  K &= \frac{2\pi\,\asini}{P\,\sqrt{1-e^2}}\\
+  \kappa = \frac{2\pi\,\asini}{P\,\sqrt{1-e^2}}\\
   \cos f &= \frac{\cos E - e}{1 - e\, \cos E}
 \end{align}
 and the eccentric anomaly, $E$, must be solved for with the mean
 anomaly, $M$,
 \begin{align}
   M = \frac{2\pi\, t}{P} - \phi_0\\
-  M = E - e\,\sin E.
+  M = E - e\,\sin E \quad .
 \end{align}
 Of these parameters, four ($P$, $\phi_0$, $e$, $\omega$) are
 non-linearly related to the radial-velocity expectation, and two
@@ -285,10 +286,11 @@ The rejection step works as follows:
 \item The number of samples that survive the rejection is (hereafter) $M$.
 \end{enumerate}
 Note that this algorithm is guaranteed to produce at least one
-surviving sample.
-Provided that the original sampling of the prior pdf is dense enough,
-the samples that survive the rejection step are fair samples from the
-posterior pdf.
+surviving sample; of course if only one sample survives (or any very
+small number), the sampling will not guaranteed to be fair.
+That said, if the original sampling of the prior pdf is dense enough
+that many survive the rejection step, the surviving samples do
+constitute a fair sampling from the posterior pdf.
 
 Our prior pdf in the non-linear parameters is very simple:
 \begin{align}
@@ -308,19 +310,37 @@ We sample the prior pdf directly and explicitly with standard
 In practice we usually take $2^{28}$ (that's about a quarter billion)
 samples in the prior-pdf sampling. Holy fuck that's a lot!
 
-The unmarginalized likelihood function would be
+The unmarginalized likelihood function $L$ is
 \begin{equation}
-\ln L = -\frac{1}{2}\,\sum_{n=1}^N \frac{[v_n - v(t_n)]^2}{\sigma_n^2}
+\ln L = -\frac{1}{2}\,\sum_{n=1}^N \frac{[v_n - v(t_n;\theta)]^2}{\sigma_n^2}
 \end{equation}
 where $n$ indexes the individual data points $v_n$, $v(t)$ is the
-radial velocity prediction at time $t$ given the parameters, the
+radial velocity prediction at time $t$ given the parameters $\theta$, the
 data-point times are the $t_n$, and the $\sigma_n^2$ is the (presumed
 correctly known) Gaussian noise variance for data point $n$.
 Note that the form of this likelihood function is set entirely by
 the assumptions, given above.
 
-The function $v(t)$ is controlled by four nonlinear parameters and two linear parameters...
-HOGG: THE MARGINALIZED LIKELIHOOD IS...
+We rejection-sample, however, using a marginalized likelihood, where
+we analytically marginalize out the linear parameters ($\asini$,
+$v_0$).
+We construct a $N\times 2$ design matrix consisting of a column of
+unit-$\asini$ predictions (given the non-linear parameters) and a
+column of ones.
+We perform standard linear least-square fitting with this design
+matrix to obtain the best-fit values for the two linear parameters,
+and the standard $2\times 2$ linear-fitting covariance matrix $C$ for their
+uncertainties.
+With these, we can construct---for each prior sample---the marginalized likelihood $Q_k$
+\begin{equation}
+\ln Q_k = -\frac{1}{2}\,\sum_{n=1}^N \frac{[v_n - v(t_n;\theta_k)]^2}{\sigma_n^2} -\frac{1}{2}\,\ln ||C||
+\end{equation}
+where the prediction $v(t_n;\theta_k)$ is taken at the best-fit values
+of the linear parameters given sample $k$ of the non-linear
+parameters, and the log-determinant term accounts for the volume in
+the marginalization integral.
+These $Q_k$ are used in the rejection sampling algorithm described above
+as Simple Monte Carlo.
 
 There are three possible outcomes at the end of the rejection
 sampling, based on two thresholds:
@@ -335,18 +355,29 @@ resolution expected from a sampling perspective.
 \item $M<M_{\rm min}$ samples survive the rejection, and these samples
   span (maximum period minus minimum period) a period range that is
   smaller than $\Delta$, we use the surviving samples (or sample) to
-  initialize a MCMC sampling using the \emcee\ package. We sample the
+  initialize a MCMC sampling using the \emcee\ package (\citealt{emcee}). We sample the
   prior densely enough initially that if only a few samples survive,
   we are fairly confident that the data are informative enough that
   the posterior pdf is approximately unimodal for our purposes. That's
   an assumption!
 \item $M<M_{\rm min}$ samples survive the rejection, and these samples
   span a period range larger than $\Delta$, we iterate the Simple
-  Monte Carlo, concatenating the surviving samples, until the full set
-  is larger than $M_{\rm min}$. This is expensive!
+  Monte Carlo, starting from new prior-pdf samplings, concatenating
+  the surviving samples, until the full set of surviving samples is
+  larger than $M_{\rm min}$. This is expensive!
 \end{itemize}
-
-When we trigger the intialization of \emcee, we do the following....HOGG
+When we trigger the intialization of \emcee, we do the following:
+\begin{enumerate}
+\item Randomly generate $M_{\rm min}$ sets of parameters $\theta_m$
+  (linear and nonlinear parameters) in a small, Gaussian ball around
+  the highest-$Q_k$ sample from the Simple Monte Carlo.
+\item Run \emcee\ on this ensemble as per the instructions written on
+  the side of the \emcee\ packaging (\citealt{emcee}) for $2^16$ steps.
+\item Take the final state of the $M_{\rm min}$-element ensemble as a
+  fair sampling of the posterior pdf.
+\end{enumerate}
+This procedure ensures that no matter what path we take, we end up with
+at least $M_{\rm min}$ samples from the posterior for any input data.
 
 \section{Experiments and results}
 
