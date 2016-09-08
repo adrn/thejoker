@@ -306,7 +306,7 @@ In different experiments we use different values for hyperparameters
 $P_{\rm min}$ and $P_{\rm max}$; we are explicit about our choices in
 each of the experiments described below.
 We sample the prior pdf directly and explicitly with standard
-\project{numpy.random} calls (\citealt{numpy}).
+\project{numpy.random} calls (\citealt{Walt:2011}).
 In practice we usually take $2^{28}$ (that's about a quarter billion)
 samples in the prior-pdf sampling. Holy fuck that's a lot!
 
@@ -424,6 +424,15 @@ This research was partially supported by [many grants].
 This project was started at AstroHackWeek 2016, organized by Kyle
 Barbary (UCB) and Phil Marshall (SLAC) at the Berkeley Institute for
 Data Science.
+
+The data analysis presented in this article was partially performed on
+computational resources supported by the Princeton Institute for Computational
+Science and Engineering (PICSciE) and the Office of Information Technology's
+High Performance Computing Center and Visualization Laboratory at Princeton
+University.
+This work additionally used the Extreme Science and Engineering Discovery
+Environment \citep[XSEDE;][]{Towns:2014}, which is supported by National Science
+Foundation grant number ACI-1053575.
 
 The code used in this project is available from
 \url{https://github.com/adrn/thejoker} under the MIT open-source
