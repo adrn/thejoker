@@ -325,20 +325,25 @@ We rejection-sample, however, using a marginalized likelihood, where
 we analytically marginalize out the linear parameters ($\asini$,
 $v_0$).
 We construct a $N\times 2$ design matrix consisting of a column of
-unit-$\asini$ predictions (given the non-linear parameters) and a
+unit-$[\asini]$ predictions (given the non-linear parameters) and a
 column of ones.
 We perform standard linear least-square fitting with this design
 matrix to obtain the best-fit values for the two linear parameters,
-and the standard $2\times 2$ linear-fitting covariance matrix $C$ for their
+and the standard $2\times 2$ linear-fitting covariance matrix $C_k$ for their
 uncertainties.
 With these, we can construct---for each prior sample---the marginalized likelihood $Q_k$
 \begin{equation}
-\ln Q_k = -\frac{1}{2}\,\sum_{n=1}^N \frac{[v_n - v(t_n;\theta_k)]^2}{\sigma_n^2} -\frac{1}{2}\,\ln ||C||
+\ln Q_k = -\frac{1}{2}\,\sum_{n=1}^N \frac{[v_n - v(t_n;\theta_k)]^2}{\sigma_n^2} -\frac{1}{2}\,\ln ||C_k||
 \end{equation}
 where the prediction $v(t_n;\theta_k)$ is taken at the best-fit values
 of the linear parameters given sample $k$ of the non-linear
 parameters, and the log-determinant term accounts for the volume in
 the marginalization integral.
+The marginalization assumes that the prior pdfs on the linear parameters
+are very broad and Gaussian---or
+at least very flat over the range of relevance---and that they do not depend
+on the nonlinear parameters in any way (which is a substantial restriction;
+see the Discussion).
 These $Q_k$ are used in the rejection sampling algorithm described above
 as Simple Monte Carlo.
 
@@ -402,6 +407,9 @@ What can this system be used for? Discovery, characterization, and
 hierarchial inference.
 
 HOGG The assumption of single companion has the following issues...
+
+HOGG The assumption that the linear-parameter prior doesn't depend
+on the nonlinear parameters is absurd! Why?
 
 Of the assumptions, probably the most severe is the Gaussian noise
 with known variance. \textbf{This is wrong, very wrong!} Ideas about
