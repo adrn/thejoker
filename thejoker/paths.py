@@ -18,9 +18,8 @@ class Paths(object):
 
     """
 
-    def __init__(self, script__file__):
-
-        self.root = abspath(join(split(abspath(script__file__))[0], ".."))
+    def __init__(self):
+        self.root = abspath(join(abspath(os.getcwd()), ".."))
 
         # first, make sure we're in the scripts directory:
         if not exists(join(self.root, "scripts")):

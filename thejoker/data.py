@@ -24,7 +24,7 @@ class RVData(object):
     Parameters
     ----------
     t : array_like, `~astropy.time.Time`
-        Array of times. Either in BJD or as an Astropy time.
+        Array of times. Either in BMJD or as an Astropy time.
     rv : `~astropy.units.Quantity` [speed]
         Radial velocity measurements.
     ivar : `~astropy.units.Quantity` [1/speed^2]
@@ -120,7 +120,7 @@ class RVData(object):
         return len(self._t)
 
     @classmethod
-    def from_apogee(cls, path_or_data, apogee_id=None, store_metadata=False):
+    def from_apogee(cls, path_or_data, apogee_id=None):
         """
         Parameters
         ----------
@@ -139,9 +139,19 @@ class RVData(object):
                 _allvisit = fits.getdata(path_or_data, 1)
                 data = _allvisit[_allvisit['APOGEE_ID'].astype(str) == apogee_id]
 
+                rv = np.array(data['VHELIO']) * u.km/u.s
+                ivar = 1 / (np.array(data['VRELERR'])**2 * (u.km/u.s)**2)
+                t = at.Time(np.array(data['JD']), format='jd', scale='tcb')
+                bmjd = t.mjd
+
             elif os.path.splitext(path_or_data)[1].lower() in ['.hdf5', '.h5']:
                 with h5py.File(path_or_data, 'r') as f:
                     data = f[apogee_id][:]
+
+                rv = np.array(data['rv']) * u.km/u.s
+                ivar = 1 / (np.array(data['rv_err'])**2 * (u.km/u.s)**2)
+                t = at.Time(np.array(data['MJD']), format='mjd', scale='utc')
+                bmjd = t.tcb.mjd
 
             else:
                 raise ValueError("Unrecognized file type.")
@@ -149,13 +159,5 @@ class RVData(object):
         else:
             data = path_or_data
 
-        rv = np.array(data['VHELIO']) * u.km/u.s
-        ivar = 1 / (np.array(data['VRELERR'])**2 * (u.km/u.s)**2)
-        t = at.Time(np.array(data['JD']), format='jd', scale='tcb')
-        bmjd = t.mjd
-
         idx = np.isfinite(rv.value) & np.isfinite(t.value) & np.isfinite(ivar.value)
-        if store_metadata:
-            return cls(bmjd[idx], rv[idx], ivar[idx], metadata=data)
-        else:
-            return cls(bmjd[idx], rv[idx], ivar[idx])
+        return cls(bmjd[idx], rv[idx], ivar[idx])
