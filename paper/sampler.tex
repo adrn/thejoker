@@ -349,30 +349,33 @@ We also set a period resolution $\Delta = [8\,P^2] / [2\pi\,T]$, (with
 $P$ set to the mean period across the surviving samples and $T$ set to
 the time span of the data) which is an expansion of the period
 resolution expected from a sampling perspective.
+The three possible outcomes are:
 \begin{itemize}
 \item $M\geq M_{\rm min}$ samples survive the rejection.
   In this case, we are done.
 \item $M<M_{\rm min}$ samples survive the rejection, and these samples
   span (maximum period minus minimum period) a period range that is
-  smaller than $\Delta$, we use the surviving samples (or sample) to
+  smaller than $\Delta$.
+  In this case, we use the surviving samples (or sample) to
   initialize a MCMC sampling using the \emcee\ package (\citealt{emcee}). We sample the
   prior densely enough initially that if only a few samples survive,
   we are fairly confident that the data are informative enough that
   the posterior pdf is approximately unimodal for our purposes. That's
   an assumption!
 \item $M<M_{\rm min}$ samples survive the rejection, and these samples
-  span a period range larger than $\Delta$, we iterate the Simple
+  span a period range larger than $\Delta$.
+  In this case, we iterate the Simple
   Monte Carlo, starting from new prior-pdf samplings, concatenating
   the surviving samples, until the full set of surviving samples is
   larger than $M_{\rm min}$. This is expensive!
 \end{itemize}
-When we trigger the intialization of \emcee, we do the following:
+When we trigger the intialization and operation of \emcee, we do the following:
 \begin{enumerate}
 \item Randomly generate $M_{\rm min}$ sets of parameters $\theta_m$
   (linear and nonlinear parameters) in a small, Gaussian ball around
   the highest-$Q_k$ sample from the Simple Monte Carlo.
 \item Run \emcee\ on this ensemble as per the instructions written on
-  the side of the \emcee\ packaging (\citealt{emcee}) for $2^16$ steps.
+  the side of the \emcee\ packaging (\citealt{emcee}) for $2^{16}$ steps.
 \item Take the final state of the $M_{\rm min}$-element ensemble as a
   fair sampling of the posterior pdf.
 \end{enumerate}
