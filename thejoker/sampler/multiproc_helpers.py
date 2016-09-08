@@ -109,23 +109,23 @@ def _orbital_params_worker(task):
     #   indices from the prior samples file -- now `idx` is an array of indices
     #   to read from the prior samples file?
 
-    # TODO: need to invert idx from index values to bool array
-
     pars = np.zeros((n_chunk, 6))
-    for i in range(n_chunk):
-        nl_p = nl_p_chunk[i]
-        P, phi0, ecc, omega = nl_p
-        ATA,p,_ = tensor_vector_scalar(nl_p, data)
+    with h5py.File(filename, 'r') as f:
+        for i in idx: # these are the integer locations of the 'good' samples!
+            nonlinear_p = f['samples'][i][:]
+            P, phi0, ecc, omega = nonlinear_p
+            ATA,p,_ = tensor_vector_scalar(nonlinear_p, data)
 
-        cov = np.linalg.inv(ATA)
-        v0,asini = np.random.multivariate_normal(p, cov)
+            cov = np.linalg.inv(ATA)
+            v0,asini = np.random.multivariate_normal(p, cov)
 
-        if asini < 0:
-            # logger.warning("Swapping asini")
-            asini = np.abs(asini)
-            omega += np.pi
+            if asini < 0:
+                # logger.warning("Swapping asini")
+                asini = np.abs(asini)
+                omega += np.pi
+                omega % (2*np.pi) # HACK: I think this is safe
 
-        pars[i] = [P, asini, ecc, omega, phi0, v0]
+            pars[i] = [P, asini, ecc, omega, phi0, v0]
 
     return pars
 
