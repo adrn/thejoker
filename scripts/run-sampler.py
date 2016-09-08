@@ -53,6 +53,10 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, cache_filena
         val,*unit = str(jitter).split()
         jitter = float(val) * u.Unit("".join(unit))
 
+    logger.debug("jitter: {}".format(jitter))
+    logger.debug("P_min: {}".format(P_min))
+    logger.debug("P_max: {}".format(P_max))
+
     # see if we already did this:
     if os.path.exists(output_filename):
         if not overwrite and not continue_sampling:
@@ -106,7 +110,7 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, cache_filena
         bmjd = f['mjd'][:]
         rv = quantity_from_hdf5(f, 'rv')
         rv_err = quantity_from_hdf5(f, 'rv_err')
-    data = RVData(bmjd, rv, stddev=rv_err)
+    data = RVData(bmjd, rv, stddev=np.sqrt(rv_err**2 + jitter**2))
 
     # generate prior samples on the fly
     logger.debug("Number of prior samples: {}".format(n_samples))
