@@ -10,7 +10,7 @@ import numpy as np
 
 # Project
 from thejoker import Paths
-paths = Paths(__file__)
+paths = Paths()
 from thejoker.data import RVData
 from thejoker.util import quantity_from_hdf5
 from thejoker.celestialmechanics import OrbitalParams

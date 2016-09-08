@@ -16,7 +16,7 @@ import numpy as np
 
 # Project
 from thejoker import Paths
-paths = Paths(__file__)
+paths = Paths()
 
 def main():
     allVisit_path = os.path.join(paths.root, "data", "allVisit-l30e.2.fits")
