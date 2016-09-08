@@ -24,7 +24,7 @@ class RVData(object):
     Parameters
     ----------
     t : array_like, `~astropy.time.Time`
-        Array of times. Either in BJD or as an Astropy time.
+        Array of times. Either in BMJD or as an Astropy time.
     rv : `~astropy.units.Quantity` [speed]
         Radial velocity measurements.
     ivar : `~astropy.units.Quantity` [1/speed^2]
