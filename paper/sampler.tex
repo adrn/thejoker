@@ -231,10 +231,10 @@ which we choose to be period $P$, projected semi-major axis $\asini$,
 a phase $\phi_0$ corresponding to a time of pericenter passage, the
 eccentricity $e$, an argument of perihelion $\omega$, and a constant
 system barycenter radial velocity $v_0$.
-The radial velocity $v_r$ at time $t$ is then given by (see also
+The radial velocity $v$ at time $t$ is then given by (see also
 equation~63 in \citealt{Murray:2010})
 \begin{equation}
-  v_r(t) = v_0 + K\,[\cos(\omega + f) + e\,\cos\omega]
+  v(t) = v_0 + K\,[\cos(\omega + f) + e\,\cos\omega]
 \end{equation}
 where $K$ is the velocity semi-amplitude and $f$ is the true anomaly
 given by
@@ -308,7 +308,7 @@ We sample the prior pdf directly and explicitly with standard
 In practice we usually take $2^{28}$ (that's about a quarter billion)
 samples in the prior-pdf sampling. Holy fuck that's a lot!
 
-The unmarginalized likelihood function is
+The unmarginalized likelihood function would be
 \begin{equation}
 \ln L = -\frac{1}{2}\,\sum_{n=1}^N \frac{[v_n - v(t_n)]^2}{\sigma_n^2}
 \end{equation}
@@ -319,12 +319,16 @@ correctly known) Gaussian noise variance for data point $n$.
 Note that the form of this likelihood function is set entirely by
 the assumptions, given above.
 
+The function $v(t)$ is controlled by four nonlinear parameters and two linear parameters...
 HOGG: THE MARGINALIZED LIKELIHOOD IS...
 
+There are three possible outcomes at the end of the rejection
+sampling, based on two thresholds:
 We set a minimum number of samples $M_{\rm min}=128$.
-We also set a period resolution $\Delta = 8 * P^2 / (2\pi\,T)$
-Given this minimum, there are three possible outcomes at the end of
-the rejection sampling:
+We also set a period resolution $\Delta = [8\,P^2] / [2\pi\,T]$, (with
+$P$ set to the mean period across the surviving samples and $T$ set to
+the time span of the data) which is an expansion of the period
+resolution expected from a sampling perspective.
 \begin{itemize}
 \item $M\geq M_{\rm min}$ samples survive the rejection.
   In this case, we are done.
