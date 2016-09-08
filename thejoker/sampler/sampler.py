@@ -116,6 +116,9 @@ def sample_prior(n=1, P_min=P_min, P_max=P_max):
         `astropy.units.Quantity` objects (i.e. with units).
 
     """
+
+    # TODO: create a class to store these OrbitalParameters or something...
+
     # sample from priors in nonlinear parameters
     P = np.exp(np.random.uniform(np.log(P_min.to(u.day).value),
                                  np.log(P_max.to(u.day).value),

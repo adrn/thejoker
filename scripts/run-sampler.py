@@ -15,38 +15,58 @@ paths = Paths(__file__)
 from thejoker.data import RVData
 from thejoker.util import quantity_from_hdf5
 from thejoker.units import usys
-from thejoker.celestialmechanics import SimulatedRVOrbit
 from thejoker.pool import choose_pool
 from thejoker.sampler import get_good_samples, samples_to_orbital_params, sample_prior
 
 # jitter = 0.5*u.km/u.s # TODO: set this same as Troup
 jitter = 0.*u.km/u.s # Troup doesn't actually add any jitter!
 
-def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42,
+def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, cache_filename=None,
          overwrite=False, continue_sampling=False):
 
-    # do this after choosing pool so all processes don't have same seed
-    if args.seed is not None:
-        logger.debug("random number seed: {}".format(args.seed))
-        np.random.seed(args.seed)
-
-    if pool.size > 0:
-        # try chunking by the pool size
-        chunk_size = n_samples // pool.size
-    else:
-        chunk_size = 1
-
     full_path = os.path.abspath(data_file)
-    basename = os.path.basename(full_path)
-    name = os.path.splitext(basename)[0]
-    output_filename = os.path.join(paths.root, "cache", "{}.h5".format(name))
+    if cache_filename is None:
+        basename = os.path.basename(full_path)
+        name = os.path.splitext(basename)[0]
+        output_filename = os.path.join(paths.root, "cache", "{}.h5".format(name))
+
+    else:
+        output_filename = "{}.h5".format(os.path.splitext(cache_filename)[0])
+        _path,_basename = os.path.split(output_filename)
+        if not _path:
+            output_filename = os.path.join(paths.root, "cache", output_filename)
 
     # see if we already did this:
-    if os.path.exists(output_filename) and not overwrite and not continue_sampling:
-        logger.info("Sampling already performed. Use --overwrite to redo or --continue "
-                    "to keep sampling.")
-        pool.close()
-        sys.exit(0)
+    if os.path.exists(output_filename):
+        if not overwrite and not continue_sampling:
+            logger.info("Sampling already performed. Use --overwrite to redo or --continue "
+                        "to keep sampling.")
+            pool.close()
+            sys.exit(0)
+
+        elif continue_sampling: # we need to increment the random number seed appropriately
+            with h5py.File(output_filename, 'r') as f:
+                if 'rerun' not in f.attrs:
+                    rerun = 0
+                else:
+                    rerun = f.attrs['rerun'] + 1
+
+        elif overwrite: # restart rerun counter
+            rerun = 0
+
+        else:
+            raise ValueError("Unknown state!")
+
+    else:
+        rerun = 0
+
+    # do this after choosing pool so all processes don't have same seed
+    if seed is not None:
+        if rerun > 0:
+            logger.info("This is rerun {} -- incrementing random number seed.".format(rerun))
+
+        logger.debug("random number seed: {} (+ rerun: {})".format(seed, rerun))
+        np.random.seed(seed + rerun)
 
     # only accepts HDF5 data formats with units
     logger.debug("Reading data from input file at '{}'".format(full_path))
@@ -55,9 +75,6 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42,
         rv = quantity_from_hdf5(f, 'rv')
         rv_err = quantity_from_hdf5(f, 'rv_err')
     data = RVData(bmjd, rv, stddev=rv_err)
-
-    # TODO: here I need to appropriately set the random number generator seed
-    # np.random.seed(??)
 
     # generate prior samples on the fly
     logger.debug("Number of prior samples: {}".format(n_samples))
@@ -72,18 +89,21 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42,
     # Note: the linear parameters are (v0, asini)
 
     # cache the prior samples
-    with open(tmp_prior_filename, "w") as f:
+    with h5py.File(tmp_prior_filename, "w") as f:
         f.create_dataset('samples', data=nonlinear_p)
 
     logger.debug("Running sampler...")
 
-    good_samples = get_good_samples(nonlinear_p, data, pool, chunk_size)
-    nl_samples = nonlinear_p[good_samples]
+    good_samples_idx = get_good_samples(n_samples, tmp_prior_filename, data, pool)
+    nl_samples = nonlinear_p[good_samples_idx]
     if len(nl_samples) == 0:
         logger.error("Failed to find any good samples!")
         pool.close()
-        sys.exit(1)
-    orbital_params = samples_to_orbital_params(nl_samples, data, pool, chunk_size)
+        sys.exit(0)
+
+    # compute orbital parameters for all good samples
+    orbital_params = samples_to_orbital_params(good_samples_idx, tmp_prior_filename,
+                                               data, pool, seed)
 
     # save the orbital parameters out to a cache file
     par_spec = OrderedDict()
@@ -95,6 +115,8 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42,
     par_spec['v0'] = usys['length']/usys['time']
 
     with h5py.File(output_filename, 'a') as f:
+        f.attrs['rerun'] = rerun
+
         for i,(name,unit) in enumerate(par_spec.items()):
             if name in f:
                 if overwrite: # delete old samples and overwrite
@@ -116,6 +138,7 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42,
 if __name__ == "__main__":
     from argparse import ArgumentParser
     import logging
+    import tempfile
 
     # Define parser object
     parser = ArgumentParser(description="")
@@ -141,6 +164,8 @@ if __name__ == "__main__":
 
     parser.add_argument("-f", "--file", dest="data_file", default=None, required=True,
                         type=str, help="Path to HDF5 data file to analyze.")
+    parser.add_argument("--name", dest="cache_name", default=None,
+                        type=str, help="Name to use when saving the cache file.")
     parser.add_argument("-n", "--num-samples", dest="n_samples", default=2**20,
                         type=str, help="Number of prior samples.")
 
@@ -170,8 +195,8 @@ if __name__ == "__main__":
     pool_kwargs = dict(mpi=args.mpi, processes=args.n_procs)
     pool = choose_pool(**pool_kwargs)
 
-    # TODO: use a context manager so tmp_prior_filename always gets deleted
-    with XXX as tmp_prior_filename:
+    # use a context manager so the prior samples file always gets deleted
+    with tempfile.NamedTemporaryFile(dir=os.path.join(paths.root, "cache")) as fp:
         main(data_file=args.data_file, pool=pool, n_samples=n_samples,
              seed=args.seed, overwrite=args.overwrite, continue_sampling=args._continue,
-             tmp_prior_filename=tmp_prior_filename)
+             cache_filename=args.cache_name, tmp_prior_filename=fp.name)
