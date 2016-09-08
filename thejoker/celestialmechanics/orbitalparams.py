@@ -1,7 +1,3 @@
-# Standard library
-import os
-import sys
-
 # Third-party
 from astropy import log as logger
 import astropy.units as u
@@ -12,6 +8,7 @@ import six
 # Project
 from ..util import quantity_from_hdf5
 from ..units import usys
+from .celestialmechanics_class import SimulatedRVOrbit
 
 class OrbitalParams(object):
     # Mapping from parameter name to physical type
@@ -92,11 +89,15 @@ class OrbitalParams(object):
 
         return cls(**kwargs)
 
-    def pack(self):
+    def pack(self, plot_units=False):
         """
         Pack the orbital parameters into a single array structure
         without associated units. The components will have units taken
         from the unit system defined in `thejoker.units.usys`.
+
+        Parameters
+        ----------
+        plot_units : bool (optional)
 
         Returns
         -------
@@ -105,7 +106,19 @@ class OrbitalParams(object):
             units. Will have shape ``(n, 6)``.
 
         """
-        pass
+        if not plot_units:
+            all_samples = np.vstack((self._P, self._asini, self.ecc,
+                                     self._omega, self._phi0, self._v0)).T
+
+        else:
+            all_samples = np.vstack((self.P.to(u.day).value,
+                                     self.asini.to(u.R_sun).value,
+                                     self.ecc,
+                                     self.omega.to(u.degree).value % 360.,
+                                     self.phi0.to(u.degree).value,
+                                     self.v0.to(u.km/u.s).value)).T
+
+        return all_samples
 
     @classmethod
     def unpack(self, pars):
@@ -125,4 +138,18 @@ class OrbitalParams(object):
         return self.__copy__()
 
     def rv_orbit(self, index):
-        pass
+        """
+        Get a `~thejoker.celestialmechanics.SimulatedRVOrbit` instance
+        for the orbital parameters with index ``i``.
+
+        Parameters
+        ----------
+        index : int
+
+        Returns
+        -------
+        orbit : `~thejoker.celestialmechanics.SimulatedRVOrbit`
+        """
+        i = index
+        return SimulatedRVOrbit(P=self.P[i], a_sin_i=self.asini[i], ecc=self.ecc[i],
+                                omega=self.omega[i], phi0=self.phi0[i], v0=self.v0[i])
