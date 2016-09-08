@@ -38,6 +38,8 @@ def plot_rv_curves(orbital_pars, t_grid, rv_unit=None, data=None,
 
     if ax is None:
         fig,ax = plt.subplots(1,1)
+    else:
+        fig = ax.figure
 
     n_samples = len(orbital_pars)
 
