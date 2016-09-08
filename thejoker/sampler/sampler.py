@@ -94,6 +94,7 @@ def marginal_ln_likelihood(ATA, chi2):
 
     return -0.5*np.atleast_1d(chi2) + 0.5*logdet
 
+u.quantity_input(P_min=u.day, P_max=u.day)
 def sample_prior(n=1, P_min=P_min, P_max=P_max):
     """
     Generate samples from the prior. Logarithmic in period, uniform in
@@ -103,11 +104,21 @@ def sample_prior(n=1, P_min=P_min, P_max=P_max):
     ----------
     n : int
         Number of samples to generate.
+    P_min : `astropy.units.Quantity`
+        Minimum period.
+    P_max : `astropy.units.Quantity`
+        Maximum period.
 
     Returns
     -------
     prior_samples : dict
+        Keys: `['P', 'phi0', 'ecc', 'omega']`, each as
+        `astropy.units.Quantity` objects (i.e. with units).
+
     """
+
+    # TODO: create a class to store these OrbitalParameters or something...
+
     # sample from priors in nonlinear parameters
     P = np.exp(np.random.uniform(np.log(P_min.to(u.day).value),
                                  np.log(P_max.to(u.day).value),
@@ -120,8 +131,15 @@ def sample_prior(n=1, P_min=P_min, P_max=P_max):
 
     return dict(P=P, phi0=phi0, ecc=ecc, omega=omega)
 
+# ----------------------------------------------------------------------------
+
 def period_grid(data, P_min=1, P_max=1E4, resolution=2):
     """
+    DEPRECATED!
+
+    .. note::
+
+        This function is not used anymore.
 
     Parameters
     ----------
@@ -140,6 +158,7 @@ def period_grid(data, P_min=1, P_max=1E4, resolution=2):
         Grid of periods in days.
     dP_grid : `numpy.ndarray` [day]
         Grid of period spacings in days.
+
     """
     T_max = data._t.max() - data._t.min()
 
