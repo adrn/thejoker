@@ -17,12 +17,10 @@ from thejoker.util import quantity_from_hdf5
 from thejoker.units import usys
 from thejoker.pool import choose_pool
 from thejoker.sampler import get_good_samples, samples_to_orbital_params, sample_prior
-
-# jitter = 0.5*u.km/u.s # TODO: set this same as Troup
-jitter = 0.*u.km/u.s # Troup doesn't actually add any jitter!
+from thejoker import config
 
 def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, cache_filename=None,
-         overwrite=False, continue_sampling=False):
+         overwrite=False, continue_sampling=False, jitter=None, P_min=None, P_max=None):
 
     full_path = os.path.abspath(data_file)
     if cache_filename is None:
@@ -35,6 +33,25 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, cache_filena
         _path,_basename = os.path.split(output_filename)
         if not _path:
             output_filename = os.path.join(paths.root, "cache", output_filename)
+
+    # get defaults for hyper-parameters:
+    if P_min is None:
+        P_min = config.P_min
+    else:
+        val,unit = str(P_min).split()
+        P_min = float(val) * u.Unit(unit)
+
+    if P_max is None:
+        P_max = config.P_max
+    else:
+        val,unit = str(P_max).split()
+        P_max = float(val) * u.Unit(unit)
+
+    if jitter is None:
+        jitter = 0*u.m/u.s
+    else:
+        val,*unit = str(jitter).split()
+        jitter = float(val) * u.Unit("".join(unit))
 
     # see if we already did this:
     if os.path.exists(output_filename):
@@ -50,6 +67,21 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, cache_filena
                     rerun = 0
                 else:
                     rerun = f.attrs['rerun'] + 1
+
+                if rerun != 0:
+                    # validate that hyperparameters are the same for the re-run!
+                    for key,name,p,unit in zip(['jitter_m/s','P_min_day','P_max_day'],
+                                               ['jitter', 'P_min', 'P_max'],
+                                               [jitter, P_min, P_max],
+                                               ['m/s', 'day', 'day']):
+                        val1,val2 = p.to(u.Unit(unit)).value, f.attrs[key]
+                        if not np.allclose(val1, val2):
+                            raise ValueError("You asked to continue sampling, but in a previous "
+                                             "run you used a different value for the '{name}': "
+                                             "{val1} {unit} vs. {val2} {unit}".format(name=name,
+                                                                                      val1=val1,
+                                                                                      val2=val2,
+                                                                                      unit=unit))
 
         elif overwrite: # restart rerun counter
             rerun = 0
@@ -78,7 +110,7 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, cache_filena
 
     # generate prior samples on the fly
     logger.debug("Number of prior samples: {}".format(n_samples))
-    prior_samples = sample_prior(n_samples)
+    prior_samples = sample_prior(n_samples, P_min=P_min, P_max=P_max)
     P = prior_samples['P'].decompose(usys).value
     ecc = prior_samples['ecc']
     phi0 = prior_samples['phi0'].decompose(usys).value
@@ -116,6 +148,9 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, cache_filena
 
     with h5py.File(output_filename, 'a') as f:
         f.attrs['rerun'] = rerun
+        f.attrs['jitter_m/s'] = jitter.to(u.m/u.s).value # HACK: always in m/s?
+        f.attrs['P_min_day'] = P_min.to(u.day).value
+        f.attrs['P_max_day'] = P_max.to(u.day).value
 
         for i,(name,unit) in enumerate(par_spec.items()):
             if name in f:
@@ -169,6 +204,18 @@ if __name__ == "__main__":
     parser.add_argument("-n", "--num-samples", dest="n_samples", default=2**20,
                         type=str, help="Number of prior samples.")
 
+    parser.add_argument("--jitter", dest="jitter", default=None, type=str,
+                        help="Extra uncertainty to add in quadtrature to the RV measurement "
+                             "uncertainties. Must specify a number with units, e.g., '15 m/s'")
+    parser.add_argument("--Pmin", dest="P_min", default=None, type=str,
+                        help="Minimum period to generate samples to (default: {})."
+                             "Must specify a number with units, e.g., '2 day'"
+                             .format(config.P_min))
+    parser.add_argument("--Pmax", dest="P_max", default=None, type=str,
+                        help="Maximum period to generate samples to (default: {})."
+                             "Must specify a number with units, e.g., '8192 day'"
+                             .format(config.P_max))
+
     args = parser.parse_args()
 
     # Set logger level based on verbose flags
@@ -199,4 +246,5 @@ if __name__ == "__main__":
     with tempfile.NamedTemporaryFile(dir=os.path.join(paths.root, "cache")) as fp:
         main(data_file=args.data_file, pool=pool, n_samples=n_samples,
              seed=args.seed, overwrite=args.overwrite, continue_sampling=args._continue,
-             cache_filename=args.cache_name, tmp_prior_filename=fp.name)
+             cache_filename=args.cache_name, tmp_prior_filename=fp.name,
+             jitter=args.jitter, P_min=args.P_min, P_max=args.P_max)
