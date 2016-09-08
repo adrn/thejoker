@@ -345,7 +345,7 @@ as Simple Monte Carlo.
 There are three possible outcomes at the end of the rejection
 sampling, based on two thresholds:
 We set a minimum number of samples $M_{\rm min}=128$.
-We also set a period resolution $\Delta = [8\,P^2] / [2\pi\,T]$, (with
+We also set a period resolution $\Delta = [4\,P^2] / [2\pi\,T]$, (with
 $P$ set to the mean period across the surviving samples and $T$ set to
 the time span of the data) which is an expansion of the period
 resolution expected from a sampling perspective.
@@ -354,10 +354,11 @@ The three possible outcomes are:
 \item $M\geq M_{\rm min}$ samples survive the rejection.
   In this case, we are done.
 \item $M<M_{\rm min}$ samples survive the rejection, and these samples
-  span (maximum period minus minimum period) a period range that is
+  have a root-variance (rms) in the period parameter $P$ that is
   smaller than $\Delta$.
   In this case, we use the surviving samples (or sample) to
-  initialize a MCMC sampling using the \emcee\ package (\citealt{emcee}). We sample the
+  initialize a MCMC sampling using the \emcee\ package (\citealt{emcee}).
+  We sample the
   prior densely enough initially that if only a few samples survive,
   we are fairly confident that the data are informative enough that
   the posterior pdf is approximately unimodal for our purposes. That's
