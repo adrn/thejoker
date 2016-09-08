@@ -230,10 +230,11 @@ radial-velocity expectation can be parameterized by six parameters,
 which we choose to be period $P$, projected semi-major axis $\asini$,
 a phase $\phi_0$ corresponding to a time of pericenter passage, the
 eccentricity $e$, an argument of perihelion $\omega$, and a constant
-system barycenter radial velocity $v_0$.  The radial velocity $v_r$ at
-time $t$ is then given by (see also Eq. 63 in \citealt{Murray:2010})
+system barycenter radial velocity $v_0$.
+The radial velocity $v$ at time $t$ is then given by (see also
+equation~63 in \citealt{Murray:2010})
 \begin{equation}
-  v_r(t) = v_0 + K\,[\cos(\omega + f) + e\,\cos\omega]
+  v(t) = v_0 + K\,[\cos(\omega + f) + e\,\cos\omega]
 \end{equation}
 where $K$ is the velocity semi-amplitude and $f$ is the true anomaly
 given by
@@ -276,11 +277,12 @@ The rejection step works as follows:
 \item For each sample $k$ in the prior pdf sampling there is a
   likelihood value $L_k$ (a probability for the data given the
   parameters, not logarithmic).
-\item There is a maximum value $L_{\mathrm{max}}$ that is the largest value of
+\item There is a maximum value $L_{\rm max}$ that is the largest value of
   $L_k$ found across all of the samples in the entire sampling.
 \item For each sample $k$, choose a random number $r_k$ between 0 and
-  $L_{\mathrm{max}}$
+  $L_{\rm max}$
 \item Reject the sample $k$ if $L_k < r_k$.
+\item The number of samples that survive the rejection is (hereafter) $M$.
 \end{enumerate}
 Note that this algorithm is guaranteed to produce at least one
 surviving sample.
@@ -303,15 +305,48 @@ $P_{\rm min}$ and $P_{\rm max}$; we are explicit about our choices in
 each of the experiments described below.
 We sample the prior pdf directly and explicitly with standard
 \project{numpy.random} calls (\citealt{numpy}).
-In practice we usually take $2^28$ samples---holy fuck---in the prior
-pdf sampling.
+In practice we usually take $2^{28}$ (that's about a quarter billion)
+samples in the prior-pdf sampling. Holy fuck that's a lot!
 
-The likelihood function---given our assumptions (above) is
+The unmarginalized likelihood function would be
 \begin{equation}
-hogg
+\ln L = -\frac{1}{2}\,\sum_{n=1}^N \frac{[v_n - v(t_n)]^2}{\sigma_n^2}
 \end{equation}
+where $n$ indexes the individual data points $v_n$, $v(t)$ is the
+radial velocity prediction at time $t$ given the parameters, the
+data-point times are the $t_n$, and the $\sigma_n^2$ is the (presumed
+correctly known) Gaussian noise variance for data point $n$.
+Note that the form of this likelihood function is set entirely by
+the assumptions, given above.
 
-What do we do after SMC? Resampling or \emcee.
+The function $v(t)$ is controlled by four nonlinear parameters and two linear parameters...
+HOGG: THE MARGINALIZED LIKELIHOOD IS...
+
+There are three possible outcomes at the end of the rejection
+sampling, based on two thresholds:
+We set a minimum number of samples $M_{\rm min}=128$.
+We also set a period resolution $\Delta = [8\,P^2] / [2\pi\,T]$, (with
+$P$ set to the mean period across the surviving samples and $T$ set to
+the time span of the data) which is an expansion of the period
+resolution expected from a sampling perspective.
+\begin{itemize}
+\item $M\geq M_{\rm min}$ samples survive the rejection.
+  In this case, we are done.
+\item $M<M_{\rm min}$ samples survive the rejection, and these samples
+  span (maximum period minus minimum period) a period range that is
+  smaller than $\Delta$, we use the surviving samples (or sample) to
+  initialize a MCMC sampling using the \emcee\ package. We sample the
+  prior densely enough initially that if only a few samples survive,
+  we are fairly confident that the data are informative enough that
+  the posterior pdf is approximately unimodal for our purposes. That's
+  an assumption!
+\item $M<M_{\rm min}$ samples survive the rejection, and these samples
+  span a period range larger than $\Delta$, we iterate the Simple
+  Monte Carlo, concatenating the surviving samples, until the full set
+  is larger than $M_{\rm min}$. This is expensive!
+\end{itemize}
+
+When we trigger the intialization of \emcee, we do the following....HOGG
 
 \section{Experiments and results}
 
