@@ -19,14 +19,18 @@ from thejoker.pool import choose_pool
 from thejoker.sampler import get_good_samples, samples_to_orbital_params, sample_prior
 from thejoker import config
 
-def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, cache_filename=None,
-         overwrite=False, continue_sampling=False, jitter=None, P_min=None, P_max=None):
+def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, hdf5_key=None,
+         cache_filename=None, overwrite=False, continue_sampling=False,
+         jitter=None, P_min=None, P_max=None):
 
     full_path = os.path.abspath(data_file)
     if cache_filename is None:
-        basename = os.path.basename(full_path)
-        name = os.path.splitext(basename)[0]
-        output_filename = os.path.join(paths.root, "cache", "{}.h5".format(name))
+        if hdf5_key is None:
+            basename = os.path.basename(full_path)
+            name = os.path.splitext(basename)[0]
+            output_filename = os.path.join(paths.root, "cache", "{}.h5".format(name))
+        else:
+            output_filename = os.path.join(paths.root, "cache", "{}.h5".format(hdf5_key))
 
     else:
         output_filename = "{}.h5".format(os.path.splitext(cache_filename)[0])
@@ -107,9 +111,14 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, cache_filena
     # only accepts HDF5 data formats with units
     logger.debug("Reading data from input file at '{}'".format(full_path))
     with h5py.File(full_path, 'r') as f:
-        bmjd = f['mjd'][:]
-        rv = quantity_from_hdf5(f, 'rv')
-        rv_err = quantity_from_hdf5(f, 'rv_err')
+        if hdf5_key is not None:
+            g = f[hdf5_key]
+        else:
+            g = f
+
+        bmjd = g['mjd'][:]
+        rv = quantity_from_hdf5(g, 'rv')
+        rv_err = quantity_from_hdf5(g, 'rv_err')
     data = RVData(bmjd, rv, stddev=np.sqrt(rv_err**2 + jitter**2))
 
     # generate prior samples on the fly
@@ -203,6 +212,8 @@ if __name__ == "__main__":
 
     parser.add_argument("-f", "--file", dest="data_file", default=None, required=True,
                         type=str, help="Path to HDF5 data file to analyze.")
+    parser.add_argument("--hdf5-key", dest="hdf5_key", default=None,
+                        type=str, help="Path within an HDF5 file to the data.")
     parser.add_argument("--name", dest="cache_name", default=None,
                         type=str, help="Name to use when saving the cache file.")
     parser.add_argument("-n", "--num-samples", dest="n_samples", default=2**20,
@@ -248,7 +259,7 @@ if __name__ == "__main__":
 
     # use a context manager so the prior samples file always gets deleted
     with tempfile.NamedTemporaryFile(dir=os.path.join(paths.root, "cache")) as fp:
-        main(data_file=args.data_file, pool=pool, n_samples=n_samples,
+        main(data_file=args.data_file, pool=pool, n_samples=n_samples, hdf5_key=args.hdf5_key,
              seed=args.seed, overwrite=args.overwrite, continue_sampling=args._continue,
              cache_filename=args.cache_name, tmp_prior_filename=fp.name,
              jitter=args.jitter, P_min=args.P_min, P_max=args.P_max)

@@ -8,6 +8,8 @@ Create a subset of APOGEE's allVisit file that contains only the stars in Troup'
 import os
 
 # Third-party
+import astropy.time as atime
+import astropy.units as u
 from astropy.io import fits
 import h5py
 import numpy as np
@@ -33,7 +35,25 @@ def main():
     with h5py.File(paths.troup_allVisit, 'w') as f:
         for apogee_id in troup['APOGEE_ID'].astype(str):
             idx = allVisit['APOGEE_ID'].astype(str) == apogee_id
-            f.create_dataset(apogee_id, data=allVisit[idx])
+            this_data = allVisit[idx]
+
+            g = f.create_group(apogee_id)
+
+            # TODO: are the MJD in allVisit definitely UTC and not barycenter?
+            bmjd = atime.Time(this_data['MJD'], format='mjd', scale='utc').tcb.mjd
+
+            d = g.create_dataset('mjd', data=bmjd)
+            d.attrs['format'] = 'mjd'
+            d.attrs['scale'] = 'tcb'
+
+            rv = np.array(this_data['VHELIO']) * u.km/u.s
+            rv_err = np.array(this_data['VRELERR']) * u.km/u.s
+
+            d = g.create_dataset('rv', data=rv.value)
+            d.attrs['unit'] = str(rv.unit)
+
+            d = g.create_dataset('rv_err', data=rv_err.value)
+            d.attrs['unit'] = str(rv_err.unit)
 
 if __name__ == '__main__':
     main()
