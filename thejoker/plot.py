@@ -4,6 +4,7 @@ from astropy import log as logger
 import astropy.units as u
 import corner
 import matplotlib.pyplot as plt
+import numpy as np
 
 __all__ = ['plot_rv_curves', 'plot_corner']
 
@@ -88,7 +89,7 @@ def plot_rv_curves(orbital_pars, t_grid, rv_unit=None, data=None,
 
         _rv = data.rv.to(rv_unit).value
         drv = _rv.max()-_rv.min()
-        ax.set_ylim(_rv.min() - 0.1*drv, _rv.max() + 0.1*drv)
+        ax.set_ylim(_rv.min() - 0.2*drv, _rv.max() + 0.2*drv)
 
     dt = t_grid.max()-t_grid.min()
     ax.set_xlim(t_grid.min() - 0.02*dt, t_grid.max() + 0.02*dt)
@@ -110,8 +111,23 @@ def plot_corner(orbital_pars, **corner_kwargs):
     corner_kw.setdefault("plot_contours", False)
     corner_kw.setdefault("plot_density", False)
     corner_kw.setdefault("plot_datapoints", True)
-    corner_kw.setdefault("data_kwargs", dict(alpha=1.))
+    corner_kw.setdefault("data_kwargs", dict(alpha=corner_kw.pop('alpha')))
     corner_kw.setdefault("labels", orbital_pars._latex_labels)
 
     samples = orbital_pars.pack(plot_units=True)
+
+    # set ranges sensibly
+    _med_v0 = np.median(samples[:,5])
+    _mad_v0 = np.median(np.abs(samples[:,5] - _med_v0))
+
+    ranges = [
+        (samples[:,0].min()-0.2, samples[:,0].max()+0.2),
+        (samples[:,1].min()-0.2, samples[:,1].max()+0.2),
+        (0,1),
+        (0,360),
+        (0,360),
+        (_med_v0 - 5*_mad_v0, _med_v0 + 5*_mad_v0)
+    ]
+    corner_kw.setdefault("range", ranges)
+
     return corner.corner(samples, **corner_kw)
