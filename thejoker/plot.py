@@ -2,11 +2,10 @@
 import astropy.time as atime
 from astropy import log as logger
 import astropy.units as u
+import corner
 import matplotlib.pyplot as plt
-import numpy as np
 
-# Project
-# ...
+__all__ = ['plot_rv_curves', 'plot_corner']
 
 def plot_rv_curves(orbital_pars, t_grid, rv_unit=None, data=None,
                    ax=None, plot_kwargs=dict(), data_plot_kwargs=dict()):
@@ -99,3 +98,18 @@ def plot_rv_curves(orbital_pars, t_grid, rv_unit=None, data=None,
     # ax_rv.set_title(name)
 
     return fig
+
+def plot_corner(orbital_pars, **corner_kwargs):
+    """
+    A thin wrapper around `corner.corner` to set defaults differently.
+    """
+
+    corner_kw = corner_kwargs.copy()
+    corner_kw.setdefault("plot_contours", False)
+    corner_kw.setdefault("plot_density", False)
+    corner_kw.setdefault("plot_datapoints", True)
+    corner_kw.setdefault("data_kwargs", dict(alpha=1.))
+    corner_kw.setdefault("labels", orbital_pars._latex_labels)
+
+    samples = orbital_pars.pack(plot_units=True)
+    return corner.corner(samples, **corner_kw)
