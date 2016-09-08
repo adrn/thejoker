@@ -91,8 +91,7 @@ def plot_rv_curves(orbital_pars, t_grid, rv_unit=None, data=None,
         drv = _rv.max()-_rv.min()
         ax.set_ylim(_rv.min() - 0.2*drv, _rv.max() + 0.2*drv)
 
-    dt = t_grid.max()-t_grid.min()
-    ax.set_xlim(t_grid.min() - 0.02*dt, t_grid.max() + 0.02*dt)
+    ax.set_xlim(t_grid.min(), t_grid.max())
     ax.set_xlabel('BMJD')
 
     unit_label = ' [{}]'.format(rv_unit._repr_latex_())
