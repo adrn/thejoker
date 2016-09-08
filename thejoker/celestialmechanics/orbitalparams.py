@@ -21,8 +21,9 @@ class OrbitalParams(object):
         'v0': 'speed'
     }
 
-    # Latex labels for the parameters
-    labels = ['P', r'$a\,\sin i$', '$e$', r'$\omega$', r'$\phi_0$', '$v_0$']
+    # Latex plot labels for the parameters
+    _latex_labels = [r'$\ln (P/day)$', r'$\ln (a\,\sin i/R_\odot)$', '$e$', r'$\omega$ [deg]',
+                     r'$\phi_0$ [deg]', '$v_0$ [km s$^{-1}$]']
 
     @u.quantity_input(P=u.day, asini=u.R_sun, omega=u.degree, phi0=u.degree, v0=u.km/u.s)
     def __init__(self, P, asini, ecc, omega, phi0, v0):
@@ -72,8 +73,9 @@ class OrbitalParams(object):
     def __getitem__(self, slicey):
         c = self.copy()
         for key in self._name_phystype.keys():
-            slice_val = getattr(self, "_{}",format(key))[slicey]
+            slice_val = getattr(self, "_{}".format(key))[slicey]
             setattr(c, key, slice_val)
+        return c
 
     @classmethod
     def from_hdf5(cls, f):

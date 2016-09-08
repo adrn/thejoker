@@ -66,3 +66,8 @@ def test_orbitalparams(tmpdir):
 
     # rv_orbit()
     orbit = op1.rv_orbit(0)
+
+    # slicing
+    op2 = op1[:3]
+    for key,phystype in op2._name_phystype.items():
+        assert len(getattr(op2, key)) == 3
