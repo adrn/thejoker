@@ -74,7 +74,7 @@ class OrbitalParams(object):
         c = self.copy()
         for key in self._name_phystype.keys():
             slice_val = getattr(self, "_{}".format(key))[slicey]
-            setattr(c, key, slice_val)
+            setattr(c, "_{}".format(key), slice_val)
         return c
 
     @classmethod
@@ -113,8 +113,8 @@ class OrbitalParams(object):
                                      self._omega, self._phi0, self._v0)).T
 
         else:
-            all_samples = np.vstack((self.P.to(u.day).value,
-                                     self.asini.to(u.R_sun).value,
+            all_samples = np.vstack((np.log(self.P.to(u.day).value),
+                                     np.log(self.asini.to(u.R_sun).value),
                                      self.ecc,
                                      self.omega.to(u.degree).value % 360.,
                                      self.phi0.to(u.degree).value,
