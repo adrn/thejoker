@@ -63,6 +63,21 @@ class OrbitalParams(object):
         else:
             return val * usys[self._name_phystype[name]]
 
+    def __len__(self):
+        return len(self._P)
+
+    def __copy__(self):
+        kw = dict()
+        for key in self._name_phystype.keys():
+            kw[key] = getattr(self, key).copy()
+        return self.__class__(**kw)
+
+    def __getitem__(self, slicey):
+        c = self.copy()
+        for key in self._name_phystype.keys():
+            slice_val = getattr(self, "_{}",format(key))[slicey]
+            setattr(c, key, slice_val)
+
     @classmethod
     def from_hdf5(cls, f):
         kwargs = dict()
@@ -76,3 +91,38 @@ class OrbitalParams(object):
                 kwargs[key] = quantity_from_hdf5(f, key)
 
         return cls(**kwargs)
+
+    def pack(self):
+        """
+        Pack the orbital parameters into a single array structure
+        without associated units. The components will have units taken
+        from the unit system defined in `thejoker.units.usys`.
+
+        Returns
+        -------
+        pars : `numpy.ndarray`
+            A single 2D array containing the parameter values with no
+            units. Will have shape ``(n, 6)``.
+
+        """
+        pass
+
+    @classmethod
+    def unpack(self, pars):
+        """
+        Unpack a 2D array structure containing the orbital parameters
+        without associated units. Should have shape ``(n,6)`` where ``n``
+        is the number of parameters.
+
+        Returns
+        -------
+        p : `~thejoker.celestialmechanics.OrbitalParams`
+
+        """
+        pass
+
+    def copy(self):
+        return self.__copy__()
+
+    def rv_orbit(self, index):
+        pass
