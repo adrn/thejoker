@@ -38,7 +38,7 @@ def main(seed):
         for i in range(0,28+1,n_delete): # HACK: MAGIC NUMBER
             if i > 0:
                 # pick 4 random data points to delete
-                idx = np.random.randint(0, len(bmjd), size=n_delete)
+                idx = np.random.choice(len(bmjd), size=n_delete, replace=False)
                 bmjd = np.delete(bmjd, idx)
                 rv = np.delete(rv, idx)
                 rv_err = np.delete(rv_err, idx)
