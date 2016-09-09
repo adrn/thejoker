@@ -37,6 +37,11 @@ def main():
             idx = allVisit['APOGEE_ID'].astype(str) == apogee_id
             this_data = allVisit[idx]
 
+            good_idx = (np.isfinite(this_data['MJD']) &
+                        np.isfinite(this_data['VHELIO']) &
+                        np.isfinite(this_data['VRELERR']))
+            this_data = this_data[good_idx]
+
             g = f.create_group(apogee_id)
 
             # TODO: are the MJD in allVisit definitely UTC and not barycenter?
