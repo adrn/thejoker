@@ -6,6 +6,7 @@ __author__ = "adrn <adrn@astro.columbia.edu>"
 import os
 
 # Third-party
+from astropy import log as logger
 from astropy.io import fits
 import astropy.time as at
 import astropy.units as u
@@ -55,6 +56,13 @@ class RVData(object):
             if not hasattr(stddev, 'unit'):
                 raise TypeError("stddev must be an Astropy Quantity object!")
             self._ivar = 1 / stddev.decompose(usys).value**2
+
+        idx = np.isfinite(self._t) & np.isfinite(self._rv) & np.isfinite(self._ivar)
+        if idx.sum() < len(self._rv):
+            logger.warning("Rejecting {} NaN data points".format(len(self._rv)-idx.sum()))
+        self._t = self._t[idx]
+        self._rv = self._rv[idx]
+        self._ivar = self._ivar[idx]
 
         self.metadata = metadata
 
