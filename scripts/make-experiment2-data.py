@@ -30,8 +30,8 @@ def main(seed):
     # start with 30 points instead of 31 -- HACK
     idx = np.random.randint(0, len(bmjd))
     bmjd = np.delete(bmjd, idx)
-    rv = np.delete(bmjd, idx)
-    rv_err = np.delete(bmjd, idx)
+    rv = np.delete(rv, idx)
+    rv_err = np.delete(rv_err, idx)
 
     n_delete = 4 # HACK: MAGIC NUMBER
     with h5py.File(os.path.join(paths.root, "data", "experiment2.h5"), "w") as outf:
@@ -40,8 +40,8 @@ def main(seed):
                 # pick 4 random data points to delete
                 idx = np.random.randint(0, len(bmjd), size=n_delete)
                 bmjd = np.delete(bmjd, idx)
-                rv = np.delete(bmjd, idx)
-                rv_err = np.delete(bmjd, idx)
+                rv = np.delete(rv, idx)
+                rv_err = np.delete(rv_err, idx)
 
             g = outf.create_group(str(i))
 
