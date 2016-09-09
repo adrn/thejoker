@@ -16,7 +16,7 @@ import numpy as np
 from thejoker import Paths
 paths = Paths()
 
-apogee_id = "2M03080601+7950502"
+apogee_id = "2M19405532+2401157"
 
 def main(seed):
     np.random.seed(seed)
@@ -27,8 +27,17 @@ def main(seed):
         rv_err = f[apogee_id]['rv_err'][:]
         rv_unit = f[apogee_id]['rv'].attrs['unit']
 
+    # HACK: downsample to 31 observations
+    idx = np.random.choice(len(bmjd), size=len(bmjd)-31, replace=False)
+    bmjd = np.delete(bmjd, idx)
+    rv = np.delete(rv, idx)
+    rv_err = np.delete(rv_err, idx)
+    assert len(bmjd) == 31
+
     n_delete = 4 # HACK: MAGIC NUMBER
     with h5py.File(os.path.join(paths.root, "data", "experiment2.h5"), "w") as outf:
+        outf.attrs['APOGEE_ID'] = apogee_id
+
         for i in range(0,28+1,n_delete): # HACK: MAGIC NUMBER
             if i > 0:
                 # pick 4 random data points to delete
