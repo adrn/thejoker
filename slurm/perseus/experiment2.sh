@@ -14,43 +14,45 @@ module load openmpi/gcc/1.10.2/64
 
 source activate thejoker
 
+python make-experiment2-data.py -s 42
+
 # Run experiment 2, dropping data points in batches of 4
 srun python run-sampler.py -v --mpi -o \
 -n 2**27 \
 -f ../data/experiment2.h5 \
---hdf5-key="2M03080601+7950502-0"
+--hdf5-key="0"
 
 srun python run-sampler.py -v --mpi -o \
 -n 2**27 \
 -f ../data/experiment2.h5 \
---hdf5-key="2M03080601+7950502-4"
+--hdf5-key="4"
 
 srun python run-sampler.py -v --mpi -o \
 -n 2**27 \
 -f ../data/experiment2.h5 \
---hdf5-key="2M03080601+7950502-8"
+--hdf5-key="8"
 
 srun python run-sampler.py -v --mpi -o \
 -n 2**27 \
 -f ../data/experiment2.h5 \
---hdf5-key="2M03080601+7950502-12"
+--hdf5-key="12"
 
 srun python run-sampler.py -v --mpi -o \
 -n 2**27 \
 -f ../data/experiment2.h5 \
---hdf5-key="2M03080601+7950502-16"
+--hdf5-key="16"
 
 srun python run-sampler.py -v --mpi -o \
 -n 2**27 \
 -f ../data/experiment2.h5 \
---hdf5-key="2M03080601+7950502-20"
+--hdf5-key="20"
 
 srun python run-sampler.py -v --mpi -o \
 -n 2**27 \
 -f ../data/experiment2.h5 \
---hdf5-key="2M03080601+7950502-24"
+--hdf5-key="24"
 
 srun python run-sampler.py -v --mpi -o \
 -n 2**27 \
 -f ../data/experiment2.h5 \
---hdf5-key="2M03080601+7950502-28"
+--hdf5-key="28"
