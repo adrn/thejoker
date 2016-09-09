@@ -1,0 +1,59 @@
+# This configuration file will make Travis CI compile our PDF and force-push it
+# back to the repository.
+
+# This hack is originally from Dan Foreman-Mackey (@dfm), modified by
+#   Andy Casey (@andycasey) to push pdfs to <branch>-pdf
+
+sudo: false
+
+language: python
+
+env:
+    matrix:
+        - PYTHON_VERSION=3.5
+
+addons:
+    apt:
+        packages:
+            - texlive-latex-recommended
+            - texlive-latex-extra
+            - texlive-fonts-recommended
+            - texlive-fonts-extra
+            - dvipng
+
+install:
+    - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+    - bash miniconda.sh -b -p $HOME/miniconda
+    - export PATH=$HOME/miniconda/bin:$PATH
+    - hash -r
+    - conda config --set always_yes yes --set changeps1 no
+    - conda update -q conda
+    - conda info -a
+
+    - conda create --yes -n test python=$PYTHON_VERSION numpy scipy matplotlib
+    - source activate test
+
+before_script: # configure a headless display to test plot generation
+    - "export DISPLAY=:99.0"
+    - "sh -e /etc/init.d/xvfb start"
+    - sleep 3 # give xvfb some time to start
+
+script:
+    - cd paper
+    - make
+
+after_success: |
+    if [ -n "$GITHUB_API_KEY" ]; then
+        # make sure we are in the parent directory of the repository
+        cd $TRAVIS_BUILD_DIR
+        git checkout --orphan $TRAVIS_BRANCH-pdf
+        git rm -rf .
+        git add -f paper/sampler.pdf
+        git -c user.name='travis' -c user.email='travis' commit -m init
+        git push -q -f https://adrn:$GITHUB_API_KEY@github.com/$TRAVIS_REPO_SLUG $TRAVIS_BRANCH-pdf
+    fi
+
+notifications:
+    email:
+       on_success: change
+       on_failure: always
