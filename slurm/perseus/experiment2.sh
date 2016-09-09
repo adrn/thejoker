@@ -2,7 +2,7 @@
 #SBATCH -J exp2           # job name
 #SBATCH -o exp2.o%j             # output file name (%j expands to jobID)
 #SBATCH -e exp2.e%j             # error file name (%j expands to jobID)
-#SBATCH -n 256                   # total number of mpi tasks requested
+#SBATCH -n 512                   # total number of mpi tasks requested
 #SBATCH -t 01:45:00             # run time (hh:mm:ss) - 1.5 hours
 #SBATCH --mail-user=adrn@princeton.edu
 #SBATCH --mail-type=begin       # email me when the job starts
@@ -14,7 +14,7 @@ module load openmpi/gcc/1.10.2/64
 
 source activate thejoker
 
-python make-experiment2-data.py -s 42
+python make-experiment2-data.py -s 8675309
 
 # Run experiment 2, dropping data points in batches of 4
 srun python run-sampler.py -q --mpi -o \
