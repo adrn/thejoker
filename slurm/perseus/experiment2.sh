@@ -20,47 +20,47 @@ python make-experiment2-data.py -s 42
 srun python run-sampler.py -v --mpi -o \
 -n 2**27 \
 -f ../data/experiment2.h5 \
--n "experiment2-0.hdf5" \
+--name="experiment2-0.hdf5" \
 --hdf5-key="0"
 
 srun python run-sampler.py -v --mpi -o \
 -n 2**27 \
 -f ../data/experiment2.h5 \
--n "experiment2-4.hdf5" \
+--name="experiment2-4.hdf5" \
 --hdf5-key="4"
 
 srun python run-sampler.py -v --mpi -o \
 -n 2**27 \
 -f ../data/experiment2.h5 \
--n "experiment2-8.hdf5" \
+--name="experiment2-8.hdf5" \
 --hdf5-key="8"
 
 srun python run-sampler.py -v --mpi -o \
 -n 2**27 \
 -f ../data/experiment2.h5 \
--n "experiment2-12.hdf5" \
+--name="experiment2-12.hdf5" \
 --hdf5-key="12"
 
 srun python run-sampler.py -v --mpi -o \
 -n 2**27 \
 -f ../data/experiment2.h5 \
--n "experiment2-16.hdf5" \
+--name="experiment2-16.hdf5" \
 --hdf5-key="16"
 
 srun python run-sampler.py -v --mpi -o \
 -n 2**27 \
 -f ../data/experiment2.h5 \
--n "experiment2-20.hdf5" \
+--name="experiment2-20.hdf5" \
 --hdf5-key="20"
 
 srun python run-sampler.py -v --mpi -o \
 -n 2**27 \
 -f ../data/experiment2.h5 \
--n "experiment2-24.hdf5" \
+--name="experiment2-24.hdf5" \
 --hdf5-key="24"
 
 srun python run-sampler.py -v --mpi -o \
 -n 2**27 \
 -f ../data/experiment2.h5 \
--n "experiment2-28.hdf5" \
+--name="experiment2-28.hdf5" \
 --hdf5-key="28"
