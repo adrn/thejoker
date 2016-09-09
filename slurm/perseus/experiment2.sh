@@ -17,50 +17,58 @@ source activate thejoker
 python make-experiment2-data.py -s 42
 
 # Run experiment 2, dropping data points in batches of 4
-srun python run-sampler.py -v --mpi -o \
+srun python run-sampler.py -q --mpi -o \
 -n 2**27 \
 -f ../data/experiment2.h5 \
 --name="experiment2-0.hdf5" \
---hdf5-key="0"
+--hdf5-key="0" \
+--seed=42
 
-srun python run-sampler.py -v --mpi -o \
+srun python run-sampler.py -q --mpi -o \
 -n 2**27 \
 -f ../data/experiment2.h5 \
 --name="experiment2-4.hdf5" \
---hdf5-key="4"
+--hdf5-key="4" \
+--seed=42
 
-srun python run-sampler.py -v --mpi -o \
+srun python run-sampler.py -q --mpi -o \
 -n 2**27 \
 -f ../data/experiment2.h5 \
 --name="experiment2-8.hdf5" \
---hdf5-key="8"
+--hdf5-key="8" \
+--seed=42
 
-srun python run-sampler.py -v --mpi -o \
+srun python run-sampler.py -q --mpi -o \
 -n 2**27 \
 -f ../data/experiment2.h5 \
 --name="experiment2-12.hdf5" \
---hdf5-key="12"
+--hdf5-key="12" \
+--seed=42
 
-srun python run-sampler.py -v --mpi -o \
+srun python run-sampler.py -q --mpi -o \
 -n 2**27 \
 -f ../data/experiment2.h5 \
 --name="experiment2-16.hdf5" \
---hdf5-key="16"
+--hdf5-key="16" \
+--seed=42
 
-srun python run-sampler.py -v --mpi -o \
+srun python run-sampler.py -q --mpi -o \
 -n 2**27 \
 -f ../data/experiment2.h5 \
 --name="experiment2-20.hdf5" \
---hdf5-key="20"
+--hdf5-key="20" \
+--seed=42
 
-srun python run-sampler.py -v --mpi -o \
+srun python run-sampler.py -q --mpi -o \
 -n 2**27 \
 -f ../data/experiment2.h5 \
 --name="experiment2-24.hdf5" \
---hdf5-key="24"
+--hdf5-key="24" \
+--seed=42
 
-srun python run-sampler.py -v --mpi -o \
+srun python run-sampler.py -q --mpi -o \
 -n 2**27 \
 -f ../data/experiment2.h5 \
 --name="experiment2-28.hdf5" \
---hdf5-key="28"
+--hdf5-key="28" \
+--seed=42
