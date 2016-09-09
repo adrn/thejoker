@@ -11,7 +11,7 @@
 % - Simple Monte Carlo gets a capital S to indicate that it is a defined thing.
 % - Use \, as a multiply operator.
 % - Reserve () for function arguments; use [] or {} for outer shit.
-% - Always prior pdf or posterior pdf, never prior or posterior.
+% - Always prior pdf or posterior pdf, never prior or posterior (that's your arse).
 
 \include{gitstuff}
 
@@ -54,6 +54,10 @@
 \newcommand{\inv}[1]{{#1}^{-1}}
 \newcommand{\msun}{\mathrm{M}_\odot}
 \newcommand{\bs}[1]{\boldsymbol{#1}}
+
+% TODO
+\newcommand{\todoapw}[1]{{\color{red}APW TODO: #1}}
+\newcommand{\todohogg}[1]{{\color{green}Hogg TODO: #1}}
 
 \begin{document}
 
@@ -138,7 +142,7 @@ noise model or outliers.
   techniques: radial velocities
 }
 
-\section{Introduction}
+\section{Introduction} \label{sec:intro}
 
 Precise radial-velocity measurements of stars have transformed
 astrophysics in the last decades:
@@ -391,11 +395,93 @@ at least $M_{\rm min}$ samples from the posterior for any input data.
 
 \section{Experiments and results}
 
-Introduce the \apogee\ data
-(\citealt{Majewski:2015,Holtzman:2015,Eisenstein:2011,Alam:2015}), and
-our poster-child (\citealt{Troup:2016}).
+In what follows, we use spectroscopic data from Data Release 13 (DR13;
+\citealt{SDSS-Collaboration:2016}) of the Apache Point Obsevatory Galactic
+Evolution Experiment (\apogee; \citealt{Majewski:2015}) in a series of
+experiments that demonstrate the robustness and utility of \samplername.
+\apogee\ is one of the four sub-surveys of the Sloan Digital Sky Survey-III
+(SDSS-III; \citealt{Eisenstein:2011}) and utilized a new infrared spectrograph
+to obtain H-band spectra for over 160,000 stars throughout the Galaxy.
+From these spectra, high-precision radial velocities, chemical abundances, and
+stellar parameters have been derived and released as a part of DR13
+(\citealt{Holtzman:2015,Nidever:2015}).
+
+As a part of the observing strategy of \apogee, most stars are observed multiple
+times and binned by day into ``visit'' spectra.
+Though a typical star is only observed a few times, (1) at least one pair of
+visits are separated by one month or longer, and (2) thousands of stars have
+been observed more than 10 times (for a more detailed look at the cadence and
+number of visits for \apogee\ stars, see Figure~1 in \citealt{Troup:2016}).
+Radial velocities (and stellar parameters) are derived for each of the visit
+spectra, affording a sparse and sporadic time-domain sampling of the radial
+velocity variations of most stars in the survey.
+This time-domain information was recently used to identify a sample of candidate
+stellar and substellar companions to \apogee\ stars (\citealt{Troup:2016}).
+
+This search was conducted after data quality and data \emph{quantity} cuts that
+were designed to keep the number of data points larger than the number of
+parameters in the model.
+In their case, the model parameters are six Keplerian orbital parameters plus a
+long-term (linear) velocity trend (seven in total).
+Under this criterion, stars with fewer than eight visits were rejected from
+consideration, leaving $\approx$15,000 stars.
+For each of the remaining stars, the radial velocity curves are searched for
+significant periods, which are then used to initialize $\chi^2$ fits of a
+Keplerian orbit using a custom least-squares fitter \todoapw{cite De Lee even
+though we don't use it?}.
+In cases where multiple significant periods are found, the parameters obtained
+from the fit with the best modified $\chi^2$ value are retained (modulo a number
+of other considerations described in Section~3.3.4 of \citealt{Troup:2016}).
+
+The complexity of this pipeline and logic needed to identify a single optimal
+set of orbital parameters from a set of solutions highlights the fact that the
+likelihood function for a Keplerian orbit model is generically multi-modal.
+When there are few data points or poor phase coverage this is especially true.
+While useful for searching for new candidate binaries, this pipeline does not
+easily fit within hierarchical probabilistic modeling of the population of
+companions.
+
+In Experiment 1, we use DR13 data for an \apogee\ star with a companion
+(identified by \citealt{Troup:2016}) to demonstrate that the posterior pdf over
+Keplerian orbital parameters can be highly multi-modal by using \samplername\ to
+generate samples from this distribution.
+In Experiment 2, we use DR13 data for an \apogee\ star with better radial
+velocity phase coverage and more observations and show how the complexity of the
+posterior pdf increases as data points are artificially deleted from the
+analysis.
+\todoapw{Experiment 3 is what?}
+
+\subsection{Experiment 1: Sampling a highly multi-model posterior pdf for a
+known companion}
+
+\begin{figure*}[p]
+\begin{center}
+\includegraphics[width=\textwidth]{figures/exp1-rv-curves.pdf}
+\end{center}
+\caption{%
+Black points show \apogee\ radial velocity measurements plotted against
+Barycentric Modified Julian Date (BMJD) of the observations.
+Grey curves show orbits compute from 512 samples from the posterior pdf for
+these data.
+Note that several qualitatively different orbital solutions are found over a
+range of eccentricities and periods.
+\label{fig:exp1-rv}}
+\end{figure*}
+
+\begin{figure*}[p]
+\begin{center}
+\includegraphics[width=\textwidth]{figures/exp1-corner.pdf}
+\end{center}
+\caption{%
+Suh.
+\label{fig:exp1-corner}}
+\end{figure*}
+
+\subsection{Experiment 2: ...}
 
 Show results as a function of $N$.
+
+\subsection{Experiment 3: ...}
 
 Show switch-over from SMC to \emcee.
 
