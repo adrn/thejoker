@@ -27,12 +27,6 @@ def main(seed):
         rv_err = f[apogee_id]['rv_err'][:]
         rv_unit = f[apogee_id]['rv'].attrs['unit']
 
-    # start with 30 points instead of 31 -- HACK
-    idx = np.random.randint(0, len(bmjd))
-    bmjd = np.delete(bmjd, idx)
-    rv = np.delete(rv, idx)
-    rv_err = np.delete(rv_err, idx)
-
     n_delete = 4 # HACK: MAGIC NUMBER
     with h5py.File(os.path.join(paths.root, "data", "experiment2.h5"), "w") as outf:
         for i in range(0,28+1,n_delete): # HACK: MAGIC NUMBER
