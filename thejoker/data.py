@@ -47,9 +47,13 @@ class RVData(object):
             raise ValueError("You must pass in 'ivar' or 'stddev', not both.")
 
         elif ivar is not None:
+            if not hasattr(ivar, 'unit'):
+                raise TypeError("ivar must be an Astropy Quantity object!")
             self._ivar = ivar.decompose(usys).value
 
         elif stddev is not None:
+            if not hasattr(stddev, 'unit'):
+                raise TypeError("stddev must be an Astropy Quantity object!")
             self._ivar = 1 / stddev.decompose(usys).value**2
 
         self.metadata = metadata

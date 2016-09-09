@@ -134,7 +134,7 @@ class OrbitalParams(object):
         p : `~thejoker.celestialmechanics.OrbitalParams`
 
         """
-        pass
+        raise NotImplementedError()
 
     def copy(self):
         return self.__copy__()
