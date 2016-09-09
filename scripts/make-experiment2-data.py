@@ -28,6 +28,7 @@ def main(seed):
         rv_unit = f[apogee_id]['rv'].attrs['unit']
 
     # HACK: downsample to 31 observations
+    print("Target has {} observations".format(len(bmjd)))
     idx = np.random.choice(len(bmjd), size=len(bmjd)-31, replace=False)
     bmjd = np.delete(bmjd, idx)
     rv = np.delete(rv, idx)
