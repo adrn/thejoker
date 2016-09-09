@@ -1,4 +1,4 @@
-\documentclass[12pt, preprint]{aastex6}
+\documentclass[manuscript, letterpaper]{aastex6}
 
 % to-do list
 % ----------
@@ -14,22 +14,7 @@
 % - Always prior pdf or posterior pdf, never prior or posterior (that's your arse).
 
 \include{gitstuff}
-
-% fix aastex
-\setlength{\parindent}{1.4em}
-\linespread{1.15} % close to 10/13 spacing in ``manuscript''
-\setlength{\parskip}{0ex}
-\makeatletter % you know you are living your life wrong when you need to do this
-\def\revtex@pageid{%
- \xdef\@thefnmark{\null}%
- \@footnotetext{%
-  This \revtex@genre\space was prepared with the
-  \revtex@org\space \LaTeX\ macros v\revtex@ver, with modifications by David~W.~Hogg.%
- }%
-}%
-\def\abstractname{Abstract}%
-\makeatother
-\sloppy\sloppypar\frenchspacing
+\include{aastexmods}
 
 % packages
 \usepackage{amsmath}
@@ -642,7 +627,7 @@ This research additionally utilized:
     \texttt{matplotlib} (\citealt{Hunter:2007}),
     and \texttt{numpy} (\citealt{Van-der-Walt:2011}).}
 
-\bibliographystyle{apj}
+\bibliographystyle{aasjournal}
 \bibliography{thejoker}
 
 \end{document}
