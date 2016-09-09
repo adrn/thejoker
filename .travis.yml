@@ -19,6 +19,7 @@ addons:
             - texlive-latex-extra
             - texlive-fonts-recommended
             - texlive-fonts-extra
+            - texlive-humanities # apparently this fixes lineno.sty error in latex?!
             - dvipng
 
 install:
