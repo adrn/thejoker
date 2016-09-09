@@ -34,7 +34,7 @@ install:
     - conda update -q conda
     - conda info -a
 
-    - conda create --yes -n test python=$PYTHON_VERSION numpy scipy matplotlib
+    - conda create --yes -n test python=$PYTHON_VERSION
     - source activate test
 
 before_script: # configure a headless display to test plot generation
