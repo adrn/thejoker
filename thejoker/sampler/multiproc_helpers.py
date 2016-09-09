@@ -105,11 +105,11 @@ def _orbital_params_worker(task):
         is not supposed to be in the public API.
     """
 
-    idx, filename, data, global_seed = task
+    idx, filename, data, global_seed, chunk_index = task
     n_chunk = len(idx)
 
     if global_seed is not None:
-        seed = int("{}{}".format(global_seed, idx[0]))
+        seed = int("{}{}".format(global_seed, chunk_index))
     else:
         seed = idx[0]
     np.random.seed(seed) # TODO: is this good enough?
@@ -177,7 +177,7 @@ def samples_to_orbital_params(good_samples_idx, filename, data, pool, global_see
     else:
         plus = 0
 
-    tasks = [[good_samples_idx[i*chunk_size:(i+1)*chunk_size], filename, data, global_seed]
+    tasks = [[good_samples_idx[i*chunk_size:(i+1)*chunk_size], filename, data, global_seed, i]
              for i in range(n_samples//chunk_size+plus)]
 
     orbit_pars = pool.map(_orbital_params_worker, tasks)
