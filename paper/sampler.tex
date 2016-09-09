@@ -402,13 +402,14 @@ Evolution Experiment (\apogee; \citealt{Majewski:2015}) in a series of
 experiments that demonstrate the robustness and utility of \samplername.
 \apogee\ is one of the four sub-surveys of the Sloan Digital Sky Survey-III
 (SDSS-III; \citealt{Eisenstein:2011}) and utilized a new infrared spectrograph
-to obtain H-band spectra for over 160,000 stars throughout the Galaxy.
+to obtain moderate-resolution, H-band spectra for over 160,000 stars throughout
+the Galaxy.
 From these spectra, high-precision radial velocities, chemical abundances, and
 stellar parameters have been derived and released as a part of DR13
 (\citealt{Holtzman:2015,Nidever:2015}).
 
-As a part of the observing strategy of \apogee, most stars are observed multiple
-times and binned by day into ``visit'' spectra.
+As a part of the observing strategy of \apogee, most stars are observed
+multiple times and binned by day into ``visit'' spectra.
 Though a typical star is only observed a few times, (1) at least one pair of
 visits are separated by one month or longer, and (2) thousands of stars have
 been observed more than 10 times (for a more detailed look at the cadence and
@@ -416,8 +417,9 @@ number of visits for \apogee\ stars, see Figure~1 in \citealt{Troup:2016}).
 Radial velocities (and stellar parameters) are derived for each of the visit
 spectra, affording a sparse and sporadic time-domain sampling of the radial
 velocity variations of most stars in the survey.
-This time-domain information was recently used to identify a sample of candidate
-stellar and substellar companions to \apogee\ stars (\citealt{Troup:2016}).
+This time-domain information was recently used to identify a sample of
+candidate stellar and substellar companions to \apogee\ stars
+(\citealt{Troup:2016}).
 
 This search was conducted after data quality and data \emph{quantity} cuts that
 were designed to keep the number of data points larger than the number of
@@ -431,8 +433,9 @@ significant periods, which are then used to initialize $\chi^2$ fits of a
 Keplerian orbit using a custom least-squares fitter \todoapw{cite De Lee even
 though we don't use it?}.
 In cases where multiple significant periods are found, the parameters obtained
-from the fit with the best modified $\chi^2$ value are retained (modulo a number
-of other considerations described in Section~3.3.4 of \citealt{Troup:2016}).
+from the fit with the best modified $\chi^2$ value are retained (modulo a
+number of other considerations described in Section~3.3.4 of
+\citealt{Troup:2016}).
 
 The complexity of this pipeline and logic needed to identify a single optimal
 set of orbital parameters from a set of solutions highlights the fact that the
@@ -444,16 +447,35 @@ companions.
 
 In Experiment 1, we use DR13 data for an \apogee\ star with a companion
 (identified by \citealt{Troup:2016}) to demonstrate that the posterior pdf over
-Keplerian orbital parameters can be highly multi-modal by using \samplername\ to
-generate samples from this distribution.
+Keplerian orbital parameters can be highly multi-modal by using \samplername\
+to generate samples from this distribution.
 In Experiment 2, we use DR13 data for an \apogee\ star with better radial
-velocity phase coverage and more observations and show how the complexity of the
-posterior pdf increases as data points are artificially deleted from the
+velocity phase coverage and more observations and show how the complexity of
+the posterior pdf increases as data points are artificially deleted from the
 analysis.
 \todoapw{Experiment 3 is what?}
 
-\subsection{Experiment 1: Sampling a highly multi-model posterior pdf for a
-known companion}
+\subsection{Experiment 1: Sampling from a highly multi-model posterior pdf for
+a known companion}
+
+Figure~\ref{fig:exp1-rv} shows radial velocity data for the \apogee\ target
+2M00110648+6609349 (black points).\footnote{We don't plot the best-fit orbit
+from \citealt{Troup:2016} because the parameter values reported in their work
+do not produce Keplerian orbits that look like reasonable fits to the data.
+\todoapw{How to say this better / nicer?}}
+These data are sparse and have poor phase-coverage and it is not clear from the
+data alone that there is a single dominant period in orbital solutions that are
+consistent with these data.
+Over-plotted on this figure as grey lines are orbits computed from random
+samples from the posterior pdf, sampled using \samplername.
+From these orbits, it appears that there are at least a few distinct period
+modes and a wide variety of eccentricities.
+
+This is also demonstrated in Figure~\ref{fig:exp1-corner}, which shows projections of the posterior samples in different parameter combinations.
+There are at least three period modes: the dominant mode at $P \approx 300~{\rm
+day}$ is broadly consistent with the previously measured period
+(\citealt{Troup:2016}), but other modes are clearly present at shorter periods
+with low-eccentricity and longer periods with high-eccentricity.
 
 \begin{figure*}[p]
 \begin{center}
