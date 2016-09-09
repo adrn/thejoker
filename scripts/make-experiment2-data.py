@@ -44,7 +44,7 @@ def main(seed):
                 rv_err = np.delete(bmjd, idx)
 
             g = outf.create_group(str(i))
-            print(len(bmjd))
+
             d = g.create_dataset('mjd', data=bmjd)
             d.attrs['format'] = 'mjd'
             d.attrs['scale'] = 'tcb'
