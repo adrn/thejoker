@@ -368,7 +368,8 @@ The three possible outcomes are:
   have a root-variance (rms) in the period parameter $P$ that is
   smaller than $\Delta$.
   In this case, we use the surviving samples (or sample) to
-  initialize a MCMC sampling using the \emcee\ package (\citealt{emcee}).
+  initialize a MCMC sampling using the \emcee\ package
+  (\citealt{Foreman-Mackey:2013}).
   We sample the
   prior densely enough initially that if only a few samples survive,
   we are fairly confident that the data are informative enough that
@@ -386,8 +387,8 @@ When we trigger the intialization and operation of \emcee, we do the following:
 \item Randomly generate $M_{\rm min}$ sets of parameters $\theta_m$
   (linear and nonlinear parameters) in a small, Gaussian ball around
   the highest-$Q_k$ sample from the Simple Monte Carlo.
-\item Run \emcee\ on this ensemble as per the instructions written on
-  the side of the \emcee\ packaging (\citealt{emcee}) for $2^{16}$ steps.
+\item Run \emcee\ on this ensemble as per the instructions written on the side
+  of the \emcee\ packaging (\citealt{Foreman-Mackey:2013}) for $2^{16}$ steps.
 \item Take the final state of the $M_{\rm min}$-element ensemble as a
   fair sampling of the posterior pdf.
 \end{enumerate}
