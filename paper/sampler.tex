@@ -1,4 +1,4 @@
-\documentclass[12pt, preprint]{aastex}
+\documentclass[12pt, preprint]{aastex6}
 
 % to-do list
 % ----------
@@ -33,14 +33,16 @@
 
 % packages
 \usepackage{amsmath}
-\usepackage[backref,breaklinks,colorlinks,citecolor=black]{hyperref}
-\usepackage[all]{hypcap}
-\renewcommand*{\backref}[1]{[#1]}
+\hypersetup{backref,breaklinks,colorlinks,citecolor=black}
+% \usepackage[backref,breaklinks,colorlinks,citecolor=black]{hyperref}
+% \usepackage[all]{hypcap}
+% \renewcommand*{\backref}[1]{[#1]}
 
 % define macros for text
 \newcommand{\project}[1]{\textsl{#1}}
 \newcommand{\acronym}[1]{{\small{#1}}}
 \newcommand{\apogee}{\project{\acronym{APOGEE}}}
+\newcommand{\sdssiii}{\project{\acronym{SDSS-III}}}
 \newcommand{\samplername}{\project{The~Joker}}
 \newcommand{\emcee}{\project{emcee}}
 \newcommand{\dr}{\acronym{DR13}}
@@ -309,7 +311,7 @@ In different experiments we use different values for hyperparameters
 $P_{\rm min}$ and $P_{\rm max}$; we are explicit about our choices in
 each of the experiments described below.
 We sample the prior pdf directly and explicitly with standard
-\project{numpy.random} calls (\citealt{Walt:2011}).
+\project{numpy.random} calls (\citealt{Van-der-Walt:2011}).
 In practice we usually take $2^{28}$ (that's about a quarter billion)
 samples in the prior-pdf sampling. Holy fuck that's a lot!
 
@@ -519,10 +521,35 @@ This work additionally used the Extreme Science and Engineering Discovery
 Environment \citep[XSEDE;][]{Towns:2014}, which is supported by National
 Science Foundation grant number ACI-1053575.
 
-The code used in this project is available from
-\url{https://github.com/adrn/thejoker} under the MIT open-source
-software license. This version of the paper was generated with git
-commit \texttt{\githash~(\gitdate)}.
+This project made use of \sdssiii\ data. Funding for \sdssiii\ has been provided
+by the Alfred P. Sloan Foundation, the Participating Institutions, the National
+Science Foundation, and the \acronym{U.S.} Department of Energy Office of
+Science. The \sdssiii\ web site is \url{http://www.sdss3.org/}.
+
+\sdssiii\ is managed by the Astrophysical Research Consortium for the
+Participating Institutions of the \sdssiii\ Collaboration including the
+University of Arizona, the Brazilian Participation Group, Brookhaven National
+Laboratory, Carnegie Mellon University, University of Florida, the French
+Participation Group, the German Participation Group, Harvard University, the
+Instituto de Astrofisica de Canarias, the Michigan State/Notre
+Dame/\acronym{JINA} Participation Group, Johns Hopkins University, Lawrence
+Berkeley National Laboratory, Max Planck Institute for Astrophysics, Max Planck
+Institute for Extraterrestrial Physics, New Mexico State University, New York
+University, Ohio State University, Pennsylvania State University, University of
+Portsmouth, Princeton University, the Spanish Participation Group, University of
+Tokyo, University of Utah, Vanderbilt University, University of Virginia,
+University of Washington, and Yale University.
+
+\software{The code used in this project is available from
+\url{https://github.com/adrn/thejoker} under the MIT open-source software
+license. This version of the paper was generated with git commit
+\texttt{\githash~(\gitdate)}.
+This research additionally utilized:
+    \texttt{Astropy} (\citealt{Astropy-Collaboration:2013}),
+    \texttt{emcee} (\citealt{Foreman-Mackey:2013}),
+    \texttt{IPython} (\citealt{Perez:2007}),
+    \texttt{matplotlib} (\citealt{Hunter:2007}),
+    and \texttt{numpy} (\citealt{Van-der-Walt:2011}).}
 
 \bibliographystyle{apj}
 \bibliography{thejoker}
