@@ -12,6 +12,7 @@
 % - Use \, as a multiply operator.
 % - Reserve () for function arguments; use [] or {} for outer shit.
 % - Always prior pdf or posterior pdf, never prior or posterior (that's your arse).
+% - Use \sectionname not Section.
 
 \include{gitstuff}
 \include{aastexmods}
@@ -211,7 +212,7 @@ Each of these assumptions can be challenged: in particular we expect some stars
 to have additional companions, and we expect there to be outliers and
 unaccounted sources of noise.
 We will return to these assumptions, and the consequences of relaxing them, in
-Section~\ref{sec:discussion}.
+\sectionname~\ref{sec:discussion}.
 
 In the two-body celestial mechanics problem (\citealt{Kepler:1609}; and here we
 are working in a parameterization similar to that of \citealt{Murray:2010}), and
@@ -330,7 +331,7 @@ The marginalization assumes that the prior pdfs on the linear parameters
 are very broad and Gaussian---or
 at least very flat over the range of relevance---and that they do not depend
 on the nonlinear parameters in any way (which is a substantial restriction;
-see Section~\ref{sec:discussion}).
+see \sectionname~\ref{sec:discussion}).
 These $Q_k$ are used in the rejection sampling algorithm described above
 as Simple Monte Carlo.
 
@@ -417,7 +418,7 @@ Keplerian orbit using a custom least-squares fitter \todoapw{cite De Lee even
 though we don't use it?}.
 In cases where multiple significant periods are found, the parameters obtained
 from the fit with the best modified $\chi^2$ value are retained (modulo a
-number of other considerations described in Section~3.3.4 of
+number of other considerations described in \sectionname~3.3.4 of
 \citealt{Troup:2016}).
 
 The complexity of this pipeline and logic needed to identify a single optimal
@@ -457,7 +458,7 @@ Over-plotted on Figure~\ref{fig:exp1-rv} as grey lines are orbits computed from
 random samples from the posterior pdf, sampled using \samplername.
 We start by generating $2^{28}$ prior samples over the nonlinear parameters with
 a period domain of $(P_{\rm min}, P_{\rm max}) = (16, 8192)~{\rm day}$ (see
-Section~\ref{sec:method}), of which 23,584 samples pass our rejection sampling
+\sectionname~\ref{sec:method}), of which 23,584 samples pass our rejection sampling
 step.
 We draw 512 of these at random and show these in Figure~\ref{fig:exp1-rv}.
 From these orbits, it appears that there are at least a few distinct period
@@ -605,6 +606,22 @@ HOGG The assumption of single companion has the following issues...
 
 HOGG The assumption that the linear-parameter prior doesn't depend
 on the nonlinear parameters is absurd! Why?
+
+The problem structure points (in \sectionname~\ref{sec:method})
+includes the point that, given a finite time span for the data, there
+is a finite width to any period peak in the likelihood function.
+This finite width goes like period squared, so at very short periods,
+it gets very narrow.
+Our prior sampling is uniform in the logarithm of period, or the
+density of samples in period goes like inverse period.
+If we wanted to make sure a minimal prior sampling was always dense
+enough at every period, we should weight it by an additional factor of
+inverse period.
+A change like this could improve the reliability of the method when the data
+are informative, the observations span a long time, and the true
+period is short.
+For now \thejoker\ simply addresses the prior sampling density issues
+by using as many prior samples as it possibly can!
 
 Of the assumptions, probably the most severe is the Gaussian noise
 with known variance. \textbf{This is wrong, very wrong!} Ideas about
