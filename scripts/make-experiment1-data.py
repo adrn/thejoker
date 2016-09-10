@@ -21,7 +21,7 @@ import numpy as np
 # Project
 from thejoker import Paths
 paths = Paths()
-from thejoker.celestialmechanics import SimulatedRVOrbit
+from thejoker.celestialmechanics import OrbitalParams
 from thejoker.data import RVData
 from thejoker.units import usys
 
@@ -30,10 +30,11 @@ plt.style.use("../thejoker/thejoker.mplstyle")
 def main():
 
     # high-eccentricity orbit with reasonable or randomly chosen parameters
-    orbit = SimulatedRVOrbit(P=103.71*u.day, a_sin_i=8.*u.R_sun, ecc=0.613,
-                             omega=np.random.uniform(0, 2*np.pi)*u.rad,
-                             phi0=np.random.uniform(0, 2*np.pi)*u.rad,
-                             v0=np.random.normal(0, 30) * u.km/u.s)
+    opars = OrbitalParams(P=103.71*u.day, asini=8.*u.R_sun, ecc=0.613,
+                          omega=np.random.uniform(0, 2*np.pi)*u.rad,
+                          phi0=np.random.uniform(0, 2*np.pi)*u.rad,
+                          v0=np.random.normal(0, 30) * u.km/u.s)
+    orbit = opars.rv_orbit(0)
     print("Mass function:", orbit.mf)
     print("omega:", orbit.omega.to(u.degree))
     print("phi0:", orbit.phi0.to(u.degree))
@@ -59,6 +60,8 @@ def main():
 
         d = f.create_dataset('rv_err', data=rv_err.decompose(usys).value)
         d.attrs['unit'] = str(usys['speed'])
+
+        f.create_dataset('truth_vector', data=opars.pack())
 
     # plot!
     plot_path = os.path.join(paths.plots, "experiment1")
