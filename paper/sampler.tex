@@ -465,8 +465,10 @@ survey start date (in barycentric MJD) to be 55555.
 The radial velocity measurement uncertainties are drawn from a uniform
 distribution over the interval $(0.1, 0.2)~\kms$, motivated by the \apogee\
 radial velocity uncertainties.
-We generate $J=2^{28}$ samples from our prior pdf over the non-linear
-parameters, of which 30,082 survive the rejection step.
+We start by generating $J=2^{28}$ prior samples over the nonlinear parameters
+with a period domain of $(P_{\rm min}, P_{\rm max}) = (16, 8192)~{\rm day}$ (see
+\sectionname~\ref{sec:method}), of which 30,082 samples pass our rejection
+sampling step.
 
 \figname~\ref{fig:exp1-rv}, top panel, shows the simulated data (black points)
 along with the true orbit (dashed, green line) and orbits computed from samples
@@ -509,34 +511,31 @@ value of true, input orbit shown as green lines and points.
 \label{fig:exp1-corner}}
 \end{figure*}
 
-\subsection{Experiment 2: Sampling from a highly multi-model posterior pdf for
-a known companion}
+\subsection{Experiment 2: A system known to be a binary with few observations}
 
-We choose an \apogee\ target with a previously
-identified companion (2M00110648+6609349) but with few radial velocity
-measurements (\citealt{Troup:2016}).
+For a more realistic application of \samplername, we choose an \apogee\ target
+with a previously identified companion (2M00110648+6609349) but with few radial
+velocity measurements (\citealt{Troup:2016}).
 \figname~\ref{fig:exp2-rv} shows radial velocity data for the star (black
 points).\footnote{We don't plot the best-fit orbit from \citealt{Troup:2016}
 because the parameter values reported in their work do not produce Keplerian
 orbits that look like reasonable fits to the data.
 \todoapw{How to say this better / nicer?}}
-These data are sparse and have poor phase coverage; it is not clear from the
-data alone that there is a single dominant period in orbital solutions that are
-consistent with these data.
+Similar to Experiment 1, these data are sparse and have poor phase coverage,
+however the time sampling is quite different and is representative of realistic
+survey design choices.
 
 Over-plotted on \figname~\ref{fig:exp2-rv} as grey lines are orbits computed
 from random samples from the posterior pdf, sampled using \samplername.
-We start by generating $2^{28}$ prior samples over the nonlinear parameters with
-a period domain of $(P_{\rm min}, P_{\rm max}) = (16, 8192)~{\rm day}$ (see
-\sectionname~\ref{sec:method}), of which 23,584 samples pass our rejection sampling
-step.
-We draw 512 of these at random and show these in \figname~\ref{fig:exp2-rv}.
+We again generate $2^{28}$ prior samples over the nonlinear parameters with a
+period domain of $(P_{\rm min}, P_{\rm max}) = (16, 8192)~{\rm day}$, of which
+45,242 samples pass our rejection sampling step.
+We draw 128 of these at random and show these in \figname~\ref{fig:exp2-rv}.
 From these orbits, it appears that there are at least a few distinct period
 modes and a wide variety of eccentricities.
 
-This is also demonstrated in \figname~\ref{fig:exp2-corner}, which shows
-projections of all 23,584 posterior samples in different parameter
-combinations.
+\figname~\ref{fig:exp2-corner} shows projections of all 23,584 posterior samples
+in different parameter combinations.
 There are at least three period modes: the dominant mode at $P \approx 300~{\rm
 day}$ is broadly consistent with the previously measured period
 (\citealt{Troup:2016}), but other modes are clearly present at shorter periods
@@ -549,7 +548,7 @@ with low eccentricity and longer periods with higher eccentricity.
 \caption{%
 Black points show \apogee\ radial velocity measurements plotted against
 Barycentric Modified Julian Date (BMJD) of the observations.
-Grey curves show orbits compute from 512 samples from the posterior pdf for
+Grey curves show orbits compute from 128 samples from the posterior pdf for
 these data.
 Note that several qualitatively different orbital solutions are found over a
 range of eccentricities and periods.
