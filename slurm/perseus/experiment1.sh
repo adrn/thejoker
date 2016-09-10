@@ -15,7 +15,7 @@ module load openmpi/gcc/1.10.2/64
 source activate thejoker
 
 # Run experiment 1!
-python make-experiment1-data.py -s 42
+python make-experiment1-data.py -s 1988
 
 srun python run-sampler.py -v --mpi -o \
 -n 2**28 \
