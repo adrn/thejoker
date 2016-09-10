@@ -1,0 +1,3 @@
+#!/bin/bash
+
+rsync -zvr --max-size=512m perseus:/tigress/adrianp/projects/thejoker/cache/experiment*.h5 ~/projects/thejoker/cache/
