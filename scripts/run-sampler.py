@@ -70,6 +70,8 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, hdf5_key=Non
             sys.exit(0)
 
         elif continue_sampling: # we need to increment the random number seed appropriately
+            mode = 'a' # append to output file
+
             with h5py.File(output_filename, 'r') as f:
                 if 'rerun' not in f.attrs:
                     rerun = 0
@@ -93,11 +95,13 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, hdf5_key=Non
 
         elif overwrite: # restart rerun counter
             rerun = 0
+            mode = 'w'
 
         else:
             raise ValueError("Unknown state!")
 
     else:
+        mode = 'w'
         rerun = 0
 
     # do this after choosing pool so all processes don't have same seed
@@ -159,7 +163,7 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, hdf5_key=Non
     par_spec['phi0'] = usys['angle']
     par_spec['v0'] = usys['length']/usys['time']
 
-    with h5py.File(output_filename, 'a') as f:
+    with h5py.File(output_filename, mode) as f:
         f.attrs['rerun'] = rerun
         f.attrs['jitter_m/s'] = jitter.to(u.m/u.s).value # HACK: always in m/s?
         f.attrs['P_min_day'] = P_min.to(u.day).value
