@@ -45,7 +45,7 @@
 \newcommand{\todoapw}[1]{{\color{red}APW TODO: #1}}
 \newcommand{\todohogg}[1]{{\color{green}Hogg TODO: #1}}
 
-\begin{document}
+\begin{document}\sloppy\sloppypar\raggedbottom\frenchspacing % trust me
 
 \title{\samplername: A custom Monte Carlo sampler \\
   for binary-star and exoplanet radial velocity data}
@@ -189,7 +189,7 @@ weaken our assumptions but they indeed prove to be far from correct.
 In order to set up a well-posed problem and build a path to a
 definite solution, we make a set of non-trivial assumptions about the
 stellar systems we will use and observations thereof.
-\begin{itemize}
+\begin{itemize}\itemsep0ex
 \item We assume that we have measurements of the radial velocity of a
   star, and that the time dependence of the expectation of that radial
   velocity is well described by the gravitational orbit of a pair of
@@ -248,7 +248,7 @@ the non-linear parameters, and analytically marginalize over the linear
 parameters.
 The method capitalizes on the following aspects of the problem
 structure:
-\begin{itemize}
+\begin{itemize}\itemsep0ex
 \item There are both linear and non-linear parameters, and we can
   treat them differently; in particular, it is possible to
   analytically marginalize the linear parameters (provided that the
@@ -263,7 +263,7 @@ Simple Monte Carlo is a method in which the prior probability density function
 (pdf) is densely sampled, and then many of the samples are rejected by a
 rejection-sampling step that uses the likelihood as the rejection scalar.
 The rejection step works as follows:
-\begin{enumerate}
+\begin{enumerate}\itemsep0ex
 \item For each sample $k$ in the prior pdf sampling there is a
   likelihood value $L_k$ (a probability for the data given the
   parameters, not logarithmic).
@@ -345,7 +345,7 @@ the time span of the data; max minus min).
 This $\Delta$ is an expansion of the period
 resolution expected from an information-theory (sampling theorems) perspective.
 The three possible outcomes are:
-\begin{itemize}
+\begin{itemize}\itemsep0ex
 \item $M\geq M_{\rm min}$ samples survive the rejection.
   In this case, we are done.
 \item $M<M_{\rm min}$ samples survive the rejection, and these samples
@@ -367,7 +367,7 @@ The three possible outcomes are:
   larger than $M_{\rm min}$. This is expensive!
 \end{itemize}
 When we trigger the intialization and operation of \emcee, we do the following:
-\begin{enumerate}
+\begin{enumerate}\itemsep0ex
 \item Randomly generate $M_{\rm min}$ sets of parameters $\bs{\theta}_m$
   (linear and nonlinear parameters) in a small, Gaussian ball around
   the highest-$Q_k$ sample from the Simple Monte Carlo.
