@@ -16,7 +16,7 @@ import numpy as np
 from thejoker import Paths
 paths = Paths()
 
-apogee_id = "2M19405532+2401157"
+apogee_id = "2M03080601+7950502"
 
 def main(seed):
     np.random.seed(seed)
@@ -29,19 +29,19 @@ def main(seed):
 
     # HACK: downsample to 31 observations
     print("Target has {} observations".format(len(bmjd)))
-    idx = np.random.choice(len(bmjd), size=len(bmjd)-31, replace=False)
+    idx = np.random.choice(len(bmjd), size=len(bmjd)-17, replace=False)
     bmjd = np.delete(bmjd, idx)
     rv = np.delete(rv, idx)
     rv_err = np.delete(rv_err, idx)
-    assert len(bmjd) == 31
+    assert len(bmjd) == 17
 
-    n_delete = 4 # HACK: MAGIC NUMBER
+    n_delete = 2 # HACK: MAGIC NUMBER
     with h5py.File(os.path.join(paths.root, "data", "experiment2.h5"), "w") as outf:
         outf.attrs['APOGEE_ID'] = apogee_id
 
-        for i in range(0,28+1,n_delete): # HACK: MAGIC NUMBER
+        for i in range(0,14+1,n_delete): # HACK: MAGIC NUMBER
             if i > 0:
-                # pick 4 random data points to delete
+                # pick random data points to delete
                 idx = np.random.choice(len(bmjd), size=n_delete, replace=False)
                 bmjd = np.delete(bmjd, idx)
                 rv = np.delete(rv, idx)
@@ -58,6 +58,8 @@ def main(seed):
 
             d = g.create_dataset('rv_err', data=rv_err)
             d.attrs['unit'] = str(rv_unit)
+
+            print(i, len(rv))
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
