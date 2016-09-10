@@ -205,7 +205,7 @@ if __name__ == "__main__":
     oc_group.add_argument("-c", "--continue", dest="_continue", default=False,
                           action="store_true", help="Continue the sampler.")
 
-    parser.add_argument("--seed", dest="seed", default=None, type=int,
+    parser.add_argument("-s", "--seed", dest="seed", default=None, type=int,
                         help="Random number seed")
 
     group = parser.add_mutually_exclusive_group()
