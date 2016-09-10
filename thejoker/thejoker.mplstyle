@@ -1,3 +1,5 @@
+backend: Agg
+
 figure.dpi: 300
 figure.facecolor: white
 figure.edgecolor: white
