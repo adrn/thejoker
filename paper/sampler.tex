@@ -12,7 +12,7 @@
 % - Use \, as a multiply operator.
 % - Reserve () for function arguments; use [] or {} for outer shit.
 % - Always prior pdf or posterior pdf, never prior or posterior (that's your arse).
-% - Use \sectionname not Section.
+% - Use \sectionname not Section, \figname not Figure.
 
 \include{gitstuff}
 \include{aastexmods}
@@ -29,6 +29,8 @@
 \newcommand{\samplername}{\project{The~Joker}}
 \newcommand{\emcee}{\project{emcee}}
 \newcommand{\dr}{\acronym{DR13}}
+\newcommand{\sectionname}{Section}
+\newcommand{\figname}{Figure}
 
 % define macros for math
 \newcommand{\meterspersecond}{\mathrm{m\,s^{-1}}}
@@ -397,7 +399,7 @@ multiple times and binned by day into ``visit'' spectra.
 Though a typical star is only observed a few times, (1) at least one pair of
 visits are separated by one month or longer, and (2) thousands of stars have
 been observed more than 10 times (for a more detailed look at the cadence and
-number of visits for \apogee\ stars, see Figure~1 in \citealt{Troup:2016}).
+number of visits for \apogee\ stars, see \figname~1 in \citealt{Troup:2016}).
 Radial velocities (and stellar parameters) are derived for each of the visit
 spectra, affording a sparse and sporadic time-domain sampling of the radial
 velocity variations of most stars in the survey.
@@ -445,7 +447,7 @@ a known companion}
 As a first experiment, we choose an \apogee\ target with a previously
 identified companion (2M00110648+6609349) but with few radial velocity
 measurements (\citealt{Troup:2016}).
-Figure~\ref{fig:exp1-rv} shows radial velocity data for the star (black
+\figname~\ref{fig:exp1-rv} shows radial velocity data for the star (black
 points).\footnote{We don't plot the best-fit orbit from \citealt{Troup:2016}
 because the parameter values reported in their work do not produce Keplerian
 orbits that look like reasonable fits to the data.
@@ -454,17 +456,17 @@ These data are sparse and have poor phase coverage; it is not clear from the
 data alone that there is a single dominant period in orbital solutions that are
 consistent with these data.
 
-Over-plotted on Figure~\ref{fig:exp1-rv} as grey lines are orbits computed from
-random samples from the posterior pdf, sampled using \samplername.
+Over-plotted on \figname~\ref{fig:exp1-rv} as grey lines are orbits computed
+from random samples from the posterior pdf, sampled using \samplername.
 We start by generating $2^{28}$ prior samples over the nonlinear parameters with
 a period domain of $(P_{\rm min}, P_{\rm max}) = (16, 8192)~{\rm day}$ (see
 \sectionname~\ref{sec:method}), of which 23,584 samples pass our rejection sampling
 step.
-We draw 512 of these at random and show these in Figure~\ref{fig:exp1-rv}.
+We draw 512 of these at random and show these in \figname~\ref{fig:exp1-rv}.
 From these orbits, it appears that there are at least a few distinct period
 modes and a wide variety of eccentricities.
 
-This is also demonstrated in Figure~\ref{fig:exp1-corner}, which shows
+This is also demonstrated in \figname~\ref{fig:exp1-corner}, which shows
 projections of all 23,584 posterior samples in different parameter
 combinations.
 There are at least three period modes: the dominant mode at $P \approx 300~{\rm
@@ -516,9 +518,9 @@ observations as input data (a total of 8 consecutive runs).
 In detail, we again generate $2^{28}$ prior samples over the nonlinear
 parameters with a period domain of $(P_{\rm min}, P_{\rm max}) = (16, 8192)~{\rm
 day}$ and re-use these prior samples for each sub-sampling of the data.
-Figures~\ref{fig:exp2-rv-0}--\ref{fig:exp2-rv-1} show the data and orbits
+\figname s~\ref{fig:exp2-rv-0}--\ref{fig:exp2-rv-1} show the data and orbits
 computed from posterior samples returned by \samplername.
-Starting from the top of Figure~\ref{fig:exp2-rv-0} with the full set of 19
+Starting from the top of \figname~\ref{fig:exp2-rv-0} with the full set of 19
 measurements, each panel below has 2 fewer data points than the previous.
 The data used for the sampling shown in a given panel are plotted as black
 circles, and the removed measurements are plotted as red X's.
@@ -530,10 +532,10 @@ are indicated on each panel.
 \includegraphics[height=0.9\textheight]{figures/exp2-rv-curves-0.pdf}
 \end{center}
 \caption{%
-Similar to Figure~\ref{fig:exp1-rv}, in all panels, black points show \apogee\
-radial velocity measurements used to generate samples from the posterior pdf
-over orbital parameters sub-sampled from the full set of observations for this
-target 2M19405532+2401157.
+Similar to \figname~\ref{fig:exp1-rv}, in all panels, black points show
+\apogee\ radial velocity measurements used to generate samples from the
+posterior pdf over orbital parameters sub-sampled from the full set of
+observations for this target 2M19405532+2401157.
 Grey curves show orbits compute from a maximum of 512 samples from the
 posterior pdf, but when the number of accepted samples is fewer than this
 number, orbits computed for all $M$ accepted samples are shown.
@@ -546,23 +548,23 @@ number, orbits computed for all $M$ accepted samples are shown.
 \includegraphics[height=0.9\textheight]{figures/exp2-rv-curves-1.pdf}
 \end{center}
 \caption{%
-Same as Figure~\ref{fig:exp2-rv-0} for smaller sub-samplings of the original
-data set.
+Same as \figname~\ref{fig:exp2-rv-0} for smaller sub-samplings of the
+original data set.
 \todoapw{More comments here..}
 \label{fig:exp2-rv-1}}
 \end{figure*}
 
-Figures~\ref{fig:exp2-corner-0}--\ref{fig:exp2-corner-1} show a few projections
-of the posterior samples for each of the data sub-samplings (i.e. the panels in
-these figures match the panels in
-Figures~\ref{fig:exp2-rv-0}--\ref{fig:exp2-rv-1}).
-All panels in Figures~\ref{fig:exp2-corner-0} show that the posterior pdf is
+\figname s~\ref{fig:exp2-corner-0}--\ref{fig:exp2-corner-1} show a few
+projections of the posterior samples for each of the data sub-samplings (i.e.
+the panels in these figures match the panels in
+\figname s~\ref{fig:exp2-rv-0}--\ref{fig:exp2-rv-1}).
+All panels in \figname s~\ref{fig:exp2-corner-0} show that the posterior pdf is
 very compact and unimodal when $N=19,17,15,13$ data points are used.
-We have fixed the axis limits to be the same in Figures~\ref{fig:exp2-corner-0}
-and \ref{fig:exp2-corner-1}), so the single dark point in some of the panels of
-Figure~\ref{fig:exp2-corner-0} are very compact visualizations of the posterior
-samples.
-The structure in Figure~\ref{fig:exp2-corner-1} is much more interesting.
+We have fixed the axis limits to be the same in \figname
+s~\ref{fig:exp2-corner-0} and \ref{fig:exp2-corner-1}), so the single dark point
+in some of the panels of \figname~\ref{fig:exp2-corner-0} are very compact
+visualizations of the posterior samples.
+The structure in \figname~\ref{fig:exp2-corner-1} is much more interesting.
 Already in the top panels ($N=9$), multiple modes appear.
 These become more apparent in the panels below, until ultimately forming a
 harmonic series of modes in the bottom two rows of panels.
@@ -585,8 +587,8 @@ TODO
 \includegraphics[height=0.9\textheight]{figures/exp2-corner-1.pdf}
 \end{center}
 \caption{%
-Same as Figure~\ref{fig:exp2-corner-0} for smaller sub-samplings of the original
-data set.
+Same as \figname~\ref{fig:exp2-corner-0} for smaller sub-samplings of the
+original data set.
 \todoapw{More comments here..}
 \label{fig:exp2-corner-1}}
 \end{figure*}
@@ -620,7 +622,7 @@ inverse period.
 A change like this could improve the reliability of the method when the data
 are informative, the observations span a long time, and the true
 period is short.
-For now \thejoker\ simply addresses the prior sampling density issues
+For now \samplername\ simply addresses the prior sampling density issues
 by using as many prior samples as it possibly can!
 
 Of the assumptions, probably the most severe is the Gaussian noise
