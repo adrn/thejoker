@@ -40,6 +40,7 @@
 \newcommand{\transpose}[1]{{#1}^{\mathsf{T}}}
 \newcommand{\inv}[1]{{#1}^{-1}}
 \newcommand{\msun}{\mathrm{M}_\odot}
+\newcommand{\kms}{\mathrm{km}~\mathrm{s}^{-1}}
 \newcommand{\bs}[1]{\boldsymbol{#1}}
 
 % TODO
@@ -432,6 +433,7 @@ While useful for searching for new candidate binaries, this pipeline does not
 easily fit within hierarchical probabilistic modeling of the population of
 companions.
 
+\todoapw{Update this to reflect new experiments}
 In Experiment 1, we use DR13 data for an \apogee\ star with a companion
 (identified by \citealt{Troup:2016}) to demonstrate that the posterior pdf over
 Keplerian orbital parameters can be highly multi-modal by using \samplername\
@@ -442,13 +444,30 @@ the posterior pdf increases as data points are artificially deleted from the
 analysis.
 \todoapw{Experiment 3 is what?}
 
-\subsection{Experiment 1: Sampling from a highly multi-model posterior pdf for
+\subsection{Experiment 1: Validation with simulated data}
+
+As a first demonstration, we generate fake radial velocity data (with
+uncertainties) that are consistent with our assumptions
+(\sectionname~\ref{sec:method}), then sample from the posterior pdf over orbital
+parameters with \samplername.
+The eccentricity is deliberately chosen to be high and the period and $\asini$
+are chosen to be broadly consistent with the typical sub-stellar companion found
+in recent analysis of the \apogee\ data (\citealt{Troup:2016}).
+The values of the parameters used for the simulated data (e.g., the truth) are:
+$e = 0.867$, $P = 53.09~{\rm day}$, $\asini = 42~R_\odot$, $\omega =
+134.834^\circ$, $\phi_0 = 342.257^\circ$, $v_0 = 19.431~\kms$.
+We generate $J=2^{28}$ samples from our prior pdf over the non-linear
+parameters, of which XXX survive the rejection step.
+
+Figure~\ref
+
+\subsection{Experiment 2: Sampling from a highly multi-model posterior pdf for
 a known companion}
 
-As a first experiment, we choose an \apogee\ target with a previously
+We choose an \apogee\ target with a previously
 identified companion (2M00110648+6609349) but with few radial velocity
 measurements (\citealt{Troup:2016}).
-\figname~\ref{fig:exp1-rv} shows radial velocity data for the star (black
+\figname~\ref{fig:exp2-rv} shows radial velocity data for the star (black
 points).\footnote{We don't plot the best-fit orbit from \citealt{Troup:2016}
 because the parameter values reported in their work do not produce Keplerian
 orbits that look like reasonable fits to the data.
@@ -457,17 +476,17 @@ These data are sparse and have poor phase coverage; it is not clear from the
 data alone that there is a single dominant period in orbital solutions that are
 consistent with these data.
 
-Over-plotted on \figname~\ref{fig:exp1-rv} as grey lines are orbits computed
+Over-plotted on \figname~\ref{fig:exp2-rv} as grey lines are orbits computed
 from random samples from the posterior pdf, sampled using \samplername.
 We start by generating $2^{28}$ prior samples over the nonlinear parameters with
 a period domain of $(P_{\rm min}, P_{\rm max}) = (16, 8192)~{\rm day}$ (see
 \sectionname~\ref{sec:method}), of which 23,584 samples pass our rejection sampling
 step.
-We draw 512 of these at random and show these in \figname~\ref{fig:exp1-rv}.
+We draw 512 of these at random and show these in \figname~\ref{fig:exp2-rv}.
 From these orbits, it appears that there are at least a few distinct period
 modes and a wide variety of eccentricities.
 
-This is also demonstrated in \figname~\ref{fig:exp1-corner}, which shows
+This is also demonstrated in \figname~\ref{fig:exp2-corner}, which shows
 projections of all 23,584 posterior samples in different parameter
 combinations.
 There are at least three period modes: the dominant mode at $P \approx 300~{\rm
@@ -477,7 +496,7 @@ with low eccentricity and longer periods with higher eccentricity.
 
 \begin{figure*}[p]
 \begin{center}
-\includegraphics[width=\textwidth]{figures/exp1-rv-curves.pdf}
+\includegraphics[width=\textwidth]{figures/exp2-rv-curves.pdf}
 \end{center}
 \caption{%
 Black points show \apogee\ radial velocity measurements plotted against
@@ -486,19 +505,19 @@ Grey curves show orbits compute from 512 samples from the posterior pdf for
 these data.
 Note that several qualitatively different orbital solutions are found over a
 range of eccentricities and periods.
-\label{fig:exp1-rv}}
+\label{fig:exp2-rv}}
 \end{figure*}
 
 \begin{figure*}[p]
 \begin{center}
-\includegraphics[width=\textwidth]{figures/exp1-corner.pdf}
+\includegraphics[width=\textwidth]{figures/exp2-corner.pdf}
 \end{center}
 \caption{%
 \todoapw{Should we select a subset of these panels to plot?}
-\label{fig:exp1-corner}}
+\label{fig:exp2-corner}}
 \end{figure*}
 
-\subsection{Experiment 2: Varying the number of data points}
+\subsection{Experiment 3: Varying the number of data points}
 
 When the phase coverage of the radial velocity observations is good and the
 number of observations is large, the posterior pdf over orbital parameters will
@@ -519,9 +538,9 @@ observations as input data (a total of 8 consecutive runs).
 In detail, we again generate $2^{28}$ prior samples over the nonlinear
 parameters with a period domain of $(P_{\rm min}, P_{\rm max}) = (16, 8192)~{\rm
 day}$ and re-use these prior samples for each sub-sampling of the data.
-\figname s~\ref{fig:exp2-rv-0}--\ref{fig:exp2-rv-1} show the data and orbits
+\figname s~\ref{fig:exp3-rv-0}--\ref{fig:exp3-rv-1} show the data and orbits
 computed from posterior samples returned by \samplername.
-Starting from the top of \figname~\ref{fig:exp2-rv-0} with the full set of 19
+Starting from the top of \figname~\ref{fig:exp3-rv-0} with the full set of 19
 measurements, each panel below has 2 fewer data points than the previous.
 The data used for the sampling shown in a given panel are plotted as black
 circles, and the removed measurements are plotted as red X's.
@@ -530,7 +549,7 @@ are indicated on each panel.
 
 \begin{figure*}[p]
 \begin{center}
-\includegraphics[height=0.9\textheight]{figures/exp2-rv-curves-0.pdf}
+\includegraphics[height=0.9\textheight]{figures/exp3-rv-curves-0.pdf}
 \end{center}
 \caption{%
 Similar to \figname~\ref{fig:exp1-rv}, in all panels, black points show
@@ -541,31 +560,31 @@ Grey curves show orbits compute from a maximum of 512 samples from the
 posterior pdf, but when the number of accepted samples is fewer than this
 number, orbits computed for all $M$ accepted samples are shown.
 \todoapw{More comments here..}
-\label{fig:exp2-rv-0}}
+\label{fig:exp3-rv-0}}
 \end{figure*}
 
 \begin{figure*}[p]
 \begin{center}
-\includegraphics[height=0.9\textheight]{figures/exp2-rv-curves-1.pdf}
+\includegraphics[height=0.9\textheight]{figures/exp3-rv-curves-1.pdf}
 \end{center}
 \caption{%
-Same as \figname~\ref{fig:exp2-rv-0} for smaller sub-samplings of the
+Same as \figname~\ref{fig:exp3-rv-0} for smaller sub-samplings of the
 original data set.
 \todoapw{More comments here..}
-\label{fig:exp2-rv-1}}
+\label{fig:exp3-rv-1}}
 \end{figure*}
 
-\figname s~\ref{fig:exp2-corner-0}--\ref{fig:exp2-corner-1} show a few
+\figname s~\ref{fig:exp3-corner-0}--\ref{fig:exp3-corner-1} show a few
 projections of the posterior samples for each of the data sub-samplings (i.e.
 the panels in these figures match the panels in
-\figname s~\ref{fig:exp2-rv-0}--\ref{fig:exp2-rv-1}).
-All panels in \figname s~\ref{fig:exp2-corner-0} show that the posterior pdf is
+\figname s~\ref{fig:exp3-rv-0}--\ref{fig:exp3-rv-1}).
+All panels in \figname s~\ref{fig:exp3-corner-0} show that the posterior pdf is
 very compact and unimodal when $N=19,17,15,13$ data points are used.
 We have fixed the axis limits to be the same in \figname
-s~\ref{fig:exp2-corner-0} and \ref{fig:exp2-corner-1}), so the single dark point
-in some of the panels of \figname~\ref{fig:exp2-corner-0} are very compact
+s~\ref{fig:exp3-corner-0} and \ref{fig:exp3-corner-1}), so the single dark point
+in some of the panels of \figname~\ref{fig:exp3-corner-0} are very compact
 visualizations of the posterior samples.
-The structure in \figname~\ref{fig:exp2-corner-1} is much more interesting.
+The structure in \figname~\ref{fig:exp3-corner-1} is much more interesting.
 Already in the top panels ($N=9$), multiple modes appear.
 These become more apparent in the panels below, until ultimately forming a
 harmonic series of modes in the bottom two rows of panels.
@@ -575,23 +594,23 @@ Still, we are able to sample from these pdfs using \samplername.
 
 \begin{figure*}[p]
 \begin{center}
-\includegraphics[height=0.9\textheight]{figures/exp2-corner-0.pdf}
+\includegraphics[height=0.9\textheight]{figures/exp3-corner-0.pdf}
 \end{center}
 \caption{%
 TODO
 \todoapw{More comments here..}
-\label{fig:exp2-corner-0}}
+\label{fig:exp3-corner-0}}
 \end{figure*}
 
 \begin{figure*}[p]
 \begin{center}
-\includegraphics[height=0.9\textheight]{figures/exp2-corner-1.pdf}
+\includegraphics[height=0.9\textheight]{figures/exp3-corner-1.pdf}
 \end{center}
 \caption{%
-Same as \figname~\ref{fig:exp2-corner-0} for smaller sub-samplings of the
+Same as \figname~\ref{fig:exp3-corner-0} for smaller sub-samplings of the
 original data set.
 \todoapw{More comments here..}
-\label{fig:exp2-corner-1}}
+\label{fig:exp3-corner-1}}
 \end{figure*}
 
 \subsection{Experiment 3: ...}
