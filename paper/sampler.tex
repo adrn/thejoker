@@ -40,6 +40,7 @@
 \newcommand{\transpose}[1]{{#1}^{\mathsf{T}}}
 \newcommand{\inv}[1]{{#1}^{-1}}
 \newcommand{\msun}{\mathrm{M}_\odot}
+\newcommand{\rsun}{\mathrm{R}_\odot}
 \newcommand{\kms}{\mathrm{km}~\mathrm{s}^{-1}}
 \newcommand{\bs}[1]{\boldsymbol{#1}}
 
@@ -446,20 +447,67 @@ analysis.
 
 \subsection{Experiment 1: Validation with simulated data}
 
-As a first demonstration, we generate fake radial velocity data (with
+As a first demonstration, we generate fake radial velocity observations (with
 uncertainties) that are consistent with our assumptions
 (\sectionname~\ref{sec:method}), then sample from the posterior pdf over orbital
 parameters with \samplername.
-The eccentricity is deliberately chosen to be high and the period and $\asini$
-are chosen to be broadly consistent with the typical sub-stellar companion found
-in recent analysis of the \apogee\ data (\citealt{Troup:2016}).
+The eccentricity, period, and $\asini$ are chosen to be broadly consistent with
+the typical sub-stellar companion found in recent analysis of the \apogee\ data
+(\citealt{Troup:2016}), the angle parameters ($\omega$, $\phi_0$) are sampled
+from a uniform distribution, and the velocity is drawn from a zero-mean Gaussian
+with variance $\sigma^2 = (30~\kms)^2$
 The values of the parameters used for the simulated data (e.g., the truth) are:
-$e = 0.867$, $P = 53.09~{\rm day}$, $\asini = 42~R_\odot$, $\omega =
+$P = 103.71~{\rm day}$, $\asini = 8~\rsun$, $e = 0.613$, $\omega =
 134.834^\circ$, $\phi_0 = 342.257^\circ$, $v_0 = 19.431~\kms$.
+We uniformly sample 4 observation times over the interval $(0,1095)~{\rm day}$
+imagining a 3-year survey with no observing strategy and arbitrarily set the
+survey start date (in barycentric MJD) to be 55555.
+The radial velocity measurement uncertainties are drawn from a uniform
+distribution over the interval $(0.1, 0.2)~\kms$, motivated by the \apogee\
+radial velocity uncertainties.
 We generate $J=2^{28}$ samples from our prior pdf over the non-linear
-parameters, of which XXX survive the rejection step.
+parameters, of which 30,082 survive the rejection step.
 
-Figure~\ref
+\figname~\ref{fig:exp1-rv}, top panel, shows the simulated data (black points)
+along with the true orbit (dashed, green line) and orbits computed from samples
+from the posterior pdf (grey lines).
+The bottom panels show two projections of all posterior samples (grey points)
+and the input orbit parameters (green +'s).
+The modes in period-space are narrow with a variety of separations, as can be
+seen in the radial-velocity curves plotted in the top panel
+\figname~\ref{fig:exp1-corner} shows all projections of the posterior samples
+(grey points) and the true, input parameters (green lines and markers).
+For small numbers of observations with poor phase-coverage, the posterior pdf
+over orbital parameters is extremely complex and structured, but we are still
+able to generate samples using \samplername.
+
+\begin{figure*}[p]
+\begin{center}
+\includegraphics[width=\textwidth]{figures/exp1-rv-curves.pdf}
+\end{center}
+\caption{%
+{\sl Top panel}: Black points show simulated radial velocity measurements
+plotted against Barycentric Modified Julian Date (BMJD) of the observations.
+Dashed green line shows the true, input orbit that the radial velocity
+measurements were drawn from.
+Grey curves show orbits computed from 128 samples from the posterior pdf for
+these data.
+Several qualitatively different orbital solutions are found over a range of
+eccentricities and periods.
+{\sl Bottom panels}: Projections of the posterior samples (grey points) and
+value of true, input orbit (green +).
+\label{fig:exp1-rv}}
+\end{figure*}
+
+\begin{figure*}[p]
+\begin{center}
+\includegraphics[width=\textwidth]{figures/exp1-corner.pdf}
+\end{center}
+\caption{%
+All projections of the 30,082 surviving posterior samples (grey points) with
+value of true, input orbit shown as green lines and points.
+\label{fig:exp1-corner}}
+\end{figure*}
 
 \subsection{Experiment 2: Sampling from a highly multi-model posterior pdf for
 a known companion}
