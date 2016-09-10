@@ -19,9 +19,6 @@
 % packages
 \usepackage{amsmath}
 \hypersetup{backref,breaklinks,colorlinks,citecolor=black}
-% \usepackage[backref,breaklinks,colorlinks,citecolor=black]{hyperref}
-% \usepackage[all]{hypcap}
-% \renewcommand*{\backref}[1]{[#1]}
 
 % define macros for text
 \newcommand{\project}[1]{\textsl{#1}}
@@ -456,10 +453,10 @@ These data are sparse and have poor phase coverage; it is not clear from the
 data alone that there is a single dominant period in orbital solutions that are
 consistent with these data.
 
-Over-plotted on this figure as grey lines are orbits computed from random
-samples from the posterior pdf, sampled using \samplername. We start by
-generating $2^{27}$ prior samples over the nonlinear parameters with a period
-domain of $(P_{\rm min}, P_{\rm max}) = (16, 8192)~{\rm day}$ (see
+Over-plotted on Figure~\ref{fig:exp1-rv} as grey lines are orbits computed from
+random samples from the posterior pdf, sampled using \samplername.
+We start by generating $2^{28}$ prior samples over the nonlinear parameters with
+a period domain of $(P_{\rm min}, P_{\rm max}) = (16, 8192)~{\rm day}$ (see
 Section~\ref{sec:method}), of which 23,584 samples pass our rejection sampling
 step.
 We draw 512 of these at random and show these in Figure~\ref{fig:exp1-rv}.
@@ -504,25 +501,24 @@ number of observations is large, the posterior pdf over orbital parameters will
 likely be unimodal.
 Under these conditions, \samplername\ is a very inefficient sampler for this
 problem and will return very few samples (as few as one).
-As the number of data points decreases, the posterior pdf will become more
-multi-modal.
+As the number of data points decreases, the posterior pdf will generally become
+more multi-modal.
 We demonstrate this behavior using another \apogee\ target with a previously
-identified companion (2M19405532+2401157) by successively and randomly removing
-observations from repeated analysis of these data with \samplername.
-In DR13, this target has 32 visit spectra; we initially remove one data point
-at random so that we start with 31 observtions
-Then, starting with the set of 31 visits, we successively remove 4 data points
-and re-run the sampling until we are left with 3 observations as input data (a
-total of 8 consecutive runs).
+identified companion (2M03080601+7950502) by successively and randomly removing
+observations from the repeated analysis of these data with \samplername.
+In DR13, this target has 30 visit spectra; we remove 11 data points at random so
+that we begin with 19 observtions
+Then, after running the sampler with the set of 19 visits, we successively
+remove 2 data points and re-run the sampling until we are left with 3
+observations as input data (a total of 8 consecutive runs).
 
-We again start this procedure by generating $2^{27}$ prior samples over the
-nonlinear parameters with a period domain of $(P_{\rm min}, P_{\rm max}) = (16,
-8192)~{\rm day}$ (we use the same prior samples for each re-run with fewer data
-points).
+In detail, we again generate $2^{28}$ prior samples over the nonlinear
+parameters with a period domain of $(P_{\rm min}, P_{\rm max}) = (16, 8192)~{\rm
+day}$ and re-use these prior samples for each sub-sampling of the data.
 Figures~\ref{fig:exp2-rv-0}--\ref{fig:exp2-rv-1} show the data and orbits
 computed from posterior samples returned by \samplername.
-Starting from the top of Figure~\ref{fig:exp2-rv-1} with the full set of 31
-measurements, each panel below has 4 fewer data points than the previous.
+Starting from the top of Figure~\ref{fig:exp2-rv-1} with the full set of 19
+measurements, each panel below has 2 fewer data points than the previous.
 The data used for the sampling shown in a given panel are plotted as black
 circles, and the removed measurements are plotted as red X's.
 The number of measurements used, $N$, and the number of surviving samples, $M$,
@@ -553,6 +549,35 @@ Same as Figure~\ref{fig:exp2-rv-0} for smaller sub-samplings of the original
 data set.
 \todoapw{More comments here..}
 \label{fig:exp2-rv-1}}
+\end{figure*}
+
+Stuff about corner plots...
+
+\begin{figure*}[p]
+\begin{center}
+\includegraphics[height=0.9\textheight]{figures/exp2-corner-0.pdf}
+\end{center}
+\caption{%
+Similar to Figure~\ref{fig:exp1-rv}, in all panels, black points show \apogee\
+radial velocity measurements used to generate samples from the posterior pdf
+over orbital parameters sub-sampled from the full set of observations for this
+target 2M19405532+2401157.
+Grey curves show orbits compute from a maximum of 512 samples from the
+posterior pdf, but when the number of accepted samples is fewer than this
+number, orbits computed for all $M$ accepted samples are shown.
+\todoapw{More comments here..}
+\label{fig:exp2-corner-0}}
+\end{figure*}
+
+\begin{figure*}[p]
+\begin{center}
+\includegraphics[height=0.9\textheight]{figures/exp2-corner-1.pdf}
+\end{center}
+\caption{%
+Same as Figure~\ref{fig:exp2-corner-0} for smaller sub-samplings of the original
+data set.
+\todoapw{More comments here..}
+\label{fig:exp2-corner-1}}
 \end{figure*}
 
 \subsection{Experiment 3: ...}
