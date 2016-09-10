@@ -265,14 +265,14 @@ Simple Monte Carlo is a method in which the prior probability density function
 rejection-sampling step that uses the likelihood as the rejection scalar.
 The rejection step works as follows:
 \begin{enumerate}\itemsep0ex
-\item For each sample $k$ in the prior pdf sampling there is a
-  likelihood value $L_k$ (a probability for the data given the
+\item For each sample $j$ in the prior pdf sampling there is a
+  likelihood value $L_j$ (a probability for the data given the
   parameters, not logarithmic).
 \item There is a maximum value $L_{\rm max}$ that is the largest value of
-  $L_k$ found across all of the samples in the prior sampling.
-\item For each sample $k$, choose a random number $r_k$ between 0 and
+  $L_j$ found across all of the samples in the prior sampling.
+\item For each sample $j$, choose a random number $r_j$ between 0 and
   $L_{\rm max}$
-\item Reject the sample $k$ if $L_k < r_k$.
+\item Reject the sample $j$ if $L_j < r_j$.
 \item The number of samples that survive the rejection is (hereafter) $M$.
 \end{enumerate}
 Note that this algorithm is guaranteed to produce at least one
@@ -297,7 +297,7 @@ $P_{\rm min}$ and $P_{\rm max}$; we are explicit about our choices in
 each of the experiments described below.
 We sample the prior pdf directly and explicitly with standard
 \project{numpy.random} calls (\citealt{Van-der-Walt:2011}).
-In practice we usually take $2^{28}$ (that's about a quarter billion)
+In practice we usually take $J=2^{28}$ (that's about a quarter billion)
 samples in the prior-pdf sampling. Holy fuck that's a lot!
 
 The unmarginalized likelihood function $L$ is
@@ -319,22 +319,23 @@ unit-$[\asini]$ predictions (given the non-linear parameters) and a
 column of ones.
 We perform standard linear least-square fitting with this design
 matrix to obtain the best-fit values for the two linear parameters,
-and the standard $2\times 2$ linear-fitting covariance matrix $C_k$ for their
+and the standard $2\times 2$ linear-fitting covariance matrix $C_j$ for their
 uncertainties.
-With these, we can construct---for each prior sample---the marginalized likelihood $Q_k$
+With these, we can construct---for each prior sample---the marginalized
+likelihood $Q_j$
 \begin{equation}
-\ln Q_k = -\frac{1}{2}\,\sum_{n=1}^N \frac{[v_n - v(t_n;\bs{\theta}_k)]^2}{\sigma_n^2} -\frac{1}{2}\,\ln ||C_k||
+\ln Q_j = -\frac{1}{2}\,\sum_{n=1}^N \frac{[v_n - v(t_n;\bs{\theta}_j)]^2}{\sigma_n^2} -\frac{1}{2}\,\ln ||C_j||
 \end{equation}
-where the prediction $v(t_n;\bs{\theta}_k)$ is taken at the best-fit values of
-the linear parameters given sample $k$ of the non-linear parameters, and the
-log-determinant term ($\ln ||C_k||$) accounts for the volume in the
+where the prediction $v(t_n;\bs{\theta}_j)$ is taken at the best-fit values of
+the linear parameters given sample $j$ of the non-linear parameters, and the
+log-determinant term ($\ln ||C_j||$) accounts for the volume in the
 marginalization integral.
 The marginalization assumes that the prior pdfs on the linear parameters
 are very broad and Gaussian---or
 at least very flat over the range of relevance---and that they do not depend
 on the nonlinear parameters in any way (which is a substantial restriction;
 see \sectionname~\ref{sec:discussion}).
-These $Q_k$ are used in the rejection sampling algorithm described above
+These $Q_j$ are used in the rejection sampling algorithm described above
 as Simple Monte Carlo.
 
 There are three possible outcomes at the end of the rejection
@@ -371,7 +372,7 @@ When we trigger the intialization and operation of \emcee, we do the following:
 \begin{enumerate}\itemsep0ex
 \item Randomly generate $M_{\rm min}$ sets of parameters $\bs{\theta}_m$
   (linear and nonlinear parameters) in a small, Gaussian ball around
-  the highest-$Q_k$ sample from the Simple Monte Carlo.
+  the highest-$Q_j$ sample from the Simple Monte Carlo.
 \item Run \emcee\ on this ensemble as per the instructions written on the side
   of the \emcee\ packaging (\citealt{Foreman-Mackey:2013}) for $2^{16}$ steps.
 \item Take the final state of the $M_{\rm min}$-element ensemble as a
