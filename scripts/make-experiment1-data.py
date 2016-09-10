@@ -55,10 +55,10 @@ def main():
         d.attrs['format'] = 'mjd'
         d.attrs['scale'] = 'tcb'
 
-        d = f.create_dataset('rv', data=rv)
+        d = f.create_dataset('rv', data=rv.decompose(usys).value)
         d.attrs['unit'] = str(usys['speed'])
 
-        d = f.create_dataset('rv_err', data=rv_err)
+        d = f.create_dataset('rv_err', data=rv_err.decompose(usys).value)
         d.attrs['unit'] = str(usys['speed'])
 
     # plot!
