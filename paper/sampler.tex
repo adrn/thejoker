@@ -132,8 +132,8 @@ Precise radial-velocity measurements of stars have transformed
 astrophysics in the last decades:
 They have permitted the discovery of the first planets around other stars,
 including especially the unanticipated but common ``hot Jupiters,''
-and been used to discover or confirm hundreds
-(perhaps thousands?) of planets.
+and have been used to discover or confirm hundreds
+\todohogg{(perhaps thousands?)} of planets.
 Radial velocity measurements have also been used to find substellar,
 degenerate, and black-hole companions to more normal stars, and hold
 the promise of delivering the full population statistics for binary
@@ -158,8 +158,10 @@ acceleration.
 That is, a small number of (even very good) radial velocity
 measurements will lead to posterior beliefs about companion orbits and
 masses that put substantial plausibility onto multiple qualitatively
-different solutions, or (in other words) create a likelihood function
-that is highly multi-model in the relevant parameter spaces.
+different solutions.
+In other words, small numbers of radial-verlocity measurements create a
+likelihood function that is highly multi-modal in the relevant parameter spaces
+(e.g., Keplerian orbital parameters).
 There are currently no safe methods known for exploring these highly
 multimodal functions and delivering correct posterior samplings and
 reliable probabilistic statements about detection and
@@ -191,7 +193,7 @@ stellar systems we will use and observations thereof.
   velocity is well described by the gravitational orbit of a pair of
   point masses (the two-body problem). We assume that the times are
   (effectively) perfectly known, and in an inertial frame (for
-  example, Solar-System barycentric MJD).
+  example, Solar-System barycenter Julian date).
 \item We assume that each star has exactly one companion, and that the
   radial-velocity measurements are not contaminated by nor affected by
   any other bodies. Since we permit the effective mass of the
@@ -205,11 +207,11 @@ stellar systems we will use and observations thereof.
   prior probability density functions on all the orbital parameters,
   described below.
 \end{itemize}
-Each of these assumptions can be challenged, and in particular we
-expect some stars to have additional companions, and we expect there
-to be outliers and unaccounted sources of noise.
-We will return to these assumptions, and the consequences of relaxing
-them, in the Discussion Section.
+Each of these assumptions can be challenged: in particular we expect some stars
+to have additional companions, and we expect there to be outliers and
+unaccounted sources of noise.
+We will return to these assumptions, and the consequences of relaxing them, in
+Section~\ref{sec:discussion}.
 
 In the two-body celestial mechanics problem (\citealt{Kepler:1609}; and here we
 are working in a parameterization similar to that of \citealt{Murray:2010}), and
@@ -221,20 +223,19 @@ $\omega$, and a constant system barycenter radial velocity $v_0$.
 The radial velocity $v$ at time $t$ is then given by (see also
 equation~63 in \citealt{Murray:2010})
 \begin{equation}
-  v(t;\theta) = v_0 + \kappa\,[\cos(\omega + f) + e\,\cos\omega]
+  v(t;\bs{\theta}) = v_0 + K\,[\cos(\omega + f) + e\,\cos\omega]
 \end{equation}
-where the $\theta$ represents a blob of all the free parameters,
-$\kappa$ is the velocity semi-amplitude and $f$ is the true anomaly
-given by
+where the $\bs{\theta}$ represents the free parameters, $K$ is the velocity
+semi-amplitude, $f$ is the true anomaly given by
 \begin{align}
-  \kappa = \frac{2\pi\,\asini}{P\,\sqrt{1-e^2}}\\
+  K &= \frac{2\pi\,\asini}{P\,\sqrt{1-e^2}}\\
   \cos f &= \frac{\cos E - e}{1 - e\, \cos E}
 \end{align}
 and the eccentric anomaly, $E$, must be solved for with the mean
 anomaly, $M$,
 \begin{align}
-  M = \frac{2\pi\, t}{P} - \phi_0\\
-  M = E - e\,\sin E \quad .
+  M &= \frac{2\pi\, t}{P} - \phi_0\\
+  M &= E - e\,\sin E \quad .
 \end{align}
 Of these parameters, four ($P$, $\phi_0$, $e$, $\omega$) are
 non-linearly related to the radial-velocity expectation, and two
@@ -251,22 +252,21 @@ structure:
   analytically marginalize the linear parameters (provided that the
   noise model is pleasant and the prior pdf is conjugate).
 \item There is a finite, time-sampling-imposed minimum size or
-  resolution---in the period direction---of any features in the
+  resolution---in the period---of any features in the
   likelihood function. That is, there cannot be arbitrarily narrow
   modes in the multimodal posterior pdf.
 \end{itemize}
 
-Simple Monte Carlo is a method in which the prior pdf is densely
-sampled, and then many of the samples are rejected by a
-rejection-sampling step that uses the likelihood as the rejection
-scalar.
+Simple Monte Carlo is a method in which the prior probability density function
+(pdf) is densely sampled, and then many of the samples are rejected by a
+rejection-sampling step that uses the likelihood as the rejection scalar.
 The rejection step works as follows:
 \begin{enumerate}
 \item For each sample $k$ in the prior pdf sampling there is a
   likelihood value $L_k$ (a probability for the data given the
   parameters, not logarithmic).
 \item There is a maximum value $L_{\rm max}$ that is the largest value of
-  $L_k$ found across all of the samples in the entire sampling.
+  $L_k$ found across all of the samples in the prior sampling.
 \item For each sample $k$, choose a random number $r_k$ between 0 and
   $L_{\rm max}$
 \item Reject the sample $k$ if $L_k < r_k$.
@@ -274,7 +274,7 @@ The rejection step works as follows:
 \end{enumerate}
 Note that this algorithm is guaranteed to produce at least one
 surviving sample; of course if only one sample survives (or any very
-small number), the sampling will not guaranteed to be fair.
+small number), the sampling is not guaranteed to be fair.
 That said, if the original sampling of the prior pdf is dense enough
 that many survive the rejection step, the surviving samples do
 constitute a fair sampling from the posterior pdf.
@@ -287,7 +287,7 @@ Our prior pdf in the non-linear parameters is very simple:
     p(e) &= {\rm Beta}(a, b) = \frac{\Gamma(a+b)}{\Gamma(a) \, \Gamma(b)} \, e^{a-1} \, [1 - e]^{b-1}
 \end{align}
 where $\mathcal{U}(x_1, x_2)$ is the uniform distribution over the
-domain $(x_1, x_2)$ and the prior over eccentricity is the Beta
+domain $(x_1, x_2)$ and the prior pdf over eccentricity is the Beta
 distribution with $a=0.867$, $b=3.03$ \citep{Kipping:2013}.
 In different experiments we use different values for hyperparameters
 $P_{\rm min}$ and $P_{\rm max}$; we are explicit about our choices in
@@ -299,11 +299,11 @@ samples in the prior-pdf sampling. Holy fuck that's a lot!
 
 The unmarginalized likelihood function $L$ is
 \begin{equation}
-\ln L = -\frac{1}{2}\,\sum_{n=1}^N \frac{[v_n - v(t_n;\theta)]^2}{\sigma_n^2}
+\ln L = -\frac{1}{2}\,\sum_{n=1}^N \frac{[v_n - v(t_n;\bs{\theta})]^2}{\sigma_n^2}
 \end{equation}
 where $n$ indexes the individual data points $v_n$, $v(t)$ is the
-radial velocity prediction at time $t$ given the parameters $\theta$, the
-data-point times are the $t_n$, and the $\sigma_n^2$ is the (presumed
+radial velocity prediction at time $t$ given the parameters $\bs{\theta}$, the
+data-point times are the $t_n$, and $\sigma_n^2$ is the (presumed
 correctly known) Gaussian noise variance for data point $n$.
 Note that the form of this likelihood function is set entirely by
 the assumptions, given above.
@@ -320,17 +320,17 @@ and the standard $2\times 2$ linear-fitting covariance matrix $C_k$ for their
 uncertainties.
 With these, we can construct---for each prior sample---the marginalized likelihood $Q_k$
 \begin{equation}
-\ln Q_k = -\frac{1}{2}\,\sum_{n=1}^N \frac{[v_n - v(t_n;\theta_k)]^2}{\sigma_n^2} -\frac{1}{2}\,\ln ||C_k||
+\ln Q_k = -\frac{1}{2}\,\sum_{n=1}^N \frac{[v_n - v(t_n;\bs{\theta}_k)]^2}{\sigma_n^2} -\frac{1}{2}\,\ln ||C_k||
 \end{equation}
-where the prediction $v(t_n;\theta_k)$ is taken at the best-fit values
-of the linear parameters given sample $k$ of the non-linear
-parameters, and the log-determinant term accounts for the volume in
-the marginalization integral.
+where the prediction $v(t_n;\bs{\theta}_k)$ is taken at the best-fit values of
+the linear parameters given sample $k$ of the non-linear parameters, and the
+log-determinant term ($\ln ||C_k||$) accounts for the volume in the
+marginalization integral.
 The marginalization assumes that the prior pdfs on the linear parameters
 are very broad and Gaussian---or
 at least very flat over the range of relevance---and that they do not depend
 on the nonlinear parameters in any way (which is a substantial restriction;
-see the Discussion).
+see Section~\ref{sec:discussion}).
 These $Q_k$ are used in the rejection sampling algorithm described above
 as Simple Monte Carlo.
 
@@ -366,7 +366,7 @@ The three possible outcomes are:
 \end{itemize}
 When we trigger the intialization and operation of \emcee, we do the following:
 \begin{enumerate}
-\item Randomly generate $M_{\rm min}$ sets of parameters $\theta_m$
+\item Randomly generate $M_{\rm min}$ sets of parameters $\bs{\theta}_m$
   (linear and nonlinear parameters) in a small, Gaussian ball around
   the highest-$Q_k$ sample from the Simple Monte Carlo.
 \item Run \emcee\ on this ensemble as per the instructions written on the side
@@ -574,7 +574,7 @@ Still, we are able to sample from these pdfs using \samplername.
 \includegraphics[height=0.9\textheight]{figures/exp2-corner-0.pdf}
 \end{center}
 \caption{%
-
+TODO
 \todoapw{More comments here..}
 \label{fig:exp2-corner-0}}
 \end{figure*}
@@ -594,7 +594,7 @@ data set.
 
 Show switch-over from SMC to \emcee.
 
-\section{Discussion}
+\section{Discussion} \label{sec:discussion}
 
 What did we find?
 
