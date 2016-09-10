@@ -16,7 +16,7 @@ source activate thejoker
 
 # Run experiment 2!
 srun python run-sampler.py -v --mpi -o \
--n 2**28 \
+-n 2**28 -s 42 \
 -f ../data/troup-allVisit.h5 \
 --hdf5-key="2M00110648+6609349" \
 --name="experiment2.h5"

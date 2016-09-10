@@ -27,7 +27,7 @@ def main(seed):
         rv_err = f[apogee_id]['rv_err'][:]
         rv_unit = f[apogee_id]['rv'].attrs['unit']
 
-    # HACK: downsample to 31 observations
+    # HACK: downsample to 17 observations
     print("Target has {} observations".format(len(bmjd)))
     idx = np.random.choice(len(bmjd), size=len(bmjd)-17, replace=False)
     bmjd = np.delete(bmjd, idx)
@@ -36,7 +36,7 @@ def main(seed):
     assert len(bmjd) == 17
 
     n_delete = 2 # HACK: MAGIC NUMBER
-    with h5py.File(os.path.join(paths.root, "data", "experiment2.h5"), "w") as outf:
+    with h5py.File(os.path.join(paths.root, "data", "experiment3.h5"), "w") as outf:
         outf.attrs['APOGEE_ID'] = apogee_id
 
         for i in range(0,14+1,n_delete): # HACK: MAGIC NUMBER
