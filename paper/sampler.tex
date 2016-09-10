@@ -506,8 +506,8 @@ more multi-modal.
 We demonstrate this behavior using another \apogee\ target with a previously
 identified companion (2M03080601+7950502) by successively and randomly removing
 observations from the repeated analysis of these data with \samplername.
-In DR13, this target has 30 visit spectra; we remove 11 data points at random so
-that we begin with 19 observtions
+In DR13, this target has 30 visits; we remove 11 of these observations at random
+so that we begin with 19 observtions.
 Then, after running the sampler with the set of 19 visits, we successively
 remove 2 data points and re-run the sampling until we are left with 3
 observations as input data (a total of 8 consecutive runs).
@@ -517,7 +517,7 @@ parameters with a period domain of $(P_{\rm min}, P_{\rm max}) = (16, 8192)~{\rm
 day}$ and re-use these prior samples for each sub-sampling of the data.
 Figures~\ref{fig:exp2-rv-0}--\ref{fig:exp2-rv-1} show the data and orbits
 computed from posterior samples returned by \samplername.
-Starting from the top of Figure~\ref{fig:exp2-rv-1} with the full set of 19
+Starting from the top of Figure~\ref{fig:exp2-rv-0} with the full set of 19
 measurements, each panel below has 2 fewer data points than the previous.
 The data used for the sampling shown in a given panel are plotted as black
 circles, and the removed measurements are plotted as red X's.
@@ -551,20 +551,30 @@ data set.
 \label{fig:exp2-rv-1}}
 \end{figure*}
 
-Stuff about corner plots...
+Figures~\ref{fig:exp2-corner-0}--\ref{fig:exp2-corner-1} show a few projections
+of the posterior samples for each of the data sub-samplings (i.e. the panels in
+these figures match the panels in
+Figures~\ref{fig:exp2-rv-0}--\ref{fig:exp2-rv-1}).
+All panels in Figures~\ref{fig:exp2-corner-0} show that the posterior pdf is
+very compact and unimodal when $N=19,17,15,13$ data points are used.
+We have fixed the axis limits to be the same in Figures~\ref{fig:exp2-corner-0}
+and \ref{fig:exp2-corner-1}), so the single dark point in some of the panels of
+Figure~\ref{fig:exp2-corner-0} are very compact visualizations of the posterior
+samples.
+The structure in Figure~\ref{fig:exp2-corner-1} is much more interesting.
+Already in the top panels ($N=9$), multiple modes appear.
+These become more apparent in the panels below, until ultimately forming a
+harmonic series of modes in the bottom two rows of panels.
+This highlights the highly complex but structured posterior pdfs that are
+expected for stars with very few radial velocity measurements.
+Still, we are able to sample from these pdfs using \samplername.
 
 \begin{figure*}[p]
 \begin{center}
 \includegraphics[height=0.9\textheight]{figures/exp2-corner-0.pdf}
 \end{center}
 \caption{%
-Similar to Figure~\ref{fig:exp1-rv}, in all panels, black points show \apogee\
-radial velocity measurements used to generate samples from the posterior pdf
-over orbital parameters sub-sampled from the full set of observations for this
-target 2M19405532+2401157.
-Grey curves show orbits compute from a maximum of 512 samples from the
-posterior pdf, but when the number of accepted samples is fewer than this
-number, orbits computed for all $M$ accepted samples are shown.
+
 \todoapw{More comments here..}
 \label{fig:exp2-corner-0}}
 \end{figure*}
