@@ -34,7 +34,10 @@ def main():
                              omega=np.random.uniform(0, 2*np.pi)*u.rad,
                              phi0=np.random.uniform(0, 2*np.pi)*u.rad,
                              v0=np.random.normal(0, 30) * u.km/u.s)
-    print(orbit.mf)
+    print("Mass function:", orbit.mf)
+    print("omega:", orbit.omega.to(u.degree))
+    print("phi0:", orbit.phi0.to(u.degree))
+    print("v0:", orbit.v0.to(u.km/u.s))
 
     n_obs = 8 # MAGIC NUMBER: number of observations
 

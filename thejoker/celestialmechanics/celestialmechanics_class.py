@@ -80,6 +80,10 @@ class RVOrbit(object):
         return self._omega * usys['angle']
 
     @property
+    def phi0(self):
+        return self._phi0 * usys['angle']
+
+    @property
     def t0(self):
         return at.Time(self._t0, scale='tcb', format='mjd')
 
