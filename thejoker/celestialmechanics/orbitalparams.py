@@ -22,7 +22,7 @@ class OrbitalParams(object):
     }
 
     # Latex plot labels for the parameters
-    _latex_labels = [r'$\ln (P/{\rm day})$', r'$\ln (a\,\sin i/R_\odot)$', '$e$', r'$\omega$ [deg]',
+    _latex_labels = [r'$\ln (P/{\rm day})$', r'$\ln (a\,\sin i/{\rm R}_\odot)$', '$e$', r'$\omega$ [deg]',
                      r'$\phi_0$ [deg]', '$v_0$ [km s$^{-1}$]']
 
     @u.quantity_input(P=u.day, asini=u.R_sun, omega=u.degree, phi0=u.degree, v0=u.km/u.s)
@@ -123,7 +123,7 @@ class OrbitalParams(object):
         return all_samples
 
     @classmethod
-    def unpack(self, pars):
+    def unpack(cls, pars):
         """
         Unpack a 2D array structure containing the orbital parameters
         without associated units. Should have shape ``(n,6)`` where ``n``
@@ -134,7 +134,9 @@ class OrbitalParams(object):
         p : `~thejoker.celestialmechanics.OrbitalParams`
 
         """
-        raise NotImplementedError()
+        P, asini, ecc, omega, phi0, v0 = np.atleast_2d(pars).T
+        return cls(P=P*usys['time'], asini=asini*usys['length'], ecc=ecc,
+                   omega=omega*usys['angle'], phi0=phi0*usys['angle'], v0=v0*usys['speed'])
 
     def copy(self):
         return self.__copy__()

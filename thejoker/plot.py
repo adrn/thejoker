@@ -8,6 +8,9 @@ import numpy as np
 
 __all__ = ['plot_rv_curves', 'plot_corner']
 
+_truth_color = '#006837'
+_prev_result_color = '#2166AC'
+
 def plot_rv_curves(orbital_pars, t_grid, rv_unit=None, data=None, t_offset=0,
                    ax=None, plot_kwargs=dict(), data_plot_kwargs=dict(),
                    add_labels=True):
