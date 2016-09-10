@@ -30,7 +30,7 @@ plt.style.use("../thejoker/thejoker.mplstyle")
 def main():
 
     # high-eccentricity orbit with reasonable or randomly chosen parameters
-    orbit = SimulatedRVOrbit(ecc=0.867, P=53.09*u.day, a_sin_i=4.2*u.R_sun,
+    orbit = SimulatedRVOrbit(P=103.71*u.day, a_sin_i=8.*u.R_sun, ecc=0.613,
                              omega=np.random.uniform(0, 2*np.pi)*u.rad,
                              phi0=np.random.uniform(0, 2*np.pi)*u.rad,
                              v0=np.random.normal(0, 30) * u.km/u.s)
@@ -39,11 +39,10 @@ def main():
     print("phi0:", orbit.phi0.to(u.degree))
     print("v0:", orbit.v0.to(u.km/u.s))
 
-    n_obs = 8 # MAGIC NUMBER: number of observations
+    n_obs = 4 # MAGIC NUMBER: number of observations
 
-    obs_t_bounds = (55555., 57000.) # MAGIC NUMBERs
-
-    bmjd = np.random.uniform(*obs_t_bounds, size=n_obs)
+    bmjd = np.random.uniform(0, 3*365, size=n_obs) + 55555. # 3 year survey
+    bmjd.sort()
     rv = orbit.generate_rv_curve(bmjd)
     rv_err = np.random.uniform(100, 200, size=n_obs) * u.m/u.s # apogee-like
     rv = np.random.normal(rv.decompose(usys).value, rv_err.decompose(usys).value) * usys['speed']
@@ -66,6 +65,7 @@ def main():
     os.makedirs(plot_path, exist_ok=True)
 
     ax = data.plot(rv_unit=u.km/u.s)
+    orbit.plot(t=np.linspace(55555, 55555+3*365, num=1024), ax=ax, alpha=0.4)
     ax.figure.tight_layout()
     ax.figure.savefig(os.path.join(plot_path, "data.png"))
 
