@@ -15,14 +15,13 @@ from .celestialmechanics_class import SimulatedRVOrbit
 
 class OrbitalParams(object):
     # Mapping from parameter name to physical type - same order as parameters
-    _name_phystype = OrderedDict(
-        P='time',
-        asini='length',
-        ecc=None,
-        omega='angle',
-        phi0='angle',
-        v0='speed'
-    )
+    _name_phystype = OrderedDict()
+    _name_phystype['P'] = 'time'
+    _name_phystype['asini'] = 'length'
+    _name_phystype['ecc'] = None
+    _name_phystype['omega'] = 'angle'
+    _name_phystype['phi0'] = 'angle'
+    _name_phystype['v0'] = 'speed'
 
     # Latex plot labels for the parameters
     _latex_labels = [r'$\ln (P/{\rm day})$', r'$\ln (a\,\sin i/{\rm R}_\odot)$', '$e$', r'$\omega$ [deg]',
