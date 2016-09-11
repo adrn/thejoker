@@ -516,28 +516,32 @@ value of true, input orbit shown as green lines and points.
 For a more realistic application of \samplername, we choose an \apogee\ target
 with a previously identified companion (2M00110648+6609349) but with few radial
 velocity measurements (\citealt{Troup:2016}).
-\figname~\ref{fig:exp2-rv} shows radial velocity data for the star (black
-points).\footnote{We don't plot the best-fit orbit from \citealt{Troup:2016}
-because the parameter values reported in their work do not produce Keplerian
-orbits that look like reasonable fits to the data.
+\figname~\ref{fig:exp2-rv}, top panel, shows radial velocity data for the star
+(black points).\footnote{We don't plot the best-fit orbit from
+\citealt{Troup:2016} because the parameter values reported in their work do not
+produce Keplerian orbits that look like reasonable fits to the data.
 \todoapw{How to say this better / nicer?}}
 Similar to Experiment 1, these data are sparse and have poor phase coverage,
 however the time sampling is quite different and is representative of realistic
 survey design choices.
 
-Over-plotted on \figname~\ref{fig:exp2-rv} as grey lines are orbits computed
-from random samples from the posterior pdf, sampled using \samplername.
 We again generate $2^{28}$ prior samples over the nonlinear parameters with a
 period domain of $(P_{\rm min}, P_{\rm max}) = (16, 8192)~{\rm day}$, of which
 45,242 samples pass our rejection sampling step.
-We draw 128 of these at random and show these in \figname~\ref{fig:exp2-rv}.
+Over-plotted as grey lines on the top panel of \figname~\ref{fig:exp2-rv} are
+128 orbits computed from random samples from the posterior pdf, sampled using
+\samplername.
 From these orbits, it appears that there are at least a few distinct period
-modes and a wide variety of eccentricities.
+modes, and a wide variety of eccentricities, represented in the posterior
+sampling.
+As with \figname~\ref{fig:exp1-rv}, bottom panels show two projections of the
+posterior samples (grey points), but now the blue plus mark indicates the
+previously found orbital parameter values (\citealt{Troup:2016}).
 
-\figname~\ref{fig:exp2-corner} shows projections of all 23,584 posterior samples
-in different parameter combinations.
-There are at least three period modes: the dominant mode at $P \approx 300~{\rm
-day}$ is broadly consistent with the previously measured period
+\figname~\ref{fig:exp2-corner} shows projections of all posterior samples in
+different parameter combinations.
+Here it is clear there are at least three period modes: the dominant mode at $P
+\approx 300~{\rm day}$ is broadly consistent with the previously measured period
 (\citealt{Troup:2016}), but other modes are clearly present at shorter periods
 with low eccentricity and longer periods with higher eccentricity.
 
@@ -546,12 +550,10 @@ with low eccentricity and longer periods with higher eccentricity.
 \includegraphics[width=\textwidth]{figures/exp2-rv-curves.pdf}
 \end{center}
 \caption{%
-Black points show \apogee\ radial velocity measurements plotted against
-Barycentric Modified Julian Date (BMJD) of the observations.
-Grey curves show orbits compute from 128 samples from the posterior pdf for
-these data.
-Note that several qualitatively different orbital solutions are found over a
-range of eccentricities and periods.
+Same as \figname~\ref{fig:exp1-rv} but now using \apogee\ radial-velocity
+measurements of the target 2M00110648+6609349.
+Blue plus mark in bottom panels indicate orbital parameter values found in a
+previous study (\citealt{Troup:2016}).
 \label{fig:exp2-rv}}
 \end{figure*}
 
@@ -560,7 +562,8 @@ range of eccentricities and periods.
 \includegraphics[width=\textwidth]{figures/exp2-corner.pdf}
 \end{center}
 \caption{%
-\todoapw{Should we select a subset of these panels to plot?}
+All projections of the 45,242 surviving posterior samples (grey points) with
+previously found orbital parameter values shown as blue lines and points.
 \label{fig:exp2-corner}}
 \end{figure*}
 
@@ -571,16 +574,17 @@ number of observations is large, the posterior pdf over orbital parameters will
 likely be unimodal.
 Under these conditions, \samplername\ is a very inefficient sampler for this
 problem and will return very few samples (as few as one).
-As the number of data points decreases, the posterior pdf will generally become
-more multi-modal.
-We demonstrate this behavior using another \apogee\ target with a previously
-identified companion (2M03080601+7950502) by successively and randomly removing
+As we have seen in the previous experiments, when the number of data points
+decreases, the posterior pdf will generally become more multi-modal.
+He we study the dependence of the complexity of the posterior pdf on the number
+of observations by using another \apogee\ target with a previously identified
+companion (2M03080601+7950502) by successively and randomly removing
 observations from the repeated analysis of these data with \samplername.
 In DR13, this target has 30 visits; we remove 11 of these observations at random
 so that we begin with 19 observtions.
-Then, after running the sampler with the set of 19 visits, we successively
-remove 2 data points and re-run the sampling until we are left with 3
-observations as input data (a total of 8 consecutive runs).
+After running the sampler with the set of 19 visits, we successively remove 2
+data points and re-run the sampling until we are left with 3 observations as
+input data (a total of 8 consecutive runs).
 
 In detail, we again generate $2^{28}$ prior samples over the nonlinear
 parameters with a period domain of $(P_{\rm min}, P_{\rm max}) = (16, 8192)~{\rm
