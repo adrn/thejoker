@@ -13,7 +13,6 @@ import six
 from thejoker import Paths
 paths = Paths()
 from thejoker.data import RVData
-from thejoker.util import quantity_from_hdf5
 from thejoker.units import usys
 from thejoker.pool import choose_pool
 from thejoker.celestialmechanics import OrbitalParams
