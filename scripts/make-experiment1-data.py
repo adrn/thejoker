@@ -40,7 +40,7 @@ def main():
     print("phi0:", orbit.phi0.to(u.degree))
     print("v0:", orbit.v0.to(u.km/u.s))
 
-    n_obs = 8 # MAGIC NUMBER: number of observations
+    n_obs = 4 # MAGIC NUMBER: number of observations
 
     # Experiment 1 data
     bmjd = np.random.uniform(0, 3*365, size=n_obs) + 55555. # 3 year survey
@@ -51,58 +51,20 @@ def main():
 
     data = RVData(t=bmjd, rv=rv, stddev=rv_err)
     with h5py.File(os.path.join(paths.root, "data", "experiment1.h5"), "w") as f:
-
-        d = f.create_dataset('mjd', data=bmjd)
-        d.attrs['format'] = 'mjd'
-        d.attrs['scale'] = 'tcb'
-
-        d = f.create_dataset('rv', data=rv.decompose(usys).value)
-        d.attrs['unit'] = str(usys['speed'])
-
-        d = f.create_dataset('rv_err', data=rv_err.decompose(usys).value)
-        d.attrs['unit'] = str(usys['speed'])
-
+        data.to_hdf5(f)
         f.create_dataset('truth_vector', data=opars.pack())
-
-    # plot!
-    plot_path = os.path.join(paths.plots, "experiment1")
-    os.makedirs(plot_path, exist_ok=True)
-
-    ax = data.plot(rv_unit=u.km/u.s)
-    orbit.plot(t=np.linspace(55555, 55555+3*365, num=1024), ax=ax, alpha=0.4)
-    ax.figure.tight_layout()
-    ax.figure.savefig(os.path.join(plot_path, "data.png"))
 
     # ------------------------------------------------------------------------
     # Experiment 5 data
-    bmjd[1] = bmjd[0] + 2. # 2 days later
+    bmjd[1] = bmjd[0] + 10. # 10 days later
     rv[1] = orbit.generate_rv_curve(bmjd[1:2])
     rv_err[1] = np.random.uniform(100, 200) * u.m/u.s
     rv[1] = np.random.normal(rv[1].decompose(usys).value, rv_err[1].decompose(usys).value) * usys['speed']
 
     data = RVData(t=bmjd, rv=rv, stddev=rv_err)
     with h5py.File(os.path.join(paths.root, "data", "experiment5.h5"), "w") as f:
-
-        d = f.create_dataset('mjd', data=bmjd)
-        d.attrs['format'] = 'mjd'
-        d.attrs['scale'] = 'tcb'
-
-        d = f.create_dataset('rv', data=rv.decompose(usys).value)
-        d.attrs['unit'] = str(usys['speed'])
-
-        d = f.create_dataset('rv_err', data=rv_err.decompose(usys).value)
-        d.attrs['unit'] = str(usys['speed'])
-
+        data.to_hdf5(f)
         f.create_dataset('truth_vector', data=opars.pack())
-
-    # plot!
-    plot_path = os.path.join(paths.plots, "Experiment5")
-    os.makedirs(plot_path, exist_ok=True)
-
-    ax = data.plot(rv_unit=u.km/u.s)
-    orbit.plot(t=np.linspace(55555, 55555+3*365, num=1024), ax=ax, alpha=0.4)
-    ax.figure.tight_layout()
-    ax.figure.savefig(os.path.join(plot_path, "data.png"))
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
