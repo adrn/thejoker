@@ -53,6 +53,10 @@ def ln_posterior(p, data):
         return lnp
 
     lnl = ln_likelihood(p, data)
+    lnprob = lnp + lnl.sum()
 
-    return lnp + lnl.sum()
+    if np.isnan(lnprob):
+        return -np.inf
+
+    return lnprob
 
