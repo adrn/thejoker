@@ -131,6 +131,65 @@ class RVData(object):
     def __len__(self):
         return len(self._t)
 
+    def to_hdf5(self, file_or_path):
+        """
+        Write data to an HDF5 file.
+
+        Parameters
+        ----------
+        file_or_path : str, `h5py.File`, `h5py.Group`
+        """
+
+        if isinstance(file_or_path, six.string_types):
+            f = h5py.File(file_or_path, 'w')
+            close = True
+
+        else:
+            f = file_or_path
+            close = False
+
+        d = f.create_dataset('mjd', data=self._t + self.t_offset)
+        d.attrs['format'] = 'mjd'
+        d.attrs['scale'] = 'tcb'
+
+        d = f.create_dataset('rv', data=self._rv)
+        d.attrs['unit'] = str(usys['speed'])
+
+        d = f.create_dataset('rv_err', data=1/np.sqrt(self._ivar))
+        d.attrs['unit'] = str(usys['speed'])
+
+        f.flush()
+
+        if close:
+            f.close()
+
+    @classmethod
+    def from_hdf5(cls, file_or_path):
+        """
+        Read data to an HDF5 file.
+
+        Parameters
+        ----------
+        file_or_path : str, `h5py.File`, `h5py.Group`
+        """
+
+        if isinstance(file_or_path, six.string_types):
+            f = h5py.File(file_or_path, 'r')
+            close = True
+
+        else:
+            f = file_or_path
+            close = False
+
+        t = f['mjd']
+        rv = f['rv'][:] * u.Unit(f['rv'].attrs['unit'])
+        stddev = f['rv_err'][:] * u.Unit(f['rv_err'].attrs['unit'])
+
+        if close:
+            f.close()
+
+        return cls(t=t, rv=rv, stddev=stddev)
+
     @classmethod
     def from_apogee(cls, path_or_data, apogee_id=None):
         """
