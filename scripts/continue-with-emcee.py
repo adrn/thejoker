@@ -85,7 +85,7 @@ def main(data_file, cache_filename, pool, n_steps, overwrite=False, seed=42, hdf
     j_max = np.argmax([mcmc.ln_posterior(s, data) for s in samples_trans.T])
     p0 = samples_trans[:,j_max]
 
-    n_walkers = config.M_min
+    n_walkers = config.defaults['M_min']
     p0 = emcee.utils.sample_ball(p0, 1E-5*np.abs(p0), size=n_walkers)
 
     sampler = emcee.EnsembleSampler(n_walkers, p0.shape[1],
