@@ -15,7 +15,7 @@ module load openmpi/gcc/1.10.2/64
 source activate thejoker
 
 # Run experiment 5!
-python make-experiment5-data.py -s 1988
+python make-experiment5-data.py -s 42
 
 export NSAMPLES="2**28"
 export SEED=42
