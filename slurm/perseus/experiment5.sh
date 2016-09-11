@@ -17,6 +17,9 @@ source activate thejoker
 # Run experiment 5!
 python make-experiment5-data.py -s 1988
 
+export NSAMPLES="2**28"
+export SEED=42
+
 # Run experiment 5, moving data point index=1 through 1 period in 8 steps:
 srun python run-sampler.py -v --mpi -o \
 -n $NSAMPLES \
