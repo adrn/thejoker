@@ -53,11 +53,10 @@ def main(data_file, cache_filename, pool, n_steps, overwrite=False, seed=42, hdf
     logger.debug("Reading data from input file at '{}'".format(full_path))
     with h5py.File(full_path, 'r') as f:
         if hdf5_key is not None:
-            g = f[hdf5_key]
+            data = RVData.from_hdf5(f[hdf5_key])
         else:
-            g = f
-        data = RVData.from_hdf5(g)
-    data._ivar = 1 / np.sqrt(1/data._ivar + jitter.decompose(usys).value**2)
+            data = RVData.from_hdf5(f)
+    data.add_jitter(jitter)
 
     logger.debug("Reading cached sample(s) from file at '{}'".format(output_filename))
     opars = OrbitalParams.from_hdf5(output_filename)
