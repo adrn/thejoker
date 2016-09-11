@@ -580,9 +580,9 @@ He we study the dependence of the complexity of the posterior pdf on the number
 of observations by using another \apogee\ target with a previously identified
 companion (2M03080601+7950502) by successively and randomly removing
 observations from the repeated analysis of these data with \samplername.
-In DR13, this target has 30 visits; we remove 11 of these observations at random
-so that we begin with 19 observtions.
-After running the sampler with the set of 19 visits, we successively remove 2
+In DR13, this target has 30 visits; we remove 13 of these observations at random
+so that we begin with 17 observtions.
+After running the sampler with the set of 17 visits, we successively remove 2
 data points and re-run the sampling until we are left with 3 observations as
 input data (a total of 8 consecutive runs).
 
@@ -591,10 +591,10 @@ parameters with a period domain of $(P_{\rm min}, P_{\rm max}) = (16, 8192)~{\rm
 day}$ and re-use these prior samples for each sub-sampling of the data.
 \figname s~\ref{fig:exp3-rv-0}--\ref{fig:exp3-rv-1} show the data and orbits
 computed from posterior samples returned by \samplername.
-Starting from the top of \figname~\ref{fig:exp3-rv-0} with the full set of 19
+Starting from the top of \figname~\ref{fig:exp3-rv-0} with the full set of 17
 measurements, each panel below has 2 fewer data points than the previous.
 The data used for the sampling shown in a given panel are plotted as black
-circles, and the removed measurements are plotted as red X's.
+circles.
 The number of measurements used, $N$, and the number of samples that survive the
 rejection step, $M$, after one run of \samplername\ are indicated on each panel.
 As described in \sectionname~\ref{sec:method}, when $M < M_{\rm min}=128$ we
@@ -604,44 +604,10 @@ with a new set of prior samples until we have at least $M_{\rm min}$ samples
 from the posterior pdf.
 In all panels, 128 orbits computed from the posterior samples are shown.
 
-\begin{figure*}[p]
-\begin{center}
-\includegraphics[height=0.9\textheight]{figures/exp3-rv-curves-0.pdf}
-\end{center}
-\caption{%
-Similar to \figname~\ref{fig:exp1-rv}, in all panels, black points show
-\apogee\ radial velocity measurements used to generate samples from the
-posterior pdf over orbital parameters sub-sampled from the full set of
-observations for this target 2M19405532+2401157.
-Grey curves show orbits compute from 128 samples from the posterior pdf.
-The number of data points, $N$, and the number of samples that pass the
-rejection sampling in the first step of \samplername, $M$, are printed on each
-panel.
-\label{fig:exp3-rv-0}}
-\end{figure*}
-
-\begin{figure*}[p]
-\begin{center}
-\includegraphics[height=0.9\textheight]{figures/exp3-rv-curves-1.pdf}
-\end{center}
-\caption{%
-Same as \figname~\ref{fig:exp3-rv-0} for further sub-samplings of the original
-data set.
-\todoapw{More comments here..}
-\label{fig:exp3-rv-1}}
-\end{figure*}
-
-\figname s~\ref{fig:exp3-corner-0}--\ref{fig:exp3-corner-1} show a few
-projections of the posterior samples for each of the data sub-samplings (i.e.
-the panels in these figures match the panels in
-\figname s~\ref{fig:exp3-rv-0}--\ref{fig:exp3-rv-1}).
-All panels in \figname s~\ref{fig:exp3-corner-0} show that the posterior pdf is
-very compact and unimodal when $N=19,17,15,13$ data points are used.
-We have fixed the axis limits to be the same in \figname
-s~\ref{fig:exp3-corner-0} and \ref{fig:exp3-corner-1}), so the single dark point
-in some of the panels of \figname~\ref{fig:exp3-corner-0} are very compact
-visualizations of the posterior samples.
-The structure in \figname~\ref{fig:exp3-corner-1} is much more interesting.
+For all sub-samplings shown in \figname~\ref{fig:exp3-rv-0}, the posterior pdf
+appears to be uni-modal.
+The structure in the posterior samples shown in the right panels of
+\figname~\ref{fig:exp3-rv-1} is much more interesting.
 Already in the top panels ($N=9$), multiple modes appear.
 These become more apparent in the panels below, until ultimately forming a
 harmonic series of modes in the bottom two rows of panels.
@@ -651,28 +617,112 @@ Still, we are able to sample from these pdfs using \samplername.
 
 \begin{figure*}[p]
 \begin{center}
-\includegraphics[height=0.9\textheight]{figures/exp3-corner-0.pdf}
+\includegraphics[width=\textwidth]{figures/exp3-rv-curves-0.pdf}
 \end{center}
 \caption{%
-TODO
-\todoapw{More comments here..}
-\label{fig:exp3-corner-0}}
+{\sl Left panels}: Similar to top panel of \figname~\ref{fig:exp1-rv}, black
+points show \apogee\ radial velocity measurements used to generate samples from
+the posterior pdf over orbital parameters sub-sampled from the full set of
+observations for this target 2M19405532+2401157.
+Grey curves show orbits compute from 128 samples from the posterior pdf, either
+from using \samplername, or, if \samplername\ returns few samples in a small
+range, from switching to \emcee\ to continue sampling until 128 samples are
+returned.
+The number of data points, $N$, and the number of samples that pass the
+rejection sampling in the first step of \samplername, $M$, are printed on each
+panel.
+{\sl Right panels}: A single projection of the posterior samples in each case
+showing the log-period, $\ln P$, and eccentricity, $e$.
+In all cases shown, the posterior pdf appears to be uni-modal.
+\label{fig:exp3-rv-0}}
 \end{figure*}
 
 \begin{figure*}[p]
 \begin{center}
-\includegraphics[height=0.9\textheight]{figures/exp3-corner-1.pdf}
+\includegraphics[width=\textwidth]{figures/exp3-rv-curves-1.pdf}
 \end{center}
 \caption{%
-Same as \figname~\ref{fig:exp3-corner-0} for smaller sub-samplings of the
-original data set.
-\todoapw{More comments here..}
-\label{fig:exp3-corner-1}}
+Same as \figname~\ref{fig:exp3-rv-0} for further sub-samplings of the original
+data set.
+Note that the axis limits for the right panels have expanded considerably, and
+that there are multiple modes in the posterior pdf for all cases in this figure.
+\label{fig:exp3-rv-1}}
 \end{figure*}
 
-\subsection{Experiment 3: ...}
+% \figname s~\ref{fig:exp3-corner-0}--\ref{fig:exp3-corner-1} show a few
+% projections of the posterior samples for each of the data sub-samplings (i.e.
+% the panels in these figures match the panels in
+% \figname s~\ref{fig:exp3-rv-0}--\ref{fig:exp3-rv-1}).
+% All panels in \figname s~\ref{fig:exp3-corner-0} show that the posterior pdf is
+% very compact and unimodal when $N=19,17,15,13$ data points are used.
+% We have fixed the axis limits to be the same in \figname
+% s~\ref{fig:exp3-corner-0} and \ref{fig:exp3-corner-1}), so the single dark point
+% in some of the panels of \figname~\ref{fig:exp3-corner-0} are very compact
+% visualizations of the posterior samples.
 
-Show switch-over from SMC to \emcee.
+% \begin{figure*}[p]
+% \begin{center}
+% \includegraphics[height=0.9\textheight]{figures/exp3-corner-0.pdf}
+% \end{center}
+% \caption{%
+% TODO
+% \todoapw{More comments here..}
+% \label{fig:exp3-corner-0}}
+% \end{figure*}
+
+% \begin{figure*}[p]
+% \begin{center}
+% \includegraphics[height=0.9\textheight]{figures/exp3-corner-1.pdf}
+% \end{center}
+% \caption{%
+% Same as \figname~\ref{fig:exp3-corner-0} for smaller sub-samplings of the
+% original data set.
+% \todoapw{More comments here..}
+% \label{fig:exp3-corner-1}}
+% \end{figure*}
+
+\subsection{Experiment 4: Increasing the uncertainties}
+
+Another feature of the data that determines the complexity of the posterior pdf
+are the uncertainties on the individual data points.
+To explore this, we again use the \apogee\ target 2M03080601+7950502 and
+downsample the data points so that there are 17 observations (the same as shown
+in the top panels of \figname~\ref{fig:exp3-rv-0}).
+We then steadily increase the uncertainties on the individual radial velocity
+measurements by factors of 2 and run \samplername\ to generate posterior
+samples.
+We again generate $2^{28}$ prior samples over the nonlinear parameters with a
+period domain of $(P_{\rm min}, P_{\rm max}) = (16, 8192)~{\rm day}$ and re-use
+these prior samples for each iteration of increasing the uncertainties.
+
+\figname~\ref{fig:exp4-rv} shows the data and uncertainties (left panels, black
+points), 128 orbits chosen at random from the posterior sampling, and all
+samples plotted in projection of log-period, $\ln P$, and eccentricity, $e$.
+The data in the top panel of \figname~\ref{fig:exp4-rv} have uncertainties
+artificially increased by a factor of 2 relative to the data in the top panel of
+\figname~\ref{fig:exp3-rv-0}, and each successive row has another increase by a
+factor of 2.
+For this particular target, increasing the uncertainties by a factor of 4 or
+more makes the posterior pdf multi-modal, even with 17 observations over a range
+of phases.
+
+\begin{figure*}[p]
+\begin{center}
+\includegraphics[width=\textwidth]{figures/exp4-rv-curves.pdf}
+\end{center}
+\caption{%
+Similar to \figname~\ref{fig:exp3-rv-0} but now varying the magnitude of the
+uncertainties instead of the number of data points.
+Each row has uncertainties increased by a factor of 2 relative to the previous
+row.
+The mean value of the uncertainties for all data points is shown on the left
+panels as $\langle \sigma_n \rangle$, along with the number of samples that
+survive the rejection sampling with \samplername\, $M$.
+\label{fig:exp4-rv}}
+\end{figure*}
+
+\subsection{Experiment 5: TODO}
+
 
 \section{Discussion} \label{sec:discussion}
 
