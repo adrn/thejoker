@@ -54,18 +54,6 @@ def main():
         data.to_hdf5(f)
         f.create_dataset('truth_vector', data=opars.pack())
 
-    # ------------------------------------------------------------------------
-    # Experiment 5 data
-    bmjd[1] = bmjd[0] + 10. # 10 days later
-    rv[1] = orbit.generate_rv_curve(bmjd[1:2])
-    rv_err[1] = np.random.uniform(100, 200) * u.m/u.s
-    rv[1] = np.random.normal(rv[1].decompose(usys).value, rv_err[1].decompose(usys).value) * usys['speed']
-
-    data = RVData(t=bmjd, rv=rv, stddev=rv_err)
-    with h5py.File(os.path.join(paths.root, "data", "experiment5.h5"), "w") as f:
-        data.to_hdf5(f)
-        f.create_dataset('truth_vector', data=opars.pack())
-
 if __name__ == '__main__':
     from argparse import ArgumentParser
 
