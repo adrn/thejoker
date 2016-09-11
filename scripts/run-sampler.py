@@ -104,7 +104,8 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, hdf5_key=Non
             logger.info("This is rerun {} -- incrementing random number seed.".format(rerun))
 
         logger.debug("random number seed: {} (+ rerun: {})".format(seed, rerun))
-        np.random.seed(seed + rerun)
+        seed = int(str(seed) + str(rerun))
+        np.random.seed(seed)
 
     # only accepts HDF5 data formats with units
     logger.debug("Reading data from input file at '{}'".format(full_path))
