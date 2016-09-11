@@ -71,6 +71,10 @@ class RVData(object):
             self._t = self._t - t_offset
         self.t_offset = t_offset
 
+    @u.quantity_input(jitter=u.km/u.s)
+    def add_jitter(self, jitter):
+        self._ivar = (1 / (self.stddev**2 + jitter**2)).decompose(usys).value
+
     @property
     def t(self):
         return at.Time(self._t + self.t_offset, scale='tcb', format='mjd')
