@@ -12,9 +12,6 @@ import os
 
 # Third-party
 import h5py
-import matplotlib
-matplotlib.use('agg')
-import matplotlib.pyplot as plt
 import numpy as np
 
 # Project
@@ -23,8 +20,6 @@ paths = Paths()
 from thejoker.celestialmechanics import OrbitalParams
 from thejoker.data import RVData
 from thejoker.units import usys
-
-plt.style.use("../thejoker/thejoker.mplstyle")
 
 def main():
 
@@ -38,22 +33,20 @@ def main():
         exp1_opars = OrbitalParams.unpack(f['truth_vector'][:])
         exp1_orbit = exp1_opars.rv_orbit()
 
-    # number of steps to take the data point through a cycle
-    n_steps = 8
-    idx = len(exp1_data._t) - 1 # the index of the data point to vary
-
     # ------------------------------------------------------------------------
     # Generate Experiment 5 data
 
-    exp5_data = exp1_data.copy()
-    with h5py.File(os.path.join(paths.root, "data", "experiment5.h5"), "w") as f:
-        for i in range(n_steps):
-            t1 = exp1_data._t[idx] + (i+1) * exp1_opars._P[0] / (n_steps+1)
-            exp5_data._t[idx] = t1
+    data_t = exp1_data._t + exp1_data.t_offset
+    data_std = 1 / np.sqrt(exp1_data._ivar)[0]
 
-            _rv = exp1_orbit.generate_rv_curve(t1)[0]
-            stddev = 1/np.sqrt(exp5_data._ivar[idx])
-            exp5_data._rv[idx] = np.random.normal(_rv.decompose(usys).value, stddev)
+    with h5py.File(os.path.join(paths.root, "data", "experiment5.h5"), "w") as f:
+        for i,next_t in enumerate([data_t[-1]+14, data_t[-1] + np.random.uniform(0,6*30)]): # MAGIC NUMBERS
+            new_rv = exp1_orbit.generate_rv_curve(next_t)[0].to(usys['speed']).value
+            new_rv = np.random.normal(new_rv, data_std)
+
+            exp5_data = RVData(t=np.concatenate((data_t, [next_t])),
+                               rv=np.concatenate((exp1_data._rv, [new_rv])) * usys['speed'],
+                               ivar=np.concatenate((exp1_data._ivar, [1/data_std**2])) * usys['speed'])
 
             g = f.create_group(str(i))
             exp5_data.to_hdf5(g)
