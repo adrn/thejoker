@@ -64,7 +64,7 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, hdf5_key=Non
                         # HACK
                         pieces = name.split("_")
                         unit = u.Unit(pieces[-1])
-                        short_name = "".join(pieces[:-1])
+                        short_name = "_".join(pieces[:-1])
                         var = hyperpars_strs[short_name]
 
                         if var is not None:
