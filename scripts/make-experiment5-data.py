@@ -40,7 +40,7 @@ def main():
     data_std = 1 / np.sqrt(exp1_data._ivar)[0]
 
     with h5py.File(os.path.join(paths.root, "data", "experiment5.h5"), "w") as f:
-        for i,next_t in enumerate([data_t[-1]+14, data_t[-1] + np.random.uniform(0,6*30)]): # MAGIC NUMBERS
+        for i,next_t in enumerate([data_t[-1]+14, data_t[-1]+250.]): # MAGIC NUMBERS
             new_rv = exp1_orbit.generate_rv_curve(next_t)[0].to(usys['speed']).value
             new_rv = np.random.normal(new_rv, data_std)
 
