@@ -30,22 +30,25 @@ def main():
                       "run make-experiment1-data.py yet?")
 
     with h5py.File(experiment1_file, "r") as f:
+        exp1_data = RVData.from_hdf5(f)
         exp1_opars = OrbitalParams.unpack(f['truth_vector'][:])
         exp1_orbit = exp1_opars.rv_orbit()
 
     # ------------------------------------------------------------------------
     # Generate Experiment 5 data
 
-    data_t1 = np.random.uniform(2., 3*365, size=4) + 55555.
-    data_t2 = np.exp(np.random.uniform(np.log(2.), np.log(3*365), size=4)) + 55555.
+    data_t = exp1_data._t + exp1_data.t_offset
+    data_std = 1 / np.sqrt(exp1_data._ivar)[:2]
 
     with h5py.File(os.path.join(paths.root, "data", "experiment5.h5"), "w") as f:
-        for i,t in enumerate([data_t1, data_t2]):
-            rv = exp1_orbit.generate_rv_curve(t).to(usys['speed'])
-            rv_err = (np.random.uniform(100,300,size=t.size)*u.m/u.s).to(usys['speed'])
-            rv = np.random.normal(rv, rv_err)
+        for i,next_t in enumerate([[data_t[-1]+8, data_t[-1]+16],
+                                  data_t[-1] + np.random.uniform(0,200,size=2)]): # MAGIC NUMBERS
+            new_rv = exp1_orbit.generate_rv_curve(next_t).to(usys['speed']).value
+            new_rv = np.random.normal(new_rv, data_std)
 
-            exp5_data = RVData(t=t, rv=rv, stddev=rv_err)
+            exp5_data = RVData(t=np.concatenate((data_t, next_t)),
+                               rv=np.concatenate((exp1_data._rv, new_rv)) * usys['speed'],
+                               ivar=np.concatenate((exp1_data._ivar, 1/data_std**2)) * usys['speed'])
 
             g = f.create_group(str(i))
             exp5_data.to_hdf5(g)
