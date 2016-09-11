@@ -1,3 +1,6 @@
+# Standard library
+from collections import OrderedDict
+
 # Third-party
 from astropy import log as logger
 import astropy.units as u
@@ -11,15 +14,15 @@ from ..units import usys
 from .celestialmechanics_class import SimulatedRVOrbit
 
 class OrbitalParams(object):
-    # Mapping from parameter name to physical type
-    _name_phystype = {
-        'P': 'time',
-        'asini': 'length',
-        'ecc': None,
-        'omega': 'angle',
-        'phi0': 'angle',
-        'v0': 'speed'
-    }
+    # Mapping from parameter name to physical type - same order as parameters
+    _name_phystype = OrderedDict(
+        P='time',
+        asini='length',
+        ecc=None,
+        omega='angle',
+        phi0='angle',
+        v0='speed'
+    )
 
     # Latex plot labels for the parameters
     _latex_labels = [r'$\ln (P/{\rm day})$', r'$\ln (a\,\sin i/{\rm R}_\odot)$', '$e$', r'$\omega$ [deg]',
