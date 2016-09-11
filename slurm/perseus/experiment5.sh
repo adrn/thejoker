@@ -17,64 +17,59 @@ source activate thejoker
 # Run experiment 5!
 python make-experiment5-data.py -s 1988
 
-srun python run-sampler.py -v --mpi -o \
--n 2**28 -s 42 \
--f ../data/experiment5.h5 \
---name="experiment5.h5"
-
 # Run experiment 5, moving data point index=1 through 1 period in 8 steps:
 srun python run-sampler.py -v --mpi -o \
 -n $NSAMPLES \
 -f ../data/experiment5.h5 \
---name="experiment5.hdf5" \
+--name="experiment5-0.hdf5" \
 --hdf5-key="0" \
 --seed=$SEED
 
 srun python run-sampler.py -v --mpi -o \
 -n $NSAMPLES \
 -f ../data/experiment5.h5 \
---name="experiment5.hdf5" \
+--name="experiment5-1.hdf5" \
 --hdf5-key="1" \
 --seed=$SEED
 
 srun python run-sampler.py -v --mpi -o \
 -n $NSAMPLES \
 -f ../data/experiment5.h5 \
---name="experiment5.hdf5" \
+--name="experiment5-2.hdf5" \
 --hdf5-key="2" \
 --seed=$SEED
 
 srun python run-sampler.py -v --mpi -o \
 -n $NSAMPLES \
 -f ../data/experiment5.h5 \
---name="experiment5.hdf5" \
+--name="experiment5-3.hdf5" \
 --hdf5-key="3" \
 --seed=$SEED
 
 srun python run-sampler.py -v --mpi -o \
 -n $NSAMPLES \
 -f ../data/experiment5.h5 \
---name="experiment5.hdf5" \
+--name="experiment5-4.hdf5" \
 --hdf5-key="4" \
 --seed=$SEED
 
 srun python run-sampler.py -v --mpi -o \
 -n $NSAMPLES \
 -f ../data/experiment5.h5 \
---name="experiment5.hdf5" \
+--name="experiment5-5.hdf5" \
 --hdf5-key="5" \
 --seed=$SEED
 
 srun python run-sampler.py -v --mpi -o \
 -n $NSAMPLES \
 -f ../data/experiment5.h5 \
---name="experiment5.hdf5" \
+--name="experiment5-6.hdf5" \
 --hdf5-key="6" \
 --seed=$SEED
 
 srun python run-sampler.py -v --mpi -o \
 -n $NSAMPLES \
 -f ../data/experiment5.h5 \
---name="experiment5.hdf5" \
+--name="experiment5-7.hdf5" \
 --hdf5-key="7" \
 --seed=$SEED
