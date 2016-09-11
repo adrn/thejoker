@@ -158,8 +158,6 @@ class RVData(object):
         d = f.create_dataset('rv_err', data=1/np.sqrt(self._ivar))
         d.attrs['unit'] = str(usys['speed'])
 
-        f.flush()
-
         if close:
             f.close()
 
