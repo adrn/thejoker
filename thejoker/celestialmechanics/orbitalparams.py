@@ -141,19 +141,27 @@ class OrbitalParams(object):
     def copy(self):
         return self.__copy__()
 
-    def rv_orbit(self, index):
+    def rv_orbit(self, index=None):
         """
         Get a `~thejoker.celestialmechanics.SimulatedRVOrbit` instance
         for the orbital parameters with index ``i``.
 
         Parameters
         ----------
-        index : int
+        index : int (optional)
 
         Returns
         -------
         orbit : `~thejoker.celestialmechanics.SimulatedRVOrbit`
         """
         i = index
+
+        if i is None and len(self._P) == 1: # OK
+            pass
+
+        elif i is None and len(self._P) > 1:
+            raise IndexError("You must specify the index of the set of paramters to get an "
+                             "orbit for!")
+
         return SimulatedRVOrbit(P=self.P[i], a_sin_i=self.asini[i], ecc=self.ecc[i],
                                 omega=self.omega[i], phi0=self.phi0[i], v0=self.v0[i])
