@@ -1,5 +1,4 @@
 # Standard library
-from collections import OrderedDict
 import os
 import sys
 
@@ -8,6 +7,7 @@ from astropy import log as logger
 import astropy.units as u
 import h5py
 import numpy as np
+import six
 
 # Project
 from thejoker import Paths
@@ -22,7 +22,7 @@ from thejoker import config
 
 def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, hdf5_key=None,
          cache_filename=None, overwrite=False, continue_sampling=False,
-         jitter=None, P_min=None, P_max=None):
+         hyperpars_strs=dict()):
 
     full_path = os.path.abspath(data_file)
     if cache_filename is None:
@@ -39,28 +39,8 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, hdf5_key=Non
         if not _path:
             output_filename = os.path.join(paths.root, "cache", output_filename)
 
-    # get defaults for hyper-parameters:
-    if P_min is None:
-        P_min = config.P_min
-    else:
-        val,unit = str(P_min).split()
-        P_min = float(val) * u.Unit(unit)
-
-    if P_max is None:
-        P_max = config.P_max
-    else:
-        val,unit = str(P_max).split()
-        P_max = float(val) * u.Unit(unit)
-
-    if jitter is None:
-        jitter = 0*u.m/u.s
-    else:
-        val,*unit = str(jitter).split()
-        jitter = float(val) * u.Unit("".join(unit))
-
-    logger.debug("jitter: {}".format(jitter))
-    logger.debug("P_min: {}".format(P_min))
-    logger.debug("P_max: {}".format(P_max))
+    # container for hyper-parameter values
+    hyperpars = dict(jitter=None, P_min=None, P_max=None)
 
     # see if we already did this:
     if os.path.exists(output_filename):
@@ -80,21 +60,19 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, hdf5_key=Non
                     rerun = f.attrs['rerun'] + 1
 
                 if rerun != 0:
-                    # TODO: shouldn't fail if they aren't set and re-run is triggered - should just
-                    #       set them based on cached values...
-                    # validate that hyperparameters are the same for the re-run!
-                    for key,name,p,unit in zip(['jitter_m/s','P_min_day','P_max_day'],
-                                               ['jitter', 'P_min', 'P_max'],
-                                               [jitter, P_min, P_max],
-                                               ['m/s', 'day', 'day']):
-                        val1,val2 = p.to(u.Unit(unit)).value, f.attrs[key]
-                        if not np.allclose(val1, val2):
-                            raise ValueError("You asked to continue sampling, but in a previous "
-                                             "run you used a different value for the '{name}': "
-                                             "{val1} {unit} vs. {val2} {unit}".format(name=name,
-                                                                                      val1=val1,
-                                                                                      val2=val2,
-                                                                                      unit=unit))
+                    logger.debug("Reading hyperparameters from cache file.")
+                    for name in ['jitter_m/s', 'P_min_day', 'P_max_day']:
+                        # HACK
+                        pieces = name.split("_")
+                        unit = u.Unit(pieces[-1])
+                        short_name = "".join(pieces[:-1])
+                        var = hyperpars_strs[short_name]
+
+                        if var is not None:
+                            logger.warning("'{}' specified at command line, but using value "
+                                           "stored in cache file.".format(short_name))
+
+                        hyperpars[short_name] = f.attrs[name] * unit
 
         elif overwrite: # restart rerun counter
             rerun = 0
@@ -106,6 +84,20 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, hdf5_key=Non
     else:
         mode = 'w'
         rerun = 0
+
+    # get defaults for hyper-parameters:
+    for name in hyperpars.keys():
+        if hyperpars[name] is None:
+            if hyperpars_strs[name] is None:
+                hyperpars[name] = config.defaults[name]
+            else:
+                if isinstance(hyperpars_strs[name], six.string_types):
+                    val,unit = str(hyperpars_strs[name]).split()
+                    hyperpars[name] = float(val) * u.Unit(unit)
+                else:
+                    hyperpars[name] = float(hyperpars_strs[name])
+
+        logger.debug("{}: {}".format(name, hyperpars[name]))
 
     # do this after choosing pool so all processes don't have same seed
     if seed is not None:
@@ -119,18 +111,14 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, hdf5_key=Non
     logger.debug("Reading data from input file at '{}'".format(full_path))
     with h5py.File(full_path, 'r') as f:
         if hdf5_key is not None:
-            g = f[hdf5_key]
+            data = RVData.from_hdf5(f[hdf5_key])
         else:
-            g = f
-
-        bmjd = g['mjd'][:]
-        rv = quantity_from_hdf5(g, 'rv')
-        rv_err = quantity_from_hdf5(g, 'rv_err')
-    data = RVData(bmjd, rv, stddev=np.sqrt(rv_err**2 + jitter**2))
+            data = RVData.from_hdf5(f)
+    data.add_jitter(hyperpars['jitter'])
 
     # generate prior samples on the fly
     logger.debug("Number of prior samples: {}".format(n_samples))
-    prior_samples = sample_prior(n_samples, P_min=P_min, P_max=P_max)
+    prior_samples = sample_prior(n_samples, P_min=hyperpars['P_min'], P_max=hyperpars['P_max'])
     P = prior_samples['P'].decompose(usys).value
     ecc = prior_samples['ecc']
     phi0 = prior_samples['phi0'].decompose(usys).value
@@ -160,9 +148,9 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, hdf5_key=Non
     # save the orbital parameters out to a cache file
     with h5py.File(output_filename, mode) as f:
         f.attrs['rerun'] = rerun
-        f.attrs['jitter_m/s'] = jitter.to(u.m/u.s).value # HACK: always in m/s?
-        f.attrs['P_min_day'] = P_min.to(u.day).value
-        f.attrs['P_max_day'] = P_max.to(u.day).value
+        f.attrs['jitter_m/s'] = hyperpars['jitter'].to(u.m/u.s).value # HACK: always in m/s?
+        f.attrs['P_min_day'] = hyperpars['P_min'].to(u.day).value
+        f.attrs['P_max_day'] = hyperpars['P_max'].to(u.day).value
 
         for i,(name,unit) in enumerate(OrbitalParams._name_phystype.items()):
             if name in f:
@@ -224,11 +212,11 @@ if __name__ == "__main__":
     parser.add_argument("--Pmin", dest="P_min", default=None, type=str,
                         help="Minimum period to generate samples to (default: {})."
                              "Must specify a number with units, e.g., '2 day'"
-                             .format(config.P_min))
+                             .format(config.defaults['P_min']))
     parser.add_argument("--Pmax", dest="P_max", default=None, type=str,
                         help="Maximum period to generate samples to (default: {})."
                              "Must specify a number with units, e.g., '8192 day'"
-                             .format(config.P_max))
+                             .format(config.defaults['P_max']))
 
     args = parser.parse_args()
 
@@ -261,4 +249,4 @@ if __name__ == "__main__":
         main(data_file=args.data_file, pool=pool, n_samples=n_samples, hdf5_key=args.hdf5_key,
              seed=args.seed, overwrite=args.overwrite, continue_sampling=args._continue,
              cache_filename=args.cache_name, tmp_prior_filename=fp.name,
-             jitter=args.jitter, P_min=args.P_min, P_max=args.P_max)
+             hyperpars_strs=dict(jitter=args.jitter, P_min=args.P_min, P_max=args.P_max))

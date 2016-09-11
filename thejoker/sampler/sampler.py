@@ -3,7 +3,7 @@ import astropy.units as u
 from astropy import log as logger
 import numpy as np
 
-from ..config import P_min, P_max
+from ..config import defaults
 from ..celestialmechanics import rv_from_elements
 
 __all__ = ['design_matrix', 'tensor_vector_scalar', 'marginal_ln_likelihood',
@@ -95,7 +95,7 @@ def marginal_ln_likelihood(ATA, chi2):
     return -0.5*np.atleast_1d(chi2) + 0.5*logdet
 
 u.quantity_input(P_min=u.day, P_max=u.day)
-def sample_prior(n=1, P_min=P_min, P_max=P_max):
+def sample_prior(n=1, P_min=defaults['P_min'], P_max=defaults['P_min']):
     """
     Generate samples from the prior. Logarithmic in period, uniform in
     phase and argument of pericenter, Beta distribution in eccentricity.
