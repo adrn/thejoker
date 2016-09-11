@@ -151,7 +151,7 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, hdf5_key=Non
         f.attrs['P_min_day'] = hyperpars['P_min'].to(u.day).value
         f.attrs['P_max_day'] = hyperpars['P_max'].to(u.day).value
 
-        for i,(name,unit) in enumerate(OrbitalParams._name_phystype.items()):
+        for i,(name,phys_type) in enumerate(OrbitalParams._name_phystype.items()):
             if name in f:
                 if overwrite: # delete old samples and overwrite
                     del f[name]
@@ -164,8 +164,8 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, hdf5_key=Non
             else:
                 f.create_dataset(name, data=orbital_params.T[i])
 
-            if unit is not None: # note: could get in to a weird state with mismatched units...
-                f[name].attrs['unit'] = str(unit)
+            if phys_type is not None: # note: could get in to a weird state with mismatched units...
+                f[name].attrs['unit'] = str(usys[phys_type])
 
     pool.close()
 
