@@ -154,14 +154,14 @@ class OrbitalParams(object):
         -------
         orbit : `~thejoker.celestialmechanics.SimulatedRVOrbit`
         """
-        i = index
+        if index is None and len(self._P) == 1: # OK
+            index = 0
 
-        if i is None and len(self._P) == 1: # OK
-            pass
-
-        elif i is None and len(self._P) > 1:
+        elif index is None and len(self._P) > 1:
             raise IndexError("You must specify the index of the set of paramters to get an "
                              "orbit for!")
+
+        i = index
 
         return SimulatedRVOrbit(P=self.P[i], a_sin_i=self.asini[i], ecc=self.ecc[i],
                                 omega=self.omega[i], phi0=self.phi0[i], v0=self.v0[i])
