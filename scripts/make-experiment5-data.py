@@ -48,10 +48,10 @@ def main():
     with h5py.File(os.path.join(paths.root, "data", "experiment5.h5"), "w") as f:
         for i in range(n_steps):
             t1 = exp1_data._t[1] + (i+1) * exp1_opars._P[0] / (n_steps+1)
-
             exp5_data._t[1] = t1
+
             _rv = exp1_orbit.generate_rv_curve(t1)[0]
-            stddev = np.sqrt(exp5_data._ivar[1])
+            stddev = 1/np.sqrt(exp5_data._ivar[1])
             exp5_data._rv[1] = np.random.normal(_rv.decompose(usys).value, stddev)
 
             g = f.create_group(str(i))
