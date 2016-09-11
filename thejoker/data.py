@@ -64,6 +64,12 @@ class RVData(object):
         self._rv = self._rv[idx]
         self._ivar = self._ivar[idx]
 
+        # sort on times
+        idx = self._t.argsort()
+        self._t = self._t[idx]
+        self._rv = self._rv[idx]
+        self._ivar = self._ivar[idx]
+
         self.metadata = metadata
 
         if t_offset is None:

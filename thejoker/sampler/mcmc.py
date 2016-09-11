@@ -59,4 +59,3 @@ def ln_posterior(p, data):
         return -np.inf
 
     return lnprob
-
