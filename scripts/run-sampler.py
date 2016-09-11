@@ -16,6 +16,7 @@ from thejoker.data import RVData
 from thejoker.util import quantity_from_hdf5
 from thejoker.units import usys
 from thejoker.pool import choose_pool
+from thejoker.celestialmechanics import OrbitalParams
 from thejoker.sampler import get_good_samples, samples_to_orbital_params, sample_prior
 from thejoker import config
 
@@ -79,6 +80,8 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, hdf5_key=Non
                     rerun = f.attrs['rerun'] + 1
 
                 if rerun != 0:
+                    # TODO: shouldn't fail if they aren't set and re-run is triggered - should just
+                    #       set them based on cached values...
                     # validate that hyperparameters are the same for the re-run!
                     for key,name,p,unit in zip(['jitter_m/s','P_min_day','P_max_day'],
                                                ['jitter', 'P_min', 'P_max'],
@@ -155,21 +158,13 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, hdf5_key=Non
                                                data, pool, seed)
 
     # save the orbital parameters out to a cache file
-    par_spec = OrderedDict()
-    par_spec['P'] = usys['time']
-    par_spec['asini'] = usys['length']
-    par_spec['ecc'] = None
-    par_spec['omega'] = usys['angle']
-    par_spec['phi0'] = usys['angle']
-    par_spec['v0'] = usys['length']/usys['time']
-
     with h5py.File(output_filename, mode) as f:
         f.attrs['rerun'] = rerun
         f.attrs['jitter_m/s'] = jitter.to(u.m/u.s).value # HACK: always in m/s?
         f.attrs['P_min_day'] = P_min.to(u.day).value
         f.attrs['P_max_day'] = P_max.to(u.day).value
 
-        for i,(name,unit) in enumerate(par_spec.items()):
+        for i,(name,unit) in enumerate(OrbitalParams._name_phystype.items()):
             if name in f:
                 if overwrite: # delete old samples and overwrite
                     del f[name]
