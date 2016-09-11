@@ -595,8 +595,14 @@ Starting from the top of \figname~\ref{fig:exp3-rv-0} with the full set of 19
 measurements, each panel below has 2 fewer data points than the previous.
 The data used for the sampling shown in a given panel are plotted as black
 circles, and the removed measurements are plotted as red X's.
-The number of measurements used, $N$, and the number of surviving samples, $M$,
-are indicated on each panel.
+The number of measurements used, $N$, and the number of samples that survive the
+rejection step, $M$, after one run of \samplername\ are indicated on each panel.
+As described in \sectionname~\ref{sec:method}, when $M < M_{\rm min}=128$ we
+either (1) if the periods of the surviving sample(s) are sufficiently close,
+initialize \emcee\ using the remaining sample(s), or (2) re-run \samplername\
+with a new set of prior samples until we have at least $M_{\rm min}$ samples
+from the posterior pdf.
+In all panels, 128 orbits computed from the posterior samples are shown.
 
 \begin{figure*}[p]
 \begin{center}
@@ -607,10 +613,10 @@ Similar to \figname~\ref{fig:exp1-rv}, in all panels, black points show
 \apogee\ radial velocity measurements used to generate samples from the
 posterior pdf over orbital parameters sub-sampled from the full set of
 observations for this target 2M19405532+2401157.
-Grey curves show orbits compute from a maximum of 512 samples from the
-posterior pdf, but when the number of accepted samples is fewer than this
-number, orbits computed for all $M$ accepted samples are shown.
-\todoapw{More comments here..}
+Grey curves show orbits compute from 128 samples from the posterior pdf.
+The number of data points, $N$, and the number of samples that pass the
+rejection sampling in the first step of \samplername, $M$, are printed on each
+panel.
 \label{fig:exp3-rv-0}}
 \end{figure*}
 
@@ -619,8 +625,8 @@ number, orbits computed for all $M$ accepted samples are shown.
 \includegraphics[height=0.9\textheight]{figures/exp3-rv-curves-1.pdf}
 \end{center}
 \caption{%
-Same as \figname~\ref{fig:exp3-rv-0} for smaller sub-samplings of the
-original data set.
+Same as \figname~\ref{fig:exp3-rv-0} for further sub-samplings of the original
+data set.
 \todoapw{More comments here..}
 \label{fig:exp3-rv-1}}
 \end{figure*}
