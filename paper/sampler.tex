@@ -93,13 +93,14 @@ Here we create a custom-built Monte Carlo sampler that can produce a
 posterior sampling for orbital parameters given even small numbers of
 noisy radial-velocity measurements (and hence a very complex likelihood
 function).
-The goal is to obtain provably correct samplings in the space of
-orbital parameters.
 % Methods
-We build a variant of Simple Monte Carlo sampling, in which we densely
-sample the non-linear orbital parameters, and perform rejection
-sampling using a marginalized likelihood, marginalizing out the linear
-orbital parameters.
+The six orbital parameters can be split into the four non-linear parameters
+(period, eccentricity, argument of pericenter, phase) and two linear parameters
+(velocity amplitude and bayrcenter velocity).
+We capitalize on this structure and build a variant of Simple Monte Carlo
+sampling, in which we densely sample the non-linear orbital parameters, and
+perform rejection sampling using a marginalized likelihood, marginalizing out
+the linear orbital parameters.
 In practice and generically, the sampling obtained by the Simple Monte
 Carlo is---in the case of sparse or uninformative data---substantial
 and multimodal, or else---in the case of informative
@@ -164,7 +165,7 @@ That is, a small number of (even very good) radial velocity
 measurements will lead to posterior beliefs about companion orbits and
 masses that put substantial plausibility onto multiple qualitatively
 different solutions.
-In other words, small numbers of radial-verlocity measurements create a
+In other words, modest numbers of radial-velocity measurements create a
 likelihood function that is highly multi-modal in the relevant parameter spaces
 (e.g., Keplerian orbital parameters).
 There are currently no safe methods known for exploring these highly
@@ -177,15 +178,19 @@ Our approach is to build custom posterior sampling methods that
 capitalize on the structure of the binary-star (or star--exoplanet)
 kinematics to create provably---or highly probably---correct
 samplings.
+In what follows, we use the term ``binary'' for any system with an observed
+source (the primary, e.g., a star), whose radial velocity variations are
+explained through gravitational two-body interactions with another object (the
+companion, e.g., star, exoplanet, stellar remnant).
 
 The structure of the paper is as follows:
-We state clearly our assumptions, and demonstrate that we have a
+We state our assumptions, and demonstrate that we have a
 method that is correct under those assumptions.
 We perform experiments with the method to understand its properties
 and limitations.
-We finish by discussing the value of the method, and the changes we
-would have to make if we weakened our assumptions, or if we don't
-weaken our assumptions but they indeed prove to be far from correct.
+We finish by discussing the astrophysical applicability and potential of the
+method, and the changes we would have to make if we weakened our assumptions, or
+if we don't weaken our assumptions but they indeed prove to be far from correct.
 
 \section{Assumptions and method} \label{sec:method}
 
@@ -199,6 +204,8 @@ stellar systems we will use and observations thereof.
   point masses (the two-body problem). We assume that the times are
   (effectively) perfectly known, and in an inertial frame (for
   example, Solar-System barycenter Julian date).
+  Here we only consider the case of a single-line spectroscopic binary system,
+  where we do not have measurements of the companion's orbit.
 \item We assume that each star has exactly one companion, and that the
   radial-velocity measurements are not contaminated by nor affected by
   any other bodies. Since we permit the effective mass of the
@@ -222,7 +229,7 @@ In the two-body celestial mechanics problem (\citealt{Kepler:1609}; and here we
 are working in a parameterization similar to that of \citealt{Murray:2010}), and
 under our above-stated assumptions, the radial-velocity expectation can be
 parameterized by six parameters, which we choose to be period $P$, projected
-semi-major axis of the observed star $\asini$, a phase $\phi_0$ corresponding to
+semi-major axis of the primary $\asini$, a phase $\phi_0$ corresponding to
 a time of pericenter passage, the eccentricity $e$, an argument of perihelion
 $\omega$, and a constant system barycenter radial velocity $v_0$.
 The radial velocity $v$ at time $t$ is then given by (see also
@@ -255,7 +262,7 @@ structure:
 \item There are both linear and non-linear parameters, and we can
   treat them differently; in particular, it is possible to
   analytically marginalize the linear parameters (provided that the
-  noise model is pleasant and the prior pdf is conjugate).
+  noise model is well-behaved and the prior pdf is conjugate).
 \item There is a finite, time-sampling-imposed minimum size or
   resolution---in the period---of any features in the
   likelihood function. That is, there cannot be arbitrarily narrow
@@ -267,9 +274,9 @@ Simple Monte Carlo is a method in which the prior probability density function
 rejection-sampling step that uses the likelihood as the rejection scalar.
 The rejection step works as follows:
 \begin{enumerate}\itemsep0ex
-\item For each sample $j$ in the prior pdf sampling there is a
-  likelihood value $L_j$ (a probability for the data given the
-  parameters, not logarithmic).
+\item For each sample $j$ in the prior pdf sampling of the four non-linear
+  parametesr, there is a (linear, not logarithmic) likelihood value $L_j$ (a
+  probability for the data given the parameters).
 \item There is a maximum value $L_{\rm max}$ that is the largest value of
   $L_j$ found across all of the samples in the prior sampling.
 \item For each sample $j$, choose a random number $r_j$ between 0 and
