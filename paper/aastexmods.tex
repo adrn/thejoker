@@ -21,11 +21,30 @@
 \vspace*{-\headsep}\vspace*{\headheight}
 \noindent\footnotesize
 {\noindent\footnotesize\textsc{\@journalinfo}}\par
-{\noindent\scriptsize Preprint typeset using \LaTeX\ style AASTeX6\\
-With modifications by David W. Hogg and Daniel Foreman-Mackey
+{\noindent\scriptsize Preprint typeset using \LaTeX\ style AASTeX6
+with modifications by DWH and DFM.
 }\par\vspace*{-\baselineskip}\vspace*{0.625in}
 }%
+\long\def\frontmatter@abstractheading{%
+\makeaffils
+  \vspace*{-\baselineskip}\vspace*{1.5pt}
+  \vspace*{0.13189in}
+ \begingroup
+  \centering
+  \abstractname
+  \vskip 1mm
+  \par
+ \endgroup
+ \everypar{\rightskip=0.0in\leftskip=\rightskip}\par
+}%
+\def\frontmatter@keys@format{\vspace*{0.5mm}%
+  \settowidth{\keys@width}{\normalsize\@keys@name}%
+  \rightskip=0.0in\leftskip=\rightskip\parindent=0pt%
+    \hangindent=\keys@width\hangafter=1\normalsize\raggedright}%
+\def\twodigits#1{\ifnum#1<10 0\fi\the#1}
+\def\mydate{\leavevmode\hbox{\the\year-\twodigits\month-\twodigits\day}}
 \makeatother
+\renewcommand{\today}{\mydate}
 
 % Section spacing:
 \makeatletter
