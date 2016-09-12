@@ -30,7 +30,7 @@ plt.style.use("../thejoker/thejoker.mplstyle")
 def main():
 
     # high-eccentricity orbit with reasonable or randomly chosen parameters
-    opars = OrbitalParams(P=103.71*u.day, asini=8.*u.R_sun, ecc=0.613,
+    opars = OrbitalParams(P=103.71*u.day, asini=12.124*u.R_sun, ecc=0.313,
                           omega=np.random.uniform(0, 2*np.pi)*u.rad,
                           phi0=np.random.uniform(0, 2*np.pi)*u.rad,
                           v0=np.random.normal(0, 30) * u.km/u.s)
@@ -40,7 +40,7 @@ def main():
     print("phi0:", orbit.phi0.to(u.degree))
     print("v0:", orbit.v0.to(u.km/u.s))
 
-    n_obs = 6 # MAGIC NUMBER: number of observations
+    n_obs = 5 # MAGIC NUMBER: number of observations
 
     # Experiment 1 data
     bmjd = np.random.uniform(0, 3*365, size=n_obs) + 55555. # 3 year survey
