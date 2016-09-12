@@ -113,14 +113,14 @@ def plot_corner(orbital_pars, **corner_kwargs):
     A thin wrapper around `corner.corner` to set defaults differently.
     """
 
+    samples = orbital_pars.pack(plot_units=True)
+
     corner_kw = corner_kwargs.copy()
     corner_kw.setdefault("plot_contours", False)
     corner_kw.setdefault("plot_density", False)
     corner_kw.setdefault("plot_datapoints", True)
     corner_kw.setdefault("data_kwargs", dict(alpha=corner_kw.pop('alpha')))
     corner_kw.setdefault("labels", orbital_pars._latex_labels)
-
-    samples = orbital_pars.pack(plot_units=True)
 
     # set ranges sensibly
     _med_v0 = np.median(samples[:,5])
@@ -136,4 +136,33 @@ def plot_corner(orbital_pars, **corner_kwargs):
     ]
     corner_kw.setdefault("range", ranges)
 
-    return corner.corner(samples, **corner_kw)
+    # default truth style
+    corner_kw.setdefault("truth_color", _truth_color)
+    corner_kw.setdefault("truth_alpha", 0.5)
+    corner_kw.setdefault("truth_linestyle", 'solid')
+
+    truth_style = dict()
+    truth_style['color'] = corner_kw.pop('truth_color')
+    truth_style['alpha'] = corner_kw.pop('truth_alpha')
+    truth_style['linestyle'] = corner_kw.pop('truth_linestyle')
+
+    if 'truths' in corner_kw: # draw lines only
+        truths = corner_kw.pop('truths')
+    else:
+        truths = None
+
+    fig = corner.corner(samples, **corner_kw)
+
+    if truths is not None: # draw lines only
+        axes = np.array(fig.axes).reshape(samples.shape[1],samples.shape[1])
+
+        for i in range(samples.shape[1]):
+            for j in range(samples.shape[1]):
+                if i == j:
+                    axes[i,j].axvline(truths[j], **truth_style)
+
+                elif i > j:
+                    axes[i,j].axvline(truths[j], **truth_style)
+                    axes[i,j].axhline(truths[i], **truth_style)
+
+    return fig
