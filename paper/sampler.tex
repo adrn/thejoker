@@ -3,6 +3,7 @@
 % to-do list
 % ----------
 % - zeroth draft
+% - search for occurrences of HOGG, DWH, APW, DFM, HWR in the text to make sure all issues are addressed.
 
 % style notes
 % -----------
@@ -12,7 +13,7 @@
 % - Use \, as a multiply operator.
 % - Reserve () for function arguments; use [] or {} for outer shit.
 % - Always prior pdf or posterior pdf, never prior or posterior (that's your arse).
-% - Use \sectionname not Section, \figname not Figure.
+% - Use \sectionname not Section, \figname not Figure, \documentname not Article or Paper or paper.
 
 \include{gitstuff}
 \include{aastexmods}
@@ -29,6 +30,7 @@
 \newcommand{\samplername}{\project{The~Joker}}
 \newcommand{\emcee}{\project{emcee}}
 \newcommand{\dr}{\acronym{DR13}}
+\newcommand{\documentname}{\textsl{Article}}
 \newcommand{\sectionname}{Section}
 \newcommand{\figname}{Figure}
 
@@ -183,7 +185,7 @@ source (the primary, e.g., a star), whose radial velocity variations are
 explained through gravitational two-body interactions with another object (the
 companion, e.g., star, exoplanet, stellar remnant).
 
-The structure of the paper is as follows:
+The structure of this \documentname\ is as follows:
 We state our assumptions, and demonstrate that we have a
 method that is correct under those assumptions.
 We perform experiments with the method to understand its properties
@@ -192,6 +194,7 @@ We finish by discussing the astrophysical applicability and potential of the
 method, and the changes we would have to make if we weakened our assumptions, or
 if we don't weaken our assumptions but they indeed prove to be far from correct.
 
+\clearpage
 \section{Assumptions and method} \label{sec:method}
 
 In order to set up a well-posed problem and build a path to a
@@ -390,6 +393,7 @@ When we trigger the intialization and operation of \emcee, we do the following:
 This procedure ensures that no matter what path we take, we end up with
 at least $M_{\rm min}$ samples from the posterior for any input data.
 
+\clearpage
 \section{Experiments and results}
 
 In what follows, we use spectroscopic data from Data Release 13 (DR13;
@@ -731,12 +735,54 @@ survive the rejection sampling with \samplername\, $M$.
 \subsection{Experiment 5: TODO}
 
 
+\clearpage
 \section{Discussion} \label{sec:discussion}
 
-What did we find?
+We have built a Monte Carlo sampler---\samplername---for the
+single-companion radial-velocity problem that has very good
+properties:
+It produces fair samplings even when the likelihood (and hence
+posterior pdf) is highly multi-modal.
+The cost of this fair sampling is computer time:
+Our method is based on Simple Monte Carlo, which is a pure brute-force
+method.
+The primary innovations we bring is a separation of the parameters
+into linear and nonlinear subsets, such that the brute force is only
+required in the nonlinear subspace.
+We further capitalize on the problem structure by identifying unimodal
+and multi-modal posterior pdfs using the minimum possible width of a
+likelihood peak in the period direction, given the time sampling.
 
-What can this system be used for? Discovery, characterization, and
-hierarchial inference.
+Our experiments show that \samplername\ can be used for discovery and
+characterization of stellar binaries or exoplanets.
+It can also be used to generate inputs for a hierarchical inference.
+In previous work (\citealt{hoggeccentricity, dfmexopop}) we have shown
+that posterior samplings under an interim prior can be importance-sampled
+with a hierarchical inference to generate posterior beliefs about the
+full population.
+These---hierarchical inferences---are the only population inferences
+that properly propagate non-trivial uncertainties at the
+individual-system level to the conclusions at the population level.
+
+Interestingly, as we show in Experiment~APW:WHAT, even very sparse
+samplings of the radial-velocity history of a star provide highly 
+informative posterior pdfs.
+Panel APW:WHAT in \figurename~APW:WHAT shows a highly multi-modal
+posterior pdf, but nonetheless a very informative posterior pdf:
+The vast majority of prior pdf samples have been eliminated, and
+only a tiny subset of periods, eccentricities, and amplitudes are
+consistent with the data.
+These posterior pdfs make look like a mess, but they would contribute
+extremely valuable information to any hierarchical inference, or
+provide a very informative prior pdf for further observing campaigns.
+
+Indeed, one of the purposes for which we built \samplername\ is
+observation planning, or cadence evaluation, or survey strategy:
+As Experiment~APW:WHAT shows, \samplername\ could be used to plan the
+times of next observations to maximize their expected information
+content.
+That is beyond the scope of this \documentname, but is not beyond
+the scope of our ambition.
 
 HOGG The assumption of single companion has the following issues...
 
@@ -806,8 +852,8 @@ University of Washington, and Yale University.
 
 \software{The code used in this project is available from
 \url{https://github.com/adrn/thejoker} under the MIT open-source software
-license. This version of the paper was generated with git commit
-\texttt{\githash~(\gitdate)}.
+license. This version was generated at git commit
+\texttt{\githash\,(\gitdate)}.
 This research additionally utilized:
     \texttt{Astropy} (\citealt{Astropy-Collaboration:2013}),
     \texttt{emcee} (\citealt{Foreman-Mackey:2013}),
