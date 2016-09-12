@@ -24,35 +24,41 @@ from thejoker.units import usys
 
 def main():
 
-    experiment1_file = os.path.join(paths.root, "data", "experiment1.h5")
-    if not os.path.exists(experiment1_file):
-        raise IOError("Experiment 1 data file could not be found -- did you "
-                      "run make-experiment1-data.py yet?")
+    # Designer RV curves!
 
-    with h5py.File(experiment1_file, "r") as f:
-        exp1_data = RVData.from_hdf5(f)
-        exp1_opars = OrbitalParams.unpack(f['truth_vector'][:])
-        exp1_orbit = exp1_opars.rv_orbit()
+    opars = OrbitalParams(P=127.31*u.day, asini=22.124*u.R_sun, ecc=0.213,
+                          omega=np.random.uniform(0, 2*np.pi)*u.rad,
+                          phi0=np.random.uniform(0, 2*np.pi)*u.rad,
+                          v0=np.random.normal(0, 30) * u.km/u.s)
+    orbit = opars.rv_orbit(0)
+    print("Mass function:", orbit.mf)
+    print("omega:", orbit.omega.to(u.degree))
+    print("phi0:", orbit.phi0.to(u.degree))
+    print("v0:", orbit.v0.to(u.km/u.s))
 
-    # ------------------------------------------------------------------------
-    # Generate Experiment 5 data
+    EPOCH = 55555. # arbitrary number
+    P = opars.P.to(u.day).value[0]
+    _t = np.array([0., 4.9, 4.92, 5.01]) * P
+    t1 = np.concatenate((_t, [5.5 * P])) + EPOCH
+    t2 = np.concatenate((_t, [5.92 * P])) + EPOCH
 
-    data_t = exp1_data._t + exp1_data.t_offset
-    data_std = 1 / np.sqrt(exp1_data._ivar)[:2]
+    rv_err = np.random.uniform(0.2, 0.3, size=t1.size) * u.km/u.s
+
+    _rnd = np.random.normal(size=t1.size)
+    rv1 = orbit.generate_rv_curve(t1) + _rnd*rv_err
+    rv2 = orbit.generate_rv_curve(t2) + _rnd*rv_err
 
     with h5py.File(os.path.join(paths.root, "data", "experiment5.h5"), "w") as f:
-        for i,next_t in enumerate([[data_t[-1]+8, data_t[-1]+16],
-                                  data_t[-1] + np.random.uniform(0,200,size=2)]): # MAGIC NUMBERS
-            new_rv = exp1_orbit.generate_rv_curve(next_t).to(usys['speed']).value
-            new_rv = np.random.normal(new_rv, data_std)
+        data1 = RVData(t=t1, rv=rv1, stddev=rv_err)
+        data2 = RVData(t=t2, rv=rv2, stddev=rv_err)
 
-            exp5_data = RVData(t=np.concatenate((data_t, next_t)),
-                               rv=np.concatenate((exp1_data._rv, new_rv)) * usys['speed'],
-                               ivar=np.concatenate((exp1_data._ivar, 1/data_std**2)) * usys['speed'])
+        g = f.create_group("0")
+        data1.to_hdf5(g)
+        g.create_dataset('truth_vector', data=opars.pack())
 
-            g = f.create_group(str(i))
-            exp5_data.to_hdf5(g)
-            g.create_dataset('truth_vector', data=exp1_opars.pack())
+        g = f.create_group("1")
+        data2.to_hdf5(g)
+        g.create_dataset('truth_vector', data=opars.pack())
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
