@@ -40,7 +40,7 @@ def main():
     print("phi0:", orbit.phi0.to(u.degree))
     print("v0:", orbit.v0.to(u.km/u.s))
 
-    n_obs = 4 # MAGIC NUMBER: number of observations
+    n_obs = 5 # MAGIC NUMBER: number of observations
 
     # Experiment 1 data
     bmjd = np.random.uniform(0, 3*365, size=n_obs) + 55555. # 3 year survey
