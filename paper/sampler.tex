@@ -194,7 +194,6 @@ We finish by discussing the astrophysical applicability and potential of the
 method, and the changes we would have to make if we weakened our assumptions, or
 if we don't weaken our assumptions but they indeed prove to be far from correct.
 
-\clearpage
 \section{Assumptions and method} \label{sec:method}
 
 In order to set up a well-posed problem and build a path to a
@@ -393,7 +392,7 @@ When we trigger the intialization and operation of \emcee, we do the following:
 This procedure ensures that no matter what path we take, we end up with
 at least $M_{\rm min}$ samples from the posterior for any input data.
 
-\clearpage
+
 \section{Experiments and results}
 
 In what follows, we use spectroscopic data from Data Release 13 (DR13;
@@ -735,7 +734,7 @@ survive the rejection sampling with \samplername\, $M$.
 \subsection{Experiment 5: TODO}
 
 
-\clearpage
+
 \section{Discussion} \label{sec:discussion}
 
 We have built a Monte Carlo sampler---\samplername---for the
@@ -746,7 +745,7 @@ posterior pdf) is highly multi-modal.
 The cost of this fair sampling is computer time:
 Our method is based on Simple Monte Carlo, which is a pure brute-force
 method.
-The primary innovations we bring is a separation of the parameters
+The primary innovation we bring is a separation of the parameters
 into linear and nonlinear subsets, such that the brute force is only
 required in the nonlinear subspace.
 We further capitalize on the problem structure by identifying unimodal
@@ -772,7 +771,7 @@ posterior pdf, but nonetheless a very informative posterior pdf:
 The vast majority of prior pdf samples have been eliminated, and
 only a tiny subset of periods, eccentricities, and amplitudes are
 consistent with the data.
-These posterior pdfs make look like a mess, but they would contribute
+These posterior pdfs may look like a mess, but they would contribute
 extremely valuable information to any hierarchical inference, or
 provide a very informative prior pdf for further observing campaigns.
 
@@ -781,14 +780,62 @@ observation planning, or cadence evaluation, or survey strategy:
 As Experiment~APW:WHAT shows, \samplername\ could be used to plan the
 times of next observations to maximize their expected information
 content.
-That is beyond the scope of this \documentname, but is not beyond
-the scope of our ambition.
+That is beyond the scope of this \documentname, but it is not beyond
+the scope of our ambitions.
 
-HOGG The assumption of single companion has the following issues...
+\samplername\ is based on a set of assumptions, itemized in
+\sectionname~\ref{sec:method}; indeed, the method delivers provably
+correct samplings when these specific assumptions hold.
+Of course, these specific assumptions do \emph{not} hold!
+There is never any guarantee that a star's radial-velocity history
+is set entirely by a single companion, with no other perturbers or
+sources of radial-velocity signal.
+More importantly, there are no data sets (to our knowledge) with
+perfectly Gaussian noise, and even if there were, the noise variances
+could never be perfectly known!
 
-HOGG The assumption that the linear-parameter prior doesn't depend
-on the nonlinear parameters is absurd! Why?
+Although the single-companion assumption is a severe assumption, it
+is pretty-much required for the method to be tractable.
+Of course, in reality, it is likely that most stars have thousands or
+millions of companions (the Sun does, after all).
+Even going to two companions, however, the non-linear parameter space
+jumps to eight-dimensional, and (at least) ten-dimensional if there
+are companion--companion interactions.
+This would be absolutely intractable to sample by brute-force Simple
+Monte Carlo; our advice would be to switch to some kind of Markov
+Chain method that deals as well as possible with multi-modal
+posteriors, such as nested sampling (\citealt{skilling, brewer}).
+This change would be associated with the loss of the simple
+convergence criterion that Simple Monte Carlo provides: If lots of
+samples survive the rejection step, the posterior has been sampled
+fairly!
+There is no comparably simple way of determining that any nested
+sampling is converged.
 
+That said, there is a simple three-body problem that \emph{can} be
+solved tractably, with only small modifications:
+If the third body is on a very long-period orbit, it appears only
+as an overall acceleration (velocity gradient with time).
+This can be modeled with just one more parameter, and that parameter
+is linear, so it doesn't worsen the prior pdf sampling (which happens
+over the nonlinear parameters only).
+
+Actually, the number of linear parameters could be increased
+dramatically without any serious loss of performance, since almost all
+of the compute time is taken up with the dense sampling in the nonlinear
+subspace.
+These extra linear parameters could be the extra $v_0$ terms that come
+in when, say, the data come from a set of different radial-velocity
+programs with different calibrations (as is the case for the recent,
+impressive Proxima b discovery; \citealt{proximab}).
+Another case for additional linear parameters would be the regressing
+out of confounding signals that correlate with housekeeping data,
+like, say, radial-velocity shifts that correlate with activity signals
+(HOGG CITE?).
+
+Although we have argued that our prior pdf sampling is dense enough,
+and---by God---we spend enough time on it, it might not be dense enough
+if we push to very short periods.
 The problem structure points (in \sectionname~\ref{sec:method})
 includes the point that, given a finite time span for the data, there
 is a finite width to any period peak in the likelihood function.
@@ -805,23 +852,47 @@ period is short.
 For now \samplername\ simply addresses the prior sampling density issues
 by using as many prior samples as it possibly can!
 
-Of the assumptions, probably the most severe is the Gaussian noise
-with known variance. \textbf{This is wrong, very wrong!} Ideas about
-ameliorating this, and what those options would cost us. Advice for
-those using the system despite these issues.
+All these caveats noted, \emph{by far} the worst assumption made by
+\samplername\ is that the noise is Gaussian with known variances:
+All data sets show occasional outliers (catastrophic errors), almost
+all data sets under-estimate the true radial-velocity errors, and the
+fact that the radial-velocity measurments depend on stellar parameters
+(the stellar photosphere model, say) leads to added radial-velocity
+noise, usually unaccounted for.
+What can we do in these cases?
+There is nothing we can simply do here, if we want to maintain the
+trick of treating the linear and non-linear parameters separately.
+Our advice to users who believe that they have additional sources or
+forms of noise is to inflate the uncertainty variance estimates and
+try to get conservative conclusions about the posterior pdf.
 
-Certain observations are much more informative than others -- in the future,
-can use this to suggest observations...
+If the only problem is an underestimate of the noise variances, the
+factor or offset to be applied to the variances can be promoted to a
+non-linear parameter and sampled along with the other nonlinear parameters.
+This is probably (just) practical.
+If the only problem is occasional outliers, the method could be
+modified to do all leave-one-out samplings, take the union, and then
+importance sample the results using some ratio of the mixture of
+leave-one-out Gaussian likelihoods to some more realistic likelihood
+that involves an outlier model (as, for example, we suggest in
+\cite{fittingalline}).
+These modifications to the method are beyond the scope of this
+\documentname\, but (once again) not beyond the scope of our ambitions.
 
 \acknowledgements
-It is a pleasure to thank
-  Ben Weaver (NOAO),
-for valuable discussions.
-This research was partially supported by [many grants].
 This project was started at AstroHackWeek 2016, organized by Kyle
 Barbary (UCB) and Phil Marshall (SLAC) at the Berkeley Institute for
 Data Science.
+It is a pleasure to thank
+  Megan Bedell (Chicago),
+  Ben Weaver (NOAO),
+  and the participants at AstroHackWeek 2016
+for valuable discussions.
 
+This research was partially supported by
+  the \acronym{NSF} (grants \acronym{IIS-1124794}, \acronym{AST-1312863}, \acronym{AST-1517237}),
+  \acronym{NASA} (grant \acronym{NNX12AI50G}),
+  and the Moore-Sloan Data Science Environment at \acronym{NYU}.
 The data analysis presented in this article was partially performed on
 computational resources supported by the Princeton Institute for Computational
 Science and Engineering (PICSciE) and the Office of Information Technology's
