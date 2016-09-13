@@ -48,8 +48,7 @@
 \newcommand{\bs}[1]{\boldsymbol{#1}}
 
 % TODO
-\newcommand{\todoapw}[1]{{\color{red}APW TODO: #1}}
-\newcommand{\todohogg}[1]{{\color{green}Hogg TODO: #1}}
+\newcommand{\todo}[1]{{\color{red}TODO: #1}}
 
 \begin{document}\sloppy\sloppypar\raggedbottom\frenchspacing % trust me
 
@@ -111,11 +110,12 @@ make the sampling more substantial.
 % Results
 The method produces correct samplings in orbital parameters for (good) data sets
 that include as few as three noisy time points.
+\samplername\ can therefore be used to (1) verify that the likelihood function
+is unimodal for a given set of data, and (2) produce proper samplings of
+multimodal pdf to use in hierarchical modeling (e.g., population modeling).
 We give some examples that show how the posterior probability depends extremely
 strongly on the number and time coverage of the observations and their
 uncertainties.
-We discuss extensions to the method that could handle issues with the noise
-model or outliers.
 \end{abstract}
 
 \keywords{
@@ -134,12 +134,14 @@ model or outliers.
 
 \section{Introduction} \label{sec:intro}
 
+\todo{DFM, HWR: This section needs work, and references! Any suggestions would
+be great.}
 Precise radial-velocity measurements of stars have transformed
 astrophysics in the last decades:
 They have permitted the discovery of the first planets around other stars,
 including especially the unanticipated but common ``hot Jupiters,''
 and have been used to discover or confirm hundreds
-\todohogg{(perhaps thousands?)} of planets.
+(thousands?) of planets.
 Radial velocity measurements have also been used to find substellar,
 degenerate, and black-hole companions to more normal stars, and hold
 the promise of delivering the full population statistics for binary
@@ -194,6 +196,8 @@ if we don't weaken our assumptions but they indeed prove to be far from correct.
 
 \section{Assumptions and method} \label{sec:method}
 
+\todo{This section also needs work, and references}
+
 In order to set up a well-posed problem and build a path to a
 definite solution, we make a set of non-trivial assumptions about the
 stellar systems we will use and observations thereof.
@@ -229,9 +233,12 @@ In the two-body celestial mechanics problem (\citealt{Kepler:1609}; and here we
 are working in a parameterization similar to that of \citealt{Murray:2010}), and
 under our above-stated assumptions, the radial-velocity expectation can be
 parameterized by six parameters, which we choose to be period $P$, projected
-semi-major axis of the primary $\asini$, a phase $\phi_0$ corresponding to
-a time of pericenter passage, the eccentricity $e$, an argument of perihelion
-$\omega$, and a constant system barycenter radial velocity $v_0$.
+semi-major axis of the primary $\asini$, a phase $\phi_0$ corresponding to a
+time of pericenter passage,\footnote{In our implementation, we subtract off the
+median time from our data before starting so this phase actually corresponds to
+the time of pericenter passage relative to the median time.} the eccentricity
+$e$, an argument of perihelion $\omega$, and a constant system barycenter radial
+velocity $v_0$.
 The radial velocity $v$ at time $t$ is then given by (see also
 equation~63 in \citealt{Murray:2010})
 \begin{equation}
@@ -427,7 +434,7 @@ Under this criterion, stars with fewer than eight visits were rejected from
 consideration, leaving $\approx$15,000 stars.
 For each of the remaining stars, the radial velocity curves are searched for
 significant periods, which are then used to initialize $\chi^2$ fits of a
-Keplerian orbit using a custom least-squares fitter \todoapw{cite De Lee even
+Keplerian orbit using a custom least-squares fitter \todo{APW: cite De Lee even
 though we don't use it?}.
 In cases where multiple significant periods are found, the parameters obtained
 from the fit with the best modified $\chi^2$ value are retained (modulo a
@@ -442,7 +449,7 @@ While useful for searching for new candidate binaries, this pipeline does not
 easily fit within hierarchical probabilistic modeling of the population of
 companions.
 
-\todoapw{Update this to reflect new experiments}
+\todo{APW: Update this to reflect new experiments}
 In Experiment 1, we use DR13 data for an \apogee\ star with a companion
 (identified by \citealt{Troup:2016}) to demonstrate that the posterior pdf over
 Keplerian orbital parameters can be highly multi-modal by using \samplername\
@@ -451,7 +458,6 @@ In Experiment 2, we use DR13 data for an \apogee\ star with better radial
 velocity phase coverage and more observations and show how the complexity of
 the posterior pdf increases as data points are artificially deleted from the
 analysis.
-\todoapw{Experiment 3 is what?}
 
 \subsection{Experiment 1: Validation with simulated data}
 
@@ -465,8 +471,8 @@ the typical sub-stellar companion found in recent analysis of the \apogee\ data
 from a uniform distribution, and the velocity is drawn from a zero-mean Gaussian
 with variance $\sigma^2 = (30~\kms)^2$
 The values of the parameters used for the simulated data (e.g., the truth) are:
-$P = 103.71~{\rm day}$, $\asini = 8~\rsun$, $e = 0.613$, $\omega =
-134.834^\circ$, $\phi_0 = 342.257^\circ$, $v_0 = 19.431~\kms$.
+$P = 103.71~{\rm day}$, $\asini = 12.124~\rsun$, $e = 0.313$, $\omega =
+68.95^\circ$, $\phi_0 = 223.96^\circ$, $v_0 = 42.98~\kms$.
 We uniformly sample 4 observation times over the interval $(0,1095)~{\rm day}$
 imagining a 3-year survey with no observing strategy and arbitrarily set the
 survey start date (in barycentric MJD) to be 55555.
@@ -528,7 +534,7 @@ velocity measurements (\citealt{Troup:2016}).
 (black points).\footnote{We don't plot the best-fit orbit from
 \citealt{Troup:2016} because the parameter values reported in their work do not
 produce Keplerian orbits that look like reasonable fits to the data.
-\todoapw{How to say this better / nicer?}}
+\todo{APW: say this better / nicer?}}
 Similar to Experiment 1, these data are sparse and have poor phase coverage,
 however the time sampling is quite different and is representative of realistic
 survey design choices.
@@ -691,7 +697,7 @@ that there are multiple modes in the posterior pdf for all cases in this figure.
 
 \subsection{Experiment 4: Increasing the uncertainties}
 
-Another feature of the data that determines the complexity of the posterior pdf
+Another aspect of the data that determines the complexity of the posterior pdf
 are the uncertainties on the individual data points.
 To explore this, we again use the \apogee\ target 2M03080601+7950502 and
 downsample the data points so that there are 17 observations (the same as shown
@@ -729,9 +735,52 @@ survive the rejection sampling with \samplername\, $M$.
 \label{fig:exp4-rv}}
 \end{figure*}
 
-\subsection{Experiment 5: TODO}
+\subsection{Experiment 5: Prospects for observation planning}
 
+A noticable feature of the middle two panels of \figname~\ref{fig:exp3-rv-1} is
+that the posterior pdf collapses significantly between the $N=5$ and $N=7$
+cases.
+This implies that the two added observations are extremely informative, and that
+we can use \samplername\ to predict when observations would be most valuable for
+a given source.
+We will explore this topic in detail in future work, but here we simply show
+that the timing of subsequent observations can lead to very different
+structure in the posterior samples.
 
+We again simulate a data set of four noisy radial velocity measurements, shown
+as black points in the top-left panel of \figname~\ref{fig:exp5-rv}.
+Uncertainties were chosen to match the \apogee\ data ($\sigma_v \approx
+0.2~\kms$) and are shown as error bars, but they are often comparable to or
+smaller than the marker size.
+Top-right panel shows posterior samples produced with \samplername\ again in the
+space of log-period $\ln P$ and eccentricity $e$.
+The three lower rows all have six observations: the same four from the top row,
+but now with two additional observations spaced, in phase, by $\frac{\Delta
+\phi}{2 \pi} = 0.04$ but with a different starting phase for the new
+observations.
+As is shown by the right panels, the observation times of the new observations
+can greatly effect the compactness of the posterior pdf.
+
+\todo{Add N, M to the panels to show the number of data points and the number of
+surviving samples!}
+\todo{Add another panel to the figure with the subsequent two observations at a
+bad postion (doesn't collapse pdf)}
+
+\begin{figure*}[p]
+\begin{center}
+\includegraphics[width=\textwidth]{figures/exp5-rv-curves.pdf}
+\end{center}
+\caption{%
+\todo{UPDATE CAPTION}
+Similar to \figname~\ref{fig:exp3-rv-0} but now varying the magnitude of the
+uncertainties instead of the number of data points.
+Each row has uncertainties increased by a factor of 2 relative to the previous
+row.
+The mean value of the uncertainties for all data points is shown on the left
+panels as $\langle \sigma_n \rangle$, along with the number of samples that
+survive the rejection sampling with \samplername\, $M$.
+\label{fig:exp5-rv}}
+\end{figure*}
 
 \section{Discussion} \label{sec:discussion}
 
