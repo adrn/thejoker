@@ -85,40 +85,37 @@
 
 \begin{abstract}
 % Context
-Given sparse radial-velocity measurements of a star, there are often
-many qualitatively different stellar or exoplanet companion orbit
-models that are consistent with the data.
-The consequent multimodality of the likelihood function leads to
-extremely challenging search, optimization, and MCMC posterior
-sampling in the space of orbital parameters.
+Given sparse or low-quality radial-velocity measurements of a star, there are
+often many qualitatively different stellar or exoplanet companion orbit models
+that are consistent with the data.
+The consequent multimodality of the likelihood function leads to extremely
+challenging search, optimization, and MCMC posterior sampling in the space of
+orbital parameters.
 % Aims
-Here we create a custom-built Monte Carlo sampler that can produce a
-posterior sampling for orbital parameters given even small numbers of
-noisy radial-velocity measurements (and hence a very complex likelihood
-function).
+Here we create a custom-built Monte Carlo sampler that can produce a posterior
+sampling for orbital parameters given even small numbers of noisy
+radial-velocity measurements (and hence a very complex likelihood function).
 % Methods
-The six orbital parameters can be split into the four non-linear parameters
-(period, eccentricity, argument of pericenter, phase) and two linear parameters
-(velocity amplitude and bayrcenter velocity).
-We capitalize on this structure and build a variant of Simple Monte Carlo
+The six standard orbital parameters can be split into the four non-linear
+parameters (period, eccentricity, argument of pericenter, phase) and two linear
+parameters (velocity amplitude and bayrcenter velocity).
+We capitalize on this separability and build a variant of Simple Monte Carlo
 sampling, in which we densely sample the non-linear orbital parameters, and
 perform rejection sampling using a marginalized likelihood, marginalizing out
 the linear orbital parameters.
-In practice and generically, the sampling obtained by the Simple Monte
-Carlo is---in the case of sparse or uninformative data---substantial
-and multimodal, or else---in the case of informative
-data---insubstantial but unimodal.
-In the unimodal case, we follow the Simple Monte Carlo with standard
-MCMC to make the sampling more substantial.
+In the case of sparse or uninformative data, the sampling obtained by the Simple
+Monte Carlo is generally multimodal and dense; with informative data, the
+sampling is generally unimodal but insufficient.
+In the unimodal case, we follow the Simple Monte Carlo with standard MCMC to
+make the sampling more substantial.
 % Results
-The method produces correct samplings in orbital
-parameters for (good) data sets that include as few as three noisy time
-points.
-We give some examples that show how the posterior probability depends
-extremely strongly on the number and time coverage of the
-observations.
-We discuss extensions to the method that could handle issues with the
-noise model or outliers.
+The method produces correct samplings in orbital parameters for (good) data sets
+that include as few as three noisy time points.
+We give some examples that show how the posterior probability depends extremely
+strongly on the number and time coverage of the observations and their
+uncertainties.
+We discuss extensions to the method that could handle issues with the noise
+model or outliers.
 \end{abstract}
 
 \keywords{
