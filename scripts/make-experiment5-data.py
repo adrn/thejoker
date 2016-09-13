@@ -36,8 +36,8 @@ def main():
     P = opars.P.to(u.day).value[0]
     f0 = opars._phi0[0]/(2*np.pi)
     _t = (np.array([0.02, 4.08, 4.45, 4.47]) + f0) * P
-    t1 = np.concatenate((_t, [(5.66 + f0) * P])) + EPOCH
-    t2 = np.concatenate((_t, [(6.08 + f0) * P])) + EPOCH
+    t1 = np.concatenate((_t, np.array([6.04, 6.08 + f0]) * P)) + EPOCH
+    t2 = np.concatenate((_t, np.array([6.62, 5.66 + f0]) * P)) + EPOCH
 
     rv_err = np.random.uniform(0.2, 0.3, size=t1.size) * u.km/u.s
 
@@ -62,12 +62,12 @@ def main():
         data0.to_hdf5(g)
         g.create_dataset('truth_vector', data=opars.pack())
 
-        g = f.create_group("1") # HERESY! I'm putting data2 into index 1
-        data2.to_hdf5(g)
+        g = f.create_group("1")
+        data1.to_hdf5(g)
         g.create_dataset('truth_vector', data=opars.pack())
 
-        g = f.create_group("2") # HERESY! I'm putting data1 into index 2
-        data1.to_hdf5(g)
+        g = f.create_group("2")
+        data2.to_hdf5(g)
         g.create_dataset('truth_vector', data=opars.pack())
 
 if __name__ == '__main__':
