@@ -36,8 +36,8 @@ def main():
     P = opars.P.to(u.day).value[0]
     f0 = opars._phi0[0]/(2*np.pi)
     _t = (np.array([0.02, 4.08, 4.45, 4.47]) + f0) * P
-    t1 = np.concatenate((_t, np.array([6.04, 6.08 + f0]) * P)) + EPOCH
-    t2 = np.concatenate((_t, np.array([6.62, 5.66 + f0]) * P)) + EPOCH
+    t1 = np.concatenate((_t, np.array([6.04, 6.07 + f0]) * P)) + EPOCH
+    t2 = np.concatenate((_t, np.array([6.62, 6.65 + f0]) * P)) + EPOCH
 
     rv_err = np.random.uniform(0.2, 0.3, size=t1.size) * u.km/u.s
 
@@ -56,7 +56,7 @@ def main():
     with h5py.File(os.path.join(paths.root, "data", "experiment5.h5"), "w") as f:
         data1 = RVData(t=t1, rv=rv1, stddev=rv_err)
         data2 = RVData(t=t2, rv=rv2, stddev=rv_err)
-        data0 = data1[:-1]
+        data0 = data1[:-2]
 
         g = f.create_group("0")
         data0.to_hdf5(g)
