@@ -760,6 +760,10 @@ but now with two additional observations spaced, in phase, by $\frac{\Delta
 observations.
 As is shown by the right panels, the observation times of the new observations
 can greatly effect the compactness of the posterior pdf.
+In particular, the placement of the observations in the bottom row of panels
+rules out most of the long-period modes from the top panels, \emph{and} many of
+the short-period modes, whereas for the middle two cases the new data are not as
+informative.
 
 \todo{Add N, M to the panels to show the number of data points and the number of
 surviving samples!}
@@ -771,14 +775,13 @@ bad postion (doesn't collapse pdf)}
 \includegraphics[width=\textwidth]{figures/exp5-rv-curves.pdf}
 \end{center}
 \caption{%
-\todo{UPDATE CAPTION}
-Similar to \figname~\ref{fig:exp3-rv-0} but now varying the magnitude of the
-uncertainties instead of the number of data points.
-Each row has uncertainties increased by a factor of 2 relative to the previous
-row.
-The mean value of the uncertainties for all data points is shown on the left
-panels as $\langle \sigma_n \rangle$, along with the number of samples that
-survive the rejection sampling with \samplername\, $M$.
+Similar to \figname~\ref{fig:exp3-rv-0} and \figname~\ref{fig:exp4-rv} but now
+varying the timing of new simulated observations relative to the data in the
+top-left panel.
+The top row has four simulated observations and all of the rows below the top
+row have two additional observations placed at different times but with fixed
+spacing in phase; the number of data points $N$ and number of samples that
+survive the rejection sampling $M$ are shown on each panel.
 \label{fig:exp5-rv}}
 \end{figure*}
 
