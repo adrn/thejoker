@@ -35,9 +35,9 @@ def main():
     EPOCH = 55555. # arbitrary number
     P = opars.P.to(u.day).value[0]
     f0 = opars._phi0[0]/(2*np.pi)
-    _t = (np.array([0.02, 4.1, 4.45, 4.47]) + f0) * P
-    t1 = np.concatenate((_t, [(5.64 + f0) * P])) + EPOCH
-    t2 = np.concatenate((_t, [(6.05 + f0) * P])) + EPOCH
+    _t = (np.array([0.02, 4.08, 4.45, 4.47]) + f0) * P
+    t1 = np.concatenate((_t, [(5.66 + f0) * P])) + EPOCH
+    t2 = np.concatenate((_t, [(6.08 + f0) * P])) + EPOCH
 
     rv_err = np.random.uniform(0.2, 0.3, size=t1.size) * u.km/u.s
 
@@ -56,13 +56,18 @@ def main():
     with h5py.File(os.path.join(paths.root, "data", "experiment5.h5"), "w") as f:
         data1 = RVData(t=t1, rv=rv1, stddev=rv_err)
         data2 = RVData(t=t2, rv=rv2, stddev=rv_err)
+        data0 = data1[:-1]
 
         g = f.create_group("0")
-        data1.to_hdf5(g)
+        data0.to_hdf5(g)
         g.create_dataset('truth_vector', data=opars.pack())
 
-        g = f.create_group("1")
+        g = f.create_group("1") # HERESY! I'm putting data2 into index 1
         data2.to_hdf5(g)
+        g.create_dataset('truth_vector', data=opars.pack())
+
+        g = f.create_group("2") # HERESY! I'm putting data1 into index 2
+        data1.to_hdf5(g)
         g.create_dataset('truth_vector', data=opars.pack())
 
 if __name__ == '__main__':
