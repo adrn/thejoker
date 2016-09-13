@@ -27,26 +27,31 @@ def main():
     # Designer RV curves!
 
     opars = OrbitalParams(P=127.31*u.day, asini=22.124*u.R_sun, ecc=0.213,
-                          omega=np.random.uniform(0, 2*np.pi)*u.rad,
-                          phi0=np.random.uniform(0, 2*np.pi)*u.rad,
-                          v0=np.random.normal(0, 30) * u.km/u.s)
+                          omega=137.234*u.degree,
+                          phi0=36.231*u.degree,
+                          v0=17.643*u.km/u.s)
     orbit = opars.rv_orbit(0)
-    print("Mass function:", orbit.mf)
-    print("omega:", orbit.omega.to(u.degree))
-    print("phi0:", orbit.phi0.to(u.degree))
-    print("v0:", orbit.v0.to(u.km/u.s))
 
     EPOCH = 55555. # arbitrary number
     P = opars.P.to(u.day).value[0]
-    _t = np.array([0., 4.9, 4.92, 5.01]) * P
-    t1 = np.concatenate((_t, [5.5 * P])) + EPOCH
-    t2 = np.concatenate((_t, [5.92 * P])) + EPOCH
+    f0 = opars._phi0[0]/(2*np.pi)
+    _t = (np.array([0.02, 4.1, 4.45, 4.47]) + f0) * P
+    t1 = np.concatenate((_t, [(5.64 + f0) * P])) + EPOCH
+    t2 = np.concatenate((_t, [(6.05 + f0) * P])) + EPOCH
 
     rv_err = np.random.uniform(0.2, 0.3, size=t1.size) * u.km/u.s
 
     _rnd = np.random.normal(size=t1.size)
     rv1 = orbit.generate_rv_curve(t1) + _rnd*rv_err
     rv2 = orbit.generate_rv_curve(t2) + _rnd*rv_err
+
+    # import matplotlib.pyplot as plt
+    # plt.errorbar(t1, rv1.to(u.km/u.s).value, rv_err.to(u.km/u.s).value, linestyle='none', marker='o', zorder=90)
+    # plt.errorbar(t2, rv2.to(u.km/u.s).value, rv_err.to(u.km/u.s).value, linestyle='none', marker='o', zorder=100)
+    # t_grid = np.linspace(t1.min()-150, t1.max()+150, 1024)
+    # plt.plot(t_grid, orbit.generate_rv_curve(t_grid).to(u.km/u.s), marker=None, linestyle='--', zorder=-1, alpha=0.5)
+    # plt.show()
+    # return
 
     with h5py.File(os.path.join(paths.root, "data", "experiment5.h5"), "w") as f:
         data1 = RVData(t=t1, rv=rv1, stddev=rv_err)
