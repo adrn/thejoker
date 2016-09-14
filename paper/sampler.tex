@@ -20,6 +20,7 @@
 
 % packages
 \definecolor{cbblue}{HTML}{3182bd}
+\usepackage{microtype}  % ALWAYS!
 \usepackage{amsmath}
 \hypersetup{backref,breaklinks,colorlinks,urlcolor=cbblue,linkcolor=cbblue,citecolor=black}
 
@@ -92,27 +93,29 @@ challenging search, optimization, and MCMC posterior sampling in the space of
 orbital parameters.
 % Aims
 Here we create a custom-built Monte Carlo sampler that can produce a posterior
-sampling for orbital parameters given even small numbers of noisy
-radial-velocity measurements (and hence a very complex likelihood function).
+sampling for orbital parameters given any number of noisy radial-velocity
+measurements~--~even when the likelihood function is poorly behaved.
 % Methods
 The six standard orbital parameters can be split into the four non-linear
 parameters (period, eccentricity, argument of pericenter, phase) and two linear
-parameters (velocity amplitude and bayrcenter velocity).
+parameters (velocity amplitude and barycenter velocity).
 We capitalize on this separability and build a variant of Simple Monte Carlo
 sampling, in which we densely sample the non-linear orbital parameters, and
 perform rejection sampling using a marginalized likelihood, marginalizing out
 the linear orbital parameters.
 In the case of sparse or uninformative data, the sampling obtained by the Simple
-Monte Carlo is generally multimodal and dense; with informative data, the
-sampling is generally unimodal but insufficient.
+Monte Carlo is generally multimodal and dense.
+With informative data, the sampling is generally unimodal but insufficient.
 In the unimodal case, we follow the Simple Monte Carlo with standard MCMC to
 make the sampling more substantial.
 % Results
-The method produces correct samplings in orbital parameters for (good) data sets
+The method produces correct samplings in orbital parameters for data sets
 that include as few as three noisy time points.
 \samplername\ can therefore be used to (1) verify that the likelihood function
-is unimodal for a given set of data, and (2) produce proper samplings of
-multimodal pdf to use in hierarchical modeling (e.g., population modeling).
+is unimodal \todo{(None of the datasets will actually have unimodal
+likelihoods\ldots what does this mean?)} for a given set of data, and (2)
+produce proper samplings of multimodal pdf to use in hierarchical modeling
+(e.g., population modeling).
 We give some examples that show how the posterior probability depends extremely
 strongly on the number and time coverage of the observations and their
 uncertainties.
@@ -141,7 +144,7 @@ astrophysics in the last decades:
 They have permitted the discovery of the first planets around other stars,
 including especially the unanticipated but common ``hot Jupiters,''
 and have been used to discover or confirm hundreds
-(thousands?) of planets.
+of planets.
 Radial velocity measurements have also been used to find substellar,
 degenerate, and black-hole companions to more normal stars, and hold
 the promise of delivering the full population statistics for binary
@@ -163,23 +166,22 @@ unambiguous detection and discovery in mind, usually there are
 multiple possible binary-star models that are consistent with any
 small number of radial-velocity measurements that show stellar
 acceleration.
-That is, a small number of (even very good) radial velocity
-measurements will lead to posterior beliefs about companion orbits and
-masses that put substantial plausibility onto multiple qualitatively
-different solutions.
+That is, a small number of radial velocity measurements~--~even when the
+uncertainties are small~--~will lead to posterior beliefs about companion
+orbits and masses that put substantial plausibility onto multiple
+qualitatively different solutions.
 In other words, modest numbers of radial-velocity measurements create a
 likelihood function that is highly multi-modal in the relevant parameter spaces
 (e.g., Keplerian orbital parameters).
-There are currently no safe methods known for exploring these highly
-multimodal functions and delivering correct posterior samplings and
-reliable probabilistic statements about detection and
-characterization.
+There are currently no methods known for exploring these highly multimodal
+functions and delivering correct posterior samplings and reliable
+probabilistic statements about detection and characterization.
+\todo{Why are we not happy with nested sampling?}
 
-Here we make an attempt at correcting these problems.
-Our approach is to build custom posterior sampling methods that
-capitalize on the structure of the binary-star (or star--exoplanet)
-kinematics to create provably---or highly probably---correct
-samplings.
+Here we make an attempt at correcting this problem.
+Our approach is to build custom posterior sampling methods that capitalize on
+the structure of the binary-star (or star--exoplanet) kinematics to generate
+robust samplings with only modest computational cost.
 In what follows, we use the term ``binary'' for any system with an observed
 source (the primary, e.g., a star), whose radial velocity variations are
 explained through gravitational two-body interactions with another object (the
@@ -188,8 +190,10 @@ companion, e.g., star, exoplanet, stellar remnant).
 The structure of this \documentname\ is as follows:
 We state our assumptions, and demonstrate that we have a
 method that is correct under those assumptions.
-We perform experiments with the method to understand its properties
-and limitations.
+\todo{HOGG: I know that you like this ``provably correct'' terminology but I
+(DFM) really think it doesn't add anything to the discussion.}
+We perform experiments with the method to understand its properties and
+limitations.
 We finish by discussing the astrophysical applicability and potential of the
 method, and the changes we would have to make if we weakened our assumptions, or
 if we don't weaken our assumptions but they indeed prove to be far from correct.
@@ -201,7 +205,7 @@ if we don't weaken our assumptions but they indeed prove to be far from correct.
 In order to set up a well-posed problem and build a path to a
 definite solution, we make a set of non-trivial assumptions about the
 stellar systems we will use and observations thereof.
-\begin{itemize}\itemsep0ex
+\begin{itemize}\itemsep0ex  % <- #yourefired
 \item We assume that we have measurements of the radial velocity of a
   star, and that the time dependence of the expectation of that radial
   velocity is well described by the gravitational orbit of a pair of
@@ -269,7 +273,7 @@ structure:
 \item There are both linear and non-linear parameters, and we can
   treat them differently; in particular, it is possible to
   analytically marginalize the linear parameters (provided that the
-  noise model is well-behaved and the prior pdf is conjugate).
+  noise model is well-behaved and the prior probability is conjugate).
 \item There is a finite, time-sampling-imposed minimum size or
   resolution---in the period---of any features in the
   likelihood function. That is, there cannot be arbitrarily narrow
@@ -277,12 +281,12 @@ structure:
 \end{itemize}
 
 Simple Monte Carlo is a method in which the prior probability density function
-(pdf) is densely sampled, and then many of the samples are rejected by a
+(prior pdf) is densely sampled, and then many of the samples are rejected by a
 rejection-sampling step that uses the likelihood as the rejection scalar.
 The rejection step works as follows:
 \begin{enumerate}\itemsep0ex
 \item For each sample $j$ in the prior pdf sampling of the four non-linear
-  parametesr, there is a (linear, not logarithmic) likelihood value $L_j$ (a
+  parameters, there is a (linear, not logarithmic) likelihood value $L_j$ (a
   probability for the data given the parameters).
 \item There is a maximum value $L_{\rm max}$ that is the largest value of
   $L_j$ found across all of the samples in the prior sampling.
@@ -313,12 +317,13 @@ $P_{\rm min}$ and $P_{\rm max}$; we are explicit about our choices in
 each of the experiments described below.
 We sample the prior pdf directly and explicitly with standard
 \project{numpy.random} calls (\citealt{Van-der-Walt:2011}).
-In practice we usually take $J=2^{28}$ (that's about a quarter billion)
-samples in the prior-pdf sampling. Holy fuck that's a lot!
+In practice, we usually required to take $J=2^{28}$ samples in the prior-pdf
+sampling; that's about a quarter billion samples. % Holy fuck that's a lot!
 
 The unmarginalized likelihood function $L$ is
 \begin{equation}
 \ln L = -\frac{1}{2}\,\sum_{n=1}^N \frac{[v_n - v(t_n;\bs{\theta})]^2}{\sigma_n^2}
+ + \mathrm{constant}
 \end{equation}
 where $n$ indexes the individual data points $v_n$, $v(t)$ is the
 radial velocity prediction at time $t$ given the parameters $\bs{\theta}$, the
@@ -341,6 +346,7 @@ With these, we can construct---for each prior sample---the marginalized
 likelihood $Q_j$
 \begin{equation}
 \ln Q_j = -\frac{1}{2}\,\sum_{n=1}^N \frac{[v_n - v(t_n;\bs{\theta}_j)]^2}{\sigma_n^2} -\frac{1}{2}\,\ln ||C_j||
+ + \mathrm{constant}
 \end{equation}
 where the prediction $v(t_n;\bs{\theta}_j)$ is taken at the best-fit values of
 the linear parameters given sample $j$ of the non-linear parameters, and the
@@ -373,7 +379,7 @@ The three possible outcomes are:
   initialize a MCMC sampling using the \emcee\ package
   (\citealt{Foreman-Mackey:2013}).
   We sample the
-  prior densely enough initially that if only a few samples survive,
+  prior densely enough \todo{define!} initially that if only a few samples survive,
   we are fairly confident that the data are informative enough that
   the posterior pdf is approximately unimodal for our purposes. That's
   an assumption!
