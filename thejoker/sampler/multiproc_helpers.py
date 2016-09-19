@@ -115,11 +115,11 @@ def _orbital_params_worker(task):
     np.random.seed(seed) # TODO: is this good enough?
     logger.debug("worker with chunk {} has seed {}".format(idx[0], seed))
 
-    pars = np.zeros((n_chunk, 6))
+    pars = np.zeros((n_chunk, 7))
     with h5py.File(filename, 'r') as f:
         for j,i in enumerate(idx): # these are the integer locations of the 'good' samples!
             nonlinear_p = f['samples'][i]
-            P, phi0, ecc, omega = nonlinear_p
+            P, phi0, ecc, omega, log_s2 = nonlinear_p
             ATA,p,_ = tensor_vector_scalar(nonlinear_p, data)
 
             cov = np.linalg.inv(ATA)
@@ -131,7 +131,7 @@ def _orbital_params_worker(task):
                 omega += np.pi
                 omega = omega % (2*np.pi) # HACK: I think this is safe
 
-            pars[j] = [P, asini, ecc, omega, phi0, v0]
+            pars[j] = [P, asini, ecc, omega, phi0, v0, log_s2]
 
     return pars
 

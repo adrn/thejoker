@@ -27,7 +27,7 @@ def design_matrix(nonlinear_p, t):
 
     """
     t = np.atleast_1d(t)
-    P, phi0, ecc, omega = nonlinear_p
+    P, phi0, ecc, omega, s2 = nonlinear_p
 
     a = np.ones_like(t)
     x1 = rv_from_elements(t, P, 1., ecc, omega, phi0, 0.)
@@ -42,8 +42,8 @@ def tensor_vector_scalar(nonlinear_p, data):
     nonlinear_p : array_like
         Array of non-linear parameter values: P (period),
         phi0 (phase at pericenter), ecc (eccentricity),
-        omega (argument of perihelion).
-    data : `ebak.singleline.RVData`
+        omega (argument of perihelion), log_s2 (ln of the jitter squared).
+    data : `thejoker.sampler.RVData`
         Instance of `RVData` containing the data to fit.
 
     Returns
@@ -58,7 +58,10 @@ def tensor_vector_scalar(nonlinear_p, data):
 
     """
     A = design_matrix(nonlinear_p, data._t)
-    ATCinv = (A.T * data._ivar[None])
+
+    log_s2 = nonlinear_p[4]
+    ivar = data.get_ivar(np.sqrt(np.exp(log_s2)))
+    ATCinv = (A.T * ivar[None])
     ATA = ATCinv.dot(A)
 
     # Note: this is unstable! if cond num is high, could do:
@@ -66,7 +69,7 @@ def tensor_vector_scalar(nonlinear_p, data):
     p = np.linalg.solve(ATA, ATCinv.dot(data._rv))
 
     dy = A.dot(p) - data._rv
-    chi2 = np.sum(dy**2 * data._ivar)
+    chi2 = np.sum(dy**2 * ivar) # don't need log term for the jitter b.c. in likelihood below
 
     return ATA, p, chi2
 
@@ -95,8 +98,11 @@ def marginal_ln_likelihood(ATA, chi2):
     return -0.5*np.atleast_1d(chi2) + 0.5*logdet
 
 u.quantity_input(P_min=u.day, P_max=u.day)
-def sample_prior(n=1, P_min=defaults['P_min'], P_max=defaults['P_min']):
+def sample_prior(n=1, P_min=defaults['P_min'], P_max=defaults['P_min'],
+                 log_jitter2_mean=0., log_jitter2_std=1.):
     """
+    TODO: add option for sampling jitter prior
+
     Generate samples from the prior. Logarithmic in period, uniform in
     phase and argument of pericenter, Beta distribution in eccentricity.
 
@@ -129,7 +135,10 @@ def sample_prior(n=1, P_min=defaults['P_min'], P_max=defaults['P_min']):
     ecc = np.random.beta(a=0.867, b=3.03, size=n)
     omega = np.random.uniform(0, 2*np.pi, size=n) * u.radian
 
-    return dict(P=P, phi0=phi0, ecc=ecc, omega=omega)
+    # DFM's idea: wide, Gaussian prior in log(s^2)
+    log_s2 = np.random.normal(log_jitter2_mean, log_jitter2_std, size=n)
+
+    return dict(P=P, phi0=phi0, ecc=ecc, omega=omega, log_jitter2=log_s2)
 
 # ----------------------------------------------------------------------------
 

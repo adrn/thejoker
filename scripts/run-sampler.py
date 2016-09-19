@@ -21,7 +21,7 @@ from thejoker import config
 
 def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, hdf5_key=None,
          cache_filename=None, overwrite=False, continue_sampling=False,
-         hyperpars_strs=dict()):
+         hyperpars_strs=dict(), log_jitter_unit=None):
 
     full_path = os.path.abspath(data_file)
     if cache_filename is None:
@@ -117,15 +117,24 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, hdf5_key=Non
     data.add_jitter(hyperpars['jitter'])
 
     # generate prior samples on the fly
+    if log_jitter_unit is not None:
+        log_jitter_unit = u.Unit(log_jitter_unit)
+    else:
+        log_jitter_unit = usys['speed']
+
+    log_jitter2_mean = np.log((1.*log_jitter_unit).decompose(usys).value)
+
     logger.debug("Number of prior samples: {}".format(n_samples))
-    prior_samples = sample_prior(n_samples, P_min=hyperpars['P_min'], P_max=hyperpars['P_max'])
+    prior_samples = sample_prior(n_samples, P_min=hyperpars['P_min'], P_max=hyperpars['P_max'],
+                                 log_jitter2_mean=log_jitter2_mean, log_jitter2_std=3.) # HACK: HARD CODED BABY
     P = prior_samples['P'].decompose(usys).value
     ecc = prior_samples['ecc']
     phi0 = prior_samples['phi0'].decompose(usys).value
     omega = prior_samples['omega'].decompose(usys).value
+    log_jitter2 = prior_samples['log_jitter2']
 
     # pack the nonlinear parameters into an array
-    nonlinear_p = np.vstack((P, phi0, ecc, omega)).T
+    nonlinear_p = np.vstack((P, phi0, ecc, omega, log_jitter2)).T
     # Note: the linear parameters are (v0, asini)
 
     # cache the prior samples
@@ -217,6 +226,8 @@ if __name__ == "__main__":
                         help="Maximum period to generate samples to (default: {})."
                              "Must specify a number with units, e.g., '8192 day'"
                              .format(config.defaults['P_max']))
+    parser.add_argument("--log-jitter-unit", dest="log_jitter_unit", default=None, type=str,
+                        help="TODO:")
 
     args = parser.parse_args()
 
@@ -249,4 +260,5 @@ if __name__ == "__main__":
         main(data_file=args.data_file, pool=pool, n_samples=n_samples, hdf5_key=args.hdf5_key,
              seed=args.seed, overwrite=args.overwrite, continue_sampling=args._continue,
              cache_filename=args.cache_name, tmp_prior_filename=fp.name,
-             hyperpars_strs=dict(jitter=args.jitter, P_min=args.P_min, P_max=args.P_max))
+             hyperpars_strs=dict(jitter=args.jitter, P_min=args.P_min, P_max=args.P_max),
+             log_jitter_unit=args.log_jitter_unit)
