@@ -120,9 +120,9 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, hdf5_key=Non
     if log_jitter_unit is not None:
         log_jitter_unit = u.Unit(log_jitter_unit)
     else:
-        log_jitter_unit = usys['speed']
+        log_jitter_unit = u.km/u.s # HACK: default is km/s
 
-    log_jitter2_mean = np.log((1.*log_jitter_unit).decompose(usys).value)
+    log_jitter2_mean = np.log((0.1*log_jitter_unit).decompose(usys).value)
 
     logger.debug("Number of prior samples: {}".format(n_samples))
     prior_samples = sample_prior(n_samples, P_min=hyperpars['P_min'], P_max=hyperpars['P_max'],
