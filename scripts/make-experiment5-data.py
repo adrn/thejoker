@@ -38,9 +38,9 @@ def main():
     _t = (np.array([0.02, 4.08, 4.45, 4.47]) + f0) * P
 
     ts = [
-        np.concatenate((_t, np.array([6.46, 7.04 + f0]) * P)) + EPOCH,
-        np.concatenate((_t, np.array([6.04, 6.07 + f0]) * P)) + EPOCH,
-        np.concatenate((_t, np.array([6.62, 6.65 + f0]) * P)) + EPOCH
+        np.concatenate((_t, (np.array([6.46, 7.04]) + f0) * P)) + EPOCH,
+        np.concatenate((_t, (np.array([6.04, 6.07]) + f0) * P)) + EPOCH,
+        np.concatenate((_t, (np.array([6.62, 6.65]) + f0) * P)) + EPOCH
     ]
 
     rv_err = np.random.uniform(0.2, 0.3, size=ts[0].size) * u.km/u.s
