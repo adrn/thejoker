@@ -36,14 +36,20 @@ def main():
     P = opars.P.to(u.day).value[0]
     f0 = opars._phi0[0]/(2*np.pi)
     _t = (np.array([0.02, 4.08, 4.45, 4.47]) + f0) * P
-    t1 = np.concatenate((_t, np.array([6.04, 6.07 + f0]) * P)) + EPOCH
-    t2 = np.concatenate((_t, np.array([6.62, 6.65 + f0]) * P)) + EPOCH
 
-    rv_err = np.random.uniform(0.2, 0.3, size=t1.size) * u.km/u.s
+    ts = [
+        np.concatenate((_t, np.array([6.41, 7.04 + f0]) * P)) + EPOCH,
+        np.concatenate((_t, np.array([6.04, 6.07 + f0]) * P)) + EPOCH,
+        np.concatenate((_t, np.array([6.62, 6.65 + f0]) * P)) + EPOCH
+    ]
 
-    _rnd = np.random.normal(size=t1.size)
-    rv1 = orbit.generate_rv_curve(t1) + _rnd*rv_err
-    rv2 = orbit.generate_rv_curve(t2) + _rnd*rv_err
+    rv_err = np.random.uniform(0.2, 0.3, size=ts[0].size) * u.km/u.s
+
+    _rnd = np.random.normal(size=ts[0].size)
+
+    rvs = []
+    for t in ts:
+        rvs.append(orbit.generate_rv_curve(t) + _rnd*rv_err)
 
     # import matplotlib.pyplot as plt
     # plt.errorbar(t1, rv1.to(u.km/u.s).value, rv_err.to(u.km/u.s).value, linestyle='none', marker='o', zorder=90)
@@ -54,21 +60,18 @@ def main():
     # return
 
     with h5py.File(os.path.join(paths.root, "data", "experiment5.h5"), "w") as f:
-        data1 = RVData(t=t1, rv=rv1, stddev=rv_err)
-        data2 = RVData(t=t2, rv=rv2, stddev=rv_err)
-        data0 = data1[:-2]
+        _data = RVData(t=ts[0], rv=rvs[0], stddev=rv_err)
+        data0 = _data[:-2]
 
         g = f.create_group("0")
         data0.to_hdf5(g)
         g.create_dataset('truth_vector', data=opars.pack())
 
-        g = f.create_group("1")
-        data1.to_hdf5(g)
-        g.create_dataset('truth_vector', data=opars.pack())
-
-        g = f.create_group("2")
-        data2.to_hdf5(g)
-        g.create_dataset('truth_vector', data=opars.pack())
+        for i,t,rv in zip(range(len(ts)), ts, rvs):
+            data = RVData(t=t, rv=rv, stddev=rv_err)
+            g = f.create_group(str(i+1))
+            data.to_hdf5(g)
+            g.create_dataset('truth_vector', data=opars.pack())
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
