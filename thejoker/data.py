@@ -101,6 +101,9 @@ class RVData(object):
     def stddev(self):
         return 1 / np.sqrt(self.ivar)
 
+    def get_ivar(self, jitter_squared):
+        return 1 / (1/self._ivar + jitter_squared)
+
     # ---
 
     def plot(self, ax=None, rv_unit=None, **kwargs):
