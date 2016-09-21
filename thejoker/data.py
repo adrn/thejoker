@@ -57,7 +57,7 @@ class RVData(object):
                 raise TypeError("stddev must be an Astropy Quantity object!")
             self._ivar = 1 / stddev.decompose(usys).value**2
 
-        idx = np.isfinite(self._t) & np.isfinite(self._rv) & np.isfinite(self._ivar)
+        idx = np.isfinite(self._t) & np.isfinite(self._rv) & np.isfinite(self._ivar) & self._ivar > 0
         if idx.sum() < len(self._rv):
             logger.warning("Rejecting {} NaN data points".format(len(self._rv)-idx.sum()))
         self._t = self._t[idx]
