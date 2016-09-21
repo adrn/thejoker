@@ -57,7 +57,8 @@ class RVData(object):
                 raise TypeError("stddev must be an Astropy Quantity object!")
             self._ivar = 1 / stddev.decompose(usys).value**2
 
-        idx = np.isfinite(self._t) & np.isfinite(self._rv) & np.isfinite(self._ivar) & self._ivar > 0
+        idx = (np.isfinite(self._t) & np.isfinite(self._rv) & np.isfinite(self._ivar) &
+               (self._ivar > 0))
         if idx.sum() < len(self._rv):
             logger.warning("Rejecting {} NaN data points".format(len(self._rv)-idx.sum()))
         self._t = self._t[idx]
@@ -102,7 +103,7 @@ class RVData(object):
         return 1 / np.sqrt(self.ivar)
 
     def get_ivar(self, jitter_squared):
-        return 1 / (1/self._ivar + jitter_squared)
+        return self._ivar / (1 + jitter_squared * self._ivar)
 
     # ---
 

@@ -60,7 +60,7 @@ def tensor_vector_scalar(nonlinear_p, data):
     A = design_matrix(nonlinear_p, data._t)
 
     log_s2 = nonlinear_p[4]
-    ivar = data.get_ivar(np.sqrt(np.exp(log_s2)))
+    ivar = data.get_ivar(np.exp(log_s2))
     ATCinv = (A.T * ivar[None])
     ATA = ATCinv.dot(A)
 
