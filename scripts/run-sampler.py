@@ -127,7 +127,7 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, hdf5_key=Non
 
     logger.debug("Number of prior samples: {}".format(n_samples))
     prior_samples = sample_prior(n_samples, P_min=hyperpars['P_min'], P_max=hyperpars['P_max'],
-                                 log_jitter2_mean=log_jitter2_mean, log_jitter2_std=2) # HACK: HARD CODED BABY
+                                 log_jitter2_mean=log_jitter2_mean, log_jitter2_std=3) # HACK: HARD CODED BABY
     P = prior_samples['P'].decompose(usys).value
     ecc = prior_samples['ecc']
     phi0 = prior_samples['phi0'].decompose(usys).value
