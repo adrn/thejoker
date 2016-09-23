@@ -22,13 +22,15 @@ class OrbitalParams(object):
     _name_phystype['omega'] = 'angle'
     _name_phystype['phi0'] = 'angle'
     _name_phystype['v0'] = 'speed'
+    _name_phystype['jitter'] = 'speed'
 
     # Latex plot labels for the parameters
     _latex_labels = [r'$\ln (P/{\rm day})$', r'$\ln (a\,\sin i/{\rm R}_\odot)$', '$e$', r'$\omega$ [deg]',
-                     r'$\phi_0$ [deg]', '$v_0$ [km s$^{-1}$]']
+                     r'$\phi_0$ [deg]', '$v_0$ [km s$^{-1}$]', '$\ln [s^2/ (m^2 s$^{-2})]$']
 
-    @u.quantity_input(P=u.day, asini=u.R_sun, omega=u.degree, phi0=u.degree, v0=u.km/u.s)
-    def __init__(self, P, asini, ecc, omega, phi0, v0):
+    @u.quantity_input(P=u.day, asini=u.R_sun, omega=u.degree, phi0=u.degree, v0=u.km/u.s,
+                      jitter=u.m/u.s)
+    def __init__(self, P, asini, ecc, omega, phi0, v0, jitter):
         """
         """
 
@@ -40,6 +42,7 @@ class OrbitalParams(object):
         self._omega = np.atleast_1d(omega).decompose(usys).value
         self._phi0 = np.atleast_1d(phi0).decompose(usys).value
         self._v0 = np.atleast_1d(v0).decompose(usys).value
+        self._jitter = np.atleast_1d(jitter).decompose(usys).value
 
         # validate shape of inputs
         if self._P.ndim > 1:
@@ -112,7 +115,8 @@ class OrbitalParams(object):
         """
         if not plot_units:
             all_samples = np.vstack((self._P, self._asini, self.ecc,
-                                     self._omega, self._phi0, self._v0)).T
+                                     self._omega, self._phi0, self._v0,
+                                     self._jitter)).T
 
         else:
             all_samples = np.vstack((np.log(self.P.to(u.day).value),
@@ -120,7 +124,8 @@ class OrbitalParams(object):
                                      self.ecc,
                                      self.omega.to(u.degree).value % 360.,
                                      self.phi0.to(u.degree).value,
-                                     self.v0.to(u.km/u.s).value)).T
+                                     self.v0.to(u.km/u.s).value,
+                                     self.jitter.to(u.m/u.s).value)).T
 
         return all_samples
 
@@ -136,9 +141,10 @@ class OrbitalParams(object):
         p : `~thejoker.celestialmechanics.OrbitalParams`
 
         """
-        P, asini, ecc, omega, phi0, v0 = np.atleast_2d(pars).T
+        P, asini, ecc, omega, phi0, v0, jitter = np.atleast_2d(pars).T
         return cls(P=P*usys['time'], asini=asini*usys['length'], ecc=ecc,
-                   omega=omega*usys['angle'], phi0=phi0*usys['angle'], v0=v0*usys['speed'])
+                   omega=omega*usys['angle'], phi0=phi0*usys['angle'], v0=v0*usys['speed'],
+                   jitter=jitter*usys['speed'])
 
     def copy(self):
         return self.__copy__()

@@ -131,7 +131,7 @@ def _orbital_params_worker(task):
                 omega += np.pi
                 omega = omega % (2*np.pi) # HACK: I think this is safe
 
-            pars[j] = [P, asini, ecc, omega, phi0, v0, log_s2]
+            pars[j] = [P, asini, ecc, omega, phi0, v0, np.exp(0.5*log_s2)]
 
     return pars
 
