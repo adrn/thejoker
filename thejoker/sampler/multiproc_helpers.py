@@ -83,7 +83,7 @@ def get_good_samples(n_samples, filename, data, pool):
     tasks = [[(i*chunk_size, (i+1)*chunk_size), filename, data]
              for i in range(n_samples//chunk_size+1)]
 
-    results = pool.map(_marginal_ll_worker, tasks)
+    results = [r for r in pool.map(_marginal_ll_worker, tasks)]
     marg_ll = np.concatenate(results)
 
     assert len(marg_ll) == n_samples
@@ -180,7 +180,7 @@ def samples_to_orbital_params(good_samples_idx, filename, data, pool, global_see
     tasks = [[good_samples_idx[i*chunk_size:(i+1)*chunk_size], filename, data, global_seed, i]
              for i in range(n_samples//chunk_size+plus)]
 
-    orbit_pars = pool.map(_orbital_params_worker, tasks)
+    orbit_pars = [r for r in pool.map(_orbital_params_worker, tasks)]
     orbit_pars = np.concatenate(orbit_pars)
 
     return orbit_pars.reshape(-1, orbit_pars.shape[-1])

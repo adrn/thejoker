@@ -8,13 +8,14 @@ import astropy.units as u
 import h5py
 import numpy as np
 import six
+from schwimmbad import choose_pool
 
 # Project
 from thejoker import Paths
 paths = Paths()
 from thejoker.data import RVData
 from thejoker.units import usys
-from thejoker.pool import choose_pool
+# from thejoker.pool import choose_pool
 from thejoker.celestialmechanics import OrbitalParams
 from thejoker.sampler import get_good_samples, samples_to_orbital_params, sample_prior
 from thejoker import config
@@ -122,11 +123,11 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, hdf5_key=Non
     else:
         log_jitter_unit = u.km/u.s # HACK: default is km/s
 
-    log_jitter2_mean = np.log((0.1*log_jitter_unit).decompose(usys).value)
+    log_jitter2_mean = np.log((0.1*log_jitter_unit).decompose(usys).value**2)
 
     logger.debug("Number of prior samples: {}".format(n_samples))
     prior_samples = sample_prior(n_samples, P_min=hyperpars['P_min'], P_max=hyperpars['P_max'],
-                                 log_jitter2_mean=log_jitter2_mean, log_jitter2_std=3.) # HACK: HARD CODED BABY
+                                 log_jitter2_mean=log_jitter2_mean, log_jitter2_std=2) # HACK: HARD CODED BABY
     P = prior_samples['P'].decompose(usys).value
     ecc = prior_samples['ecc']
     phi0 = prior_samples['phi0'].decompose(usys).value
