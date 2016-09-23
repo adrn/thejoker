@@ -26,7 +26,7 @@ class OrbitalParams(object):
 
     # Latex plot labels for the parameters
     _latex_labels = [r'$\ln (P/{\rm day})$', r'$\ln (a\,\sin i/{\rm R}_\odot)$', '$e$', r'$\omega$ [deg]',
-                     r'$\phi_0$ [deg]', '$v_0$ [km s$^{-1}$]', '$\ln [s^2/ (m^2 s$^{-2})]$']
+                     r'$\phi_0$ [deg]', '$v_0$ [km s$^{-1}$]', 's [m s$^{-1}]$']
 
     @u.quantity_input(P=u.day, asini=u.R_sun, omega=u.degree, phi0=u.degree, v0=u.km/u.s,
                       jitter=u.m/u.s)
