@@ -16,7 +16,7 @@ import numpy as np
 import six
 
 # Project
-from .units import usys
+from .units import default_units
 
 __all__ = ['RVData']
 
@@ -39,7 +39,7 @@ class RVData(object):
             _t = t
         self._t = _t
 
-        self._rv = rv.decompose(usys).value
+        self._rv = rv.to(default_units['v0']).value
 
         if ivar is None and stddev is None:
             self._ivar = 1.
@@ -50,12 +50,12 @@ class RVData(object):
         elif ivar is not None:
             if not hasattr(ivar, 'unit'):
                 raise TypeError("ivar must be an Astropy Quantity object!")
-            self._ivar = ivar.decompose(usys).value
+            self._ivar = ivar.to(1/default_units['v0']**2).value
 
         elif stddev is not None:
             if not hasattr(stddev, 'unit'):
                 raise TypeError("stddev must be an Astropy Quantity object!")
-            self._ivar = 1 / stddev.decompose(usys).value**2
+            self._ivar = 1 / stddev.to(default_units['v0']).value**2
 
         idx = (np.isfinite(self._t) & np.isfinite(self._rv) & np.isfinite(self._ivar) &
                (self._ivar > 0))
@@ -80,7 +80,7 @@ class RVData(object):
 
     @u.quantity_input(jitter=u.km/u.s)
     def add_jitter(self, jitter):
-        self._ivar = (1 / (self.stddev**2 + jitter**2)).decompose(usys).value
+        self._ivar = (1 / (self.stddev**2 + jitter**2)).to(1/default_units['v0']**2).value
 
     @property
     def t(self):
@@ -92,11 +92,11 @@ class RVData(object):
 
     @property
     def rv(self):
-        return self._rv * usys['length'] / usys['time']
+        return self._rv * default_units['v0']
 
     @property
     def ivar(self):
-        return self._ivar * (usys['time'] / usys['length'])**2
+        return self._ivar / default_units['v0']**2
 
     @property
     def stddev(self):
@@ -167,10 +167,10 @@ class RVData(object):
         d.attrs['scale'] = 'tcb'
 
         d = f.create_dataset('rv', data=self._rv)
-        d.attrs['unit'] = str(usys['speed'])
+        d.attrs['unit'] = str(default_units['v0'])
 
         d = f.create_dataset('rv_err', data=1/np.sqrt(self._ivar))
-        d.attrs['unit'] = str(usys['speed'])
+        d.attrs['unit'] = str(default_units['v0'])
 
         if close:
             f.close()
