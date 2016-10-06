@@ -1,5 +1,5 @@
 """
-Celestial mechanics for the Ebak project.
+Celestial mechanics.
 
 General comments
 ----------------
@@ -14,13 +14,13 @@ Issues
 """
 from __future__ import division
 
-__author__ = "David W. Hogg <david.hogg@nyu.edu>"
-
 # Standard-library
 import warnings
 
 # Third-party
+import astropy.units as u
 import numpy as np
+au_per_day_m_s = (1*u.m/u.s*u.day).to(u.au).value
 
 __all__ = ['mean_anomaly_from_eccentric_anomaly',
            'eccentric_anomaly_from_mean_anomaly',
@@ -161,7 +161,7 @@ def d_true_anomaly_d_eccentric_anomaly(Es, fs, e):
     assert np.allclose(cEs, (e + cfs) / (1. + e * cfs))
     return (sEs / sfs) * (1. + e * cfs) / (1. - e * cEs)
 
-def Z_from_elements(times, P, asini, e, omega, time0):
+def Z_from_elements(times, P, K, e, omega, time0):
     """
     Z points towards the observer.
 
@@ -171,9 +171,8 @@ def Z_from_elements(times, P, asini, e, omega, time0):
         BJD of observations.
     p : numeric [day]
         Period.
-    asini : numeric [AU]
-        Semi-major axis times sine of inclination for star from system
-        barycenter (will be negative for one of the stars?)
+    K : numeric [m/s]
+        Velocity semi-amplitude.
     e : numeric
         Eccentricity.
     omega : numeric [radian]
@@ -200,13 +199,14 @@ def Z_from_elements(times, P, asini, e, omega, time0):
     Es = eccentric_anomaly_from_mean_anomaly(Ms, e)
     fs = true_anomaly_from_eccentric_anomaly(Es, e)
 
-    rs = asini * (1. - e * np.cos(Es))
+    a1sini = K/(2*np.pi) * (P * np.sqrt(1-e**2)) * au_per_day_m_s
+    rs = a1sini * (1. - e * np.cos(Es))
     # this is equivalent to:
     # rs = asini * (1. - e**2) / (1 + e*np.cos(fs))
 
     return rs * np.sin(omega + fs)
 
-def rv_from_elements(times, P, asini, e, omega, phi0, rv0):
+def rv_from_elements(times, P, K, e, omega, phi0, rv0):
     """
     Parameters
     ----------
@@ -214,21 +214,20 @@ def rv_from_elements(times, P, asini, e, omega, phi0, rv0):
         BJD of observations.
     p : numeric [day]
         Period.
-    asini : numeric [AU]
-        Semi-major axis times sine of inclination for star from system
-        barycenter (will be negative for one of the stars?)
+    K : numeric [m/s]
+        Velocity semi-amplitude.
     e : numeric
         Eccentricity.
     omega : numeric [radian]
         Argument of periapse.
     phi0 : numeric [radian]
         Phase at pericenter.
-    rv0 : numeric [AU/day]
+    rv0 : numeric [m/s]
         Systemic velocity.
 
     Returns
     -------
-    rv : numeric [AU/day]
+    rv : numeric [m/s]
         Radial velocity.
 
     Issues
@@ -242,8 +241,6 @@ def rv_from_elements(times, P, asini, e, omega, phi0, rv0):
 
     Es = eccentric_anomaly_from_mean_anomaly(Ms, e)
     fs = true_anomaly_from_eccentric_anomaly(Es, e)
-
-    K = 2*np.pi*asini / (P * np.sqrt(1-e**2))
     vz = K * (np.cos(omega + fs) + e*np.cos(omega))
 
     return vz + rv0
