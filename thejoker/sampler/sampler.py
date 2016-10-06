@@ -48,7 +48,7 @@ def tensor_vector_scalar(nonlinear_p, data):
 
     Returns
     -------
-    ATA : `numpy.ndarray`
+    ATCinvA : `numpy.ndarray`
         Value of A^T C^-1 A -- inverse of the covariance matrix
         of the linear parameters.
     p : `numpy.ndarray`
@@ -62,23 +62,23 @@ def tensor_vector_scalar(nonlinear_p, data):
     log_s2 = nonlinear_p[4]
     ivar = data.get_ivar(np.exp(log_s2))
     ATCinv = (A.T * ivar[None])
-    ATA = ATCinv.dot(A)
+    ATCinvA = ATCinv.dot(A)
 
     # Note: this is unstable! if cond num is high, could do:
     # p,*_ = np.linalg.lstsq(A, y)
-    p = np.linalg.solve(ATA, ATCinv.dot(data._rv))
+    p = np.linalg.solve(ATCinvA, ATCinv.dot(data._rv))
 
     dy = A.dot(p) - data._rv
     chi2 = np.sum(dy**2 * ivar) # don't need log term for the jitter b.c. in likelihood below
 
-    return ATA, p, chi2
+    return ATCinvA, p, chi2
 
-def marginal_ln_likelihood(ATA, chi2):
+def marginal_ln_likelihood(ATCinvA, chi2):
     """
 
     Parameters
     ----------
-    ATA : array_like
+    ATCinvA : array_like
         Should have shape `(N, M, M)` or `(M, M)` where `M`
         is the number of linear parameters in the model.
     chi2 : numeric, array_like
@@ -90,7 +90,7 @@ def marginal_ln_likelihood(ATA, chi2):
         Marginal log-likelihood values.
 
     """
-    sign,logdet = np.linalg.slogdet(ATA)
+    sign,logdet = np.linalg.slogdet(ATCinvA)
     if not np.all(sign == 1.):
         logger.debug('logdet sign < 0')
         return np.nan
