@@ -1,4 +1,5 @@
 # Third-party
+import astropy.units as u
 import numpy as np
 
 # Project
@@ -17,7 +18,10 @@ def test_everything():
         phi0 = 2*np.pi*time0/P
 
         sini = 1.0
-        print("testing", P, a*sini, e, omega, time, time0)
+        K = (2*np.pi*a*sini / (P * np.sqrt(1-e**2)) * u.au / u.day).to(u.m/u.s).value
+
+        print("testing", P, K, e, omega, time, time0)
+
         big = 65536.0 # MAGIC
         dt = P / big # d ; MAGIC
         dMdt = 2. * np.pi / P # rad / d
@@ -29,15 +33,17 @@ def test_everything():
         if np.abs(dEdM - dEdM2) > (1. / big):
             print("dEdM", dEdM, dEdM2, dEdM - dEdM2)
             assert False
+
         f, f1, f2 = (true_anomaly_from_eccentric_anomaly(EE, e) for EE in [E, E1, E2])
         dfdE = d_true_anomaly_d_eccentric_anomaly(E, f, e)
         dfdE2 = (f2 - f1) / (E2 - E1)
         if np.abs(dfdE - dfdE2) > (1. / big):
             print("dfdE", dfdE, dfdE2, dfdE - dfdE2)
             assert False
-        Z, Z1, Z2 = Z_from_elements(threetimes, P, a*sini, e, omega, time0)
-        rv = rv_from_elements(time, P, a*sini, e, omega, phi0, 0.)
-        rv2 = (Z2 - Z1) / dt
-        if np.abs(rv - rv2) > (a / P) * (1. / big):
-            print("RV", rv, rv2, rv - rv2)
-            assert False
+
+        Z, Z1, Z2 = Z_from_elements(threetimes, P, K, e, omega, time0) # AU
+        rv = rv_from_elements(time, P, K, e, omega, phi0, 0.) # m/s
+        rv2 = (Z2 - Z1) / dt # au/day
+        rv2 = (rv2 * u.au/u.day).to(u.m/u.s).value
+
+        assert np.allclose(rv, rv2, atol=1E-6) # TODO: this precision is not so good...
