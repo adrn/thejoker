@@ -119,19 +119,19 @@ def _orbital_params_worker(task):
     with h5py.File(filename, 'r') as f:
         for j,i in enumerate(idx): # these are the integer locations of the 'good' samples!
             nonlinear_p = f['samples'][i]
-            P, phi0, ecc, omega, log_s2 = nonlinear_p
+            P, phi0, ecc, omega, s2 = nonlinear_p
             ATA,p,_ = tensor_vector_scalar(nonlinear_p, data)
 
             cov = np.linalg.inv(ATA)
-            v0,asini = np.random.multivariate_normal(p, cov)
+            v0,K = np.random.multivariate_normal(p, cov)
 
-            if asini < 0:
-                # logger.warning("Swapping asini")
-                asini = np.abs(asini)
-                omega += np.pi
-                omega = omega % (2*np.pi) # HACK: I think this is safe
+            # if asini < 0:
+            #     # logger.warning("Swapping asini")
+            #     asini = np.abs(asini)
+            #     omega += np.pi
+            #     omega = omega % (2*np.pi) # HACK: I think this is safe
 
-            pars[j] = [P, asini, ecc, omega, phi0, v0, np.exp(0.5*log_s2)]
+            pars[j] = [P, ecc, omega, phi0, np.sqrt(s2), K, v0]
 
     return pars
 
