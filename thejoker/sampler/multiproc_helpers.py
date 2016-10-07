@@ -4,7 +4,7 @@ import h5py
 import numpy as np
 
 # Project
-from thejoker.sampler import tensor_vector_scalar, marginal_ln_likelihood
+from thejoker.sampler import design_matrix, tensor_vector_scalar, marginal_ln_likelihood
 
 __all__ = ['get_good_samples', 'samples_to_orbital_params']
 
@@ -37,8 +37,7 @@ def _marginal_ll_worker(task):
     ll = np.zeros(n_chunk)
     for i in range(n_chunk):
         try:
-            ATA,p,chi2 = tensor_vector_scalar(chunk[i], data)
-            ll[i] = marginal_ln_likelihood(ATA, chi2)
+            ll[i] = marginal_ln_likelihood(chunk[i], data)
         except:
             ll[i] = np.nan
 
@@ -120,7 +119,10 @@ def _orbital_params_worker(task):
         for j,i in enumerate(idx): # these are the integer locations of the 'good' samples!
             nonlinear_p = f['samples'][i]
             P, phi0, ecc, omega, s2 = nonlinear_p
-            ATA,p,_ = tensor_vector_scalar(nonlinear_p, data)
+
+            ivar = data.get_ivar(s2)
+            A = design_matrix(nonlinear_p, data._t, data.t_offset)
+            ATA,p,_ = tensor_vector_scalar(A, ivar, data._rv)
 
             cov = np.linalg.inv(ATA)
             v0,K = np.random.multivariate_normal(p, cov)
