@@ -17,7 +17,7 @@ default_units['omega'] = u.radian
 default_units['phi0'] = u.radian
 default_units['v0'] = u.m/u.s
 default_units['jitter'] = u.m/u.s
-default_units['asini'] = u.au
+default_units['asini'] = u.Rsun
 default_units['mf'] = u.Msun
 
 default_plot_units = OrderedDict()

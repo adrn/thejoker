@@ -9,7 +9,7 @@ from ..celestialmechanics import rv_from_elements
 __all__ = ['design_matrix', 'tensor_vector_scalar', 'marginal_ln_likelihood',
            'sample_prior', 'period_grid']
 
-def design_matrix(nonlinear_p, t):
+def design_matrix(nonlinear_p, t, t_offset):
     """
 
     Parameters
@@ -27,10 +27,10 @@ def design_matrix(nonlinear_p, t):
 
     """
     t = np.atleast_1d(t)
-    P, phi0, ecc, omega, s2 = nonlinear_p
+    P, phi0, ecc, omega, _ = nonlinear_p
 
     a = np.ones_like(t)
-    x1 = rv_from_elements(t, P, 1., ecc, omega, phi0, 0.)
+    x1 = rv_from_elements(times=t+t_offset, P=P, K=1., e=ecc, omega=omega, phi0=phi0, rv0=0.)
     A = np.vstack((a, x1)).T
     return A
 
@@ -57,10 +57,10 @@ def tensor_vector_scalar(nonlinear_p, data):
         Chi-squared value.
 
     """
-    A = design_matrix(nonlinear_p, data._t)
+    A = design_matrix(nonlinear_p, data._t, data.t_offset)
 
-    log_s2 = nonlinear_p[4]
-    ivar = data.get_ivar(np.exp(log_s2))
+    s2 = nonlinear_p[4]
+    ivar = data.get_ivar(s2)
     ATCinv = (A.T * ivar[None])
     ATCinvA = ATCinv.dot(A)
 
@@ -95,7 +95,7 @@ def marginal_ln_likelihood(ATCinvA, chi2):
         logger.debug('logdet sign < 0')
         return np.nan
 
-    return -0.5*np.atleast_1d(chi2) + 0.5*logdet
+    return 0.5*logdet - 0.5*np.atleast_1d(chi2)
 
 u.quantity_input(P_min=u.day, P_max=u.day)
 def sample_prior(n=1, P_min=defaults['P_min'], P_max=defaults['P_min'],
@@ -123,8 +123,6 @@ def sample_prior(n=1, P_min=defaults['P_min'], P_max=defaults['P_min'],
 
     """
 
-    # TODO: create a class to store these OrbitalParameters or something...
-
     # sample from priors in nonlinear parameters
     P = np.exp(np.random.uniform(np.log(P_min.to(u.day).value),
                                  np.log(P_max.to(u.day).value),
@@ -136,9 +134,9 @@ def sample_prior(n=1, P_min=defaults['P_min'], P_max=defaults['P_min'],
     omega = np.random.uniform(0, 2*np.pi, size=n) * u.radian
 
     # DFM's idea: wide, Gaussian prior in log(s^2)
-    log_s2 = np.random.normal(log_jitter2_mean, log_jitter2_std, size=n)
+    s2 = np.exp(np.random.normal(log_jitter2_mean, log_jitter2_std, size=n))
 
-    return dict(P=P, phi0=phi0, ecc=ecc, omega=omega, log_jitter2=log_s2)
+    return dict(P=P, phi0=phi0, ecc=ecc, omega=omega, jitter2=s2)
 
 # ----------------------------------------------------------------------------
 

@@ -60,13 +60,13 @@ class SimulatedRVOrbit(object):
         else:
             _t = t
 
-        rv = rv_from_elements(_t,
-                              self.pars.P.to(u.day).value,
-                              self.pars.K.to(u.m/u.s).value,
-                              self.pars.ecc.value,
-                              self.pars.omega.to(u.radian).value,
-                              self.pars.phi0.to(u.radian).value,
-                              self.pars.v0.to(u.m/u.s).value)
+        rv = rv_from_elements(times=_t,
+                              P=self.pars.P.to(u.day).value,
+                              K=self.pars.K.to(u.m/u.s).value,
+                              e=self.pars.ecc.value,
+                              omega=self.pars.omega.to(u.radian).value,
+                              phi0=self.pars.phi0.to(u.radian).value,
+                              rv0=self.pars.v0.to(u.m/u.s).value)
         return rv
 
     def generate_rv_curve(self, t):
