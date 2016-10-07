@@ -134,7 +134,7 @@ def sample_prior(n=1, P_min=defaults['P_min'], P_max=defaults['P_min'],
     omega = np.random.uniform(0, 2*np.pi, size=n) * u.radian
 
     # DFM's idea: wide, Gaussian prior in log(s^2)
-    s2 = np.exp(np.random.normal(log_jitter2_mean, log_jitter2_std, size=n))
+    s2 = np.exp(np.random.normal(log_jitter2_mean, log_jitter2_std, size=n)) * (u.m/u.s)**2
 
     return dict(P=P, phi0=phi0, ecc=ecc, omega=omega, jitter2=s2)
 
