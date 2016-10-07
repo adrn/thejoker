@@ -132,10 +132,10 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, hdf5_key=Non
     ecc = prior_samples['ecc']
     phi0 = prior_samples['phi0'].decompose(usys).value
     omega = prior_samples['omega'].decompose(usys).value
-    log_jitter2 = prior_samples['log_jitter2']
+    jitter2 = prior_samples['jitter2']
 
     # pack the nonlinear parameters into an array
-    nonlinear_p = np.vstack((P, phi0, ecc, omega, log_jitter2)).T
+    nonlinear_p = np.vstack((P, phi0, ecc, omega, jitter2)).T
     # Note: the linear parameters are (v0, asini)
 
     # cache the prior samples
