@@ -12,6 +12,13 @@ def find_t0(phi0, P, epoch):
     """
     This is carefully written to not subtract large numbers, but might
     be incomprehensible.
+
+    Parameters
+    ----------
+    phi0 : numeric [rad]
+    P : numeric [day]
+    epoch : numeric [day]
+        MJD.
     """
     phi0 = np.arctan2(np.sin(phi0), np.cos(phi0)) # HACK
     epoch_phi = (2 * np.pi * epoch / P) % (2. * np.pi)
