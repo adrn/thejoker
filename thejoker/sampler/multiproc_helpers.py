@@ -4,7 +4,7 @@ import h5py
 import numpy as np
 
 # Project
-from thejoker.sampler import tensor_vector_scalar, marginal_ln_likelihood
+from thejoker.sampler import design_matrix, tensor_vector_scalar, marginal_ln_likelihood
 
 __all__ = ['get_good_samples', 'samples_to_orbital_params']
 
@@ -37,8 +37,7 @@ def _marginal_ll_worker(task):
     ll = np.zeros(n_chunk)
     for i in range(n_chunk):
         try:
-            ATA,p,chi2 = tensor_vector_scalar(chunk[i], data)
-            ll[i] = marginal_ln_likelihood(ATA, chi2)
+            ll[i] = marginal_ln_likelihood(chunk[i], data)
         except:
             ll[i] = np.nan
 
@@ -83,7 +82,7 @@ def get_good_samples(n_samples, filename, data, pool):
     tasks = [[(i*chunk_size, (i+1)*chunk_size), filename, data]
              for i in range(n_samples//chunk_size+1)]
 
-    results = pool.map(_marginal_ll_worker, tasks)
+    results = [r for r in pool.map(_marginal_ll_worker, tasks)]
     marg_ll = np.concatenate(results)
 
     assert len(marg_ll) == n_samples
@@ -115,23 +114,26 @@ def _orbital_params_worker(task):
     np.random.seed(seed) # TODO: is this good enough?
     logger.debug("worker with chunk {} has seed {}".format(idx[0], seed))
 
-    pars = np.zeros((n_chunk, 6))
+    pars = np.zeros((n_chunk, 7))
     with h5py.File(filename, 'r') as f:
         for j,i in enumerate(idx): # these are the integer locations of the 'good' samples!
             nonlinear_p = f['samples'][i]
-            P, phi0, ecc, omega = nonlinear_p
-            ATA,p,_ = tensor_vector_scalar(nonlinear_p, data)
+            P, phi0, ecc, omega, s2 = nonlinear_p
+
+            ivar = data.get_ivar(s2)
+            A = design_matrix(nonlinear_p, data._t, data.t_offset)
+            ATA,p,_ = tensor_vector_scalar(A, ivar, data._rv)
 
             cov = np.linalg.inv(ATA)
-            v0,asini = np.random.multivariate_normal(p, cov)
+            v0,K = np.random.multivariate_normal(p, cov)
 
-            if asini < 0:
-                # logger.warning("Swapping asini")
-                asini = np.abs(asini)
+            if K < 0:
+                # logger.warning("Swapping K")
+                K = np.abs(K)
                 omega += np.pi
                 omega = omega % (2*np.pi) # HACK: I think this is safe
 
-            pars[j] = [P, asini, ecc, omega, phi0, v0]
+            pars[j] = [P, ecc, omega, phi0, np.sqrt(s2), K, v0]
 
     return pars
 
@@ -180,7 +182,7 @@ def samples_to_orbital_params(good_samples_idx, filename, data, pool, global_see
     tasks = [[good_samples_idx[i*chunk_size:(i+1)*chunk_size], filename, data, global_seed, i]
              for i in range(n_samples//chunk_size+plus)]
 
-    orbit_pars = pool.map(_orbital_params_worker, tasks)
+    orbit_pars = [r for r in pool.map(_orbital_params_worker, tasks)]
     orbit_pars = np.concatenate(orbit_pars)
 
     return orbit_pars.reshape(-1, orbit_pars.shape[-1])
