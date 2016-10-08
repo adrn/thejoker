@@ -127,11 +127,11 @@ def _orbital_params_worker(task):
             cov = np.linalg.inv(ATA)
             v0,K = np.random.multivariate_normal(p, cov)
 
-            # if asini < 0:
-            #     # logger.warning("Swapping asini")
-            #     asini = np.abs(asini)
-            #     omega += np.pi
-            #     omega = omega % (2*np.pi) # HACK: I think this is safe
+            if K < 0:
+                # logger.warning("Swapping K")
+                K = np.abs(K)
+                omega += np.pi
+                omega = omega % (2*np.pi) # HACK: I think this is safe
 
             pars[j] = [P, ecc, omega, phi0, np.sqrt(s2), K, v0]
 
