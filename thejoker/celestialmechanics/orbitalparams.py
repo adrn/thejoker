@@ -37,7 +37,10 @@ class OrbitalParams(object):
         #   be accessed with units without the underscore prefix (e.g., .P vs ._P)
         for name,unit in self._name_to_unit.items():
             if unit is not None:
-                setattr(self, "_{}".format(name), np.atleast_1d(eval(name)).to(unit).value)
+                if unit is u.one:
+                    setattr(self, "_{}".format(name), np.array(np.atleast_1d(eval(name))))
+                else:
+                    setattr(self, "_{}".format(name), np.atleast_1d(eval(name)).to(unit).value)
             else:
                 setattr(self, "_{}".format(name), np.atleast_1d(eval(name)))
 
