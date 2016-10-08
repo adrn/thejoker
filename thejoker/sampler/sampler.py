@@ -30,7 +30,8 @@ def design_matrix(nonlinear_p, t, t_offset):
     P, phi0, ecc, omega, _ = nonlinear_p
 
     a = np.ones_like(t)
-    x1 = rv_from_elements(times=t+t_offset, P=P, K=1., e=ecc, omega=omega, phi0=phi0, rv0=0.)
+    x1 = rv_from_elements(times=t, P=P, K=1., e=ecc, omega=omega,
+                          phi0=phi0-2*np.pi*((t_offset/P) % 1.), rv0=0.)
     A = np.vstack((a, x1)).T
     return A
 
