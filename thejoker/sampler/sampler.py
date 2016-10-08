@@ -9,7 +9,7 @@ from ..celestialmechanics import rv_from_elements
 __all__ = ['design_matrix', 'tensor_vector_scalar', 'marginal_ln_likelihood',
            'sample_prior', 'period_grid']
 
-def design_matrix(nonlinear_p, t):
+def design_matrix(nonlinear_p, t, t_offset):
     """
 
     Parameters
@@ -27,14 +27,15 @@ def design_matrix(nonlinear_p, t):
 
     """
     t = np.atleast_1d(t)
-    P, phi0, ecc, omega = nonlinear_p
+    P, phi0, ecc, omega, _ = nonlinear_p
 
     a = np.ones_like(t)
-    x1 = rv_from_elements(t, P, 1., ecc, omega, phi0, 0.)
+    x1 = rv_from_elements(times=t, P=P, K=1., e=ecc, omega=omega,
+                          phi0=phi0-2*np.pi*((t_offset/P) % 1.), rv0=0.)
     A = np.vstack((a, x1)).T
     return A
 
-def tensor_vector_scalar(nonlinear_p, data):
+def tensor_vector_scalar(A, ivar, y):
     """
 
     Parameters
@@ -42,13 +43,13 @@ def tensor_vector_scalar(nonlinear_p, data):
     nonlinear_p : array_like
         Array of non-linear parameter values: P (period),
         phi0 (phase at pericenter), ecc (eccentricity),
-        omega (argument of perihelion).
-    data : `ebak.singleline.RVData`
+        omega (argument of perihelion), log_s2 (ln of the jitter squared).
+    data : `thejoker.sampler.RVData`
         Instance of `RVData` containing the data to fit.
 
     Returns
     -------
-    ATA : `numpy.ndarray`
+    ATCinvA : `numpy.ndarray`
         Value of A^T C^-1 A -- inverse of the covariance matrix
         of the linear parameters.
     p : `numpy.ndarray`
@@ -57,25 +58,24 @@ def tensor_vector_scalar(nonlinear_p, data):
         Chi-squared value.
 
     """
-    A = design_matrix(nonlinear_p, data._t)
-    ATCinv = (A.T * data._ivar[None])
-    ATA = ATCinv.dot(A)
+    ATCinv = (A.T * ivar[None])
+    ATCinvA = ATCinv.dot(A)
 
     # Note: this is unstable! if cond num is high, could do:
     # p,*_ = np.linalg.lstsq(A, y)
-    p = np.linalg.solve(ATA, ATCinv.dot(data._rv))
+    p = np.linalg.solve(ATCinvA, ATCinv.dot(y))
 
-    dy = A.dot(p) - data._rv
-    chi2 = np.sum(dy**2 * data._ivar)
+    dy = A.dot(p) - y
+    chi2 = np.sum(dy**2 * ivar) # don't need log term for the jitter b.c. in likelihood below
 
-    return ATA, p, chi2
+    return ATCinvA, p, chi2
 
-def marginal_ln_likelihood(ATA, chi2):
+def marginal_ln_likelihood(nonlinear_p, data):
     """
 
     Parameters
     ----------
-    ATA : array_like
+    ATCinvA : array_like
         Should have shape `(N, M, M)` or `(M, M)` where `M`
         is the number of linear parameters in the model.
     chi2 : numeric, array_like
@@ -87,16 +87,28 @@ def marginal_ln_likelihood(ATA, chi2):
         Marginal log-likelihood values.
 
     """
-    sign,logdet = np.linalg.slogdet(ATA)
+    A = design_matrix(nonlinear_p, data._t, data.t_offset)
+
+    s2 = nonlinear_p[4]
+    ivar = data.get_ivar(s2)
+
+    ATCinvA,_,chi2 = tensor_vector_scalar(A, ivar, data._rv)
+
+    sign,logdet = np.linalg.slogdet(ATCinvA)
     if not np.all(sign == 1.):
         logger.debug('logdet sign < 0')
         return np.nan
 
-    return -0.5*np.atleast_1d(chi2) + 0.5*logdet
+    logdet += np.sum(np.log(ivar/(2*np.pi))) # TODO: this needs a final audit, and is inconsistent with math in the paper
+
+    return 0.5*logdet - 0.5*np.atleast_1d(chi2)
 
 u.quantity_input(P_min=u.day, P_max=u.day)
-def sample_prior(n=1, P_min=defaults['P_min'], P_max=defaults['P_min']):
+def sample_prior(n=1, P_min=defaults['P_min'], P_max=defaults['P_min'],
+                 log_jitter2_mean=0., log_jitter2_std=1.):
     """
+    TODO: add option for sampling jitter prior
+
     Generate samples from the prior. Logarithmic in period, uniform in
     phase and argument of pericenter, Beta distribution in eccentricity.
 
@@ -117,8 +129,6 @@ def sample_prior(n=1, P_min=defaults['P_min'], P_max=defaults['P_min']):
 
     """
 
-    # TODO: create a class to store these OrbitalParameters or something...
-
     # sample from priors in nonlinear parameters
     P = np.exp(np.random.uniform(np.log(P_min.to(u.day).value),
                                  np.log(P_max.to(u.day).value),
@@ -129,7 +139,10 @@ def sample_prior(n=1, P_min=defaults['P_min'], P_max=defaults['P_min']):
     ecc = np.random.beta(a=0.867, b=3.03, size=n)
     omega = np.random.uniform(0, 2*np.pi, size=n) * u.radian
 
-    return dict(P=P, phi0=phi0, ecc=ecc, omega=omega)
+    # DFM's idea: wide, Gaussian prior in log(s^2)
+    s2 = np.exp(np.random.normal(log_jitter2_mean, log_jitter2_std, size=n)) * (u.m/u.s)**2
+
+    return dict(P=P, phi0=phi0, ecc=ecc, omega=omega, jitter2=s2)
 
 # ----------------------------------------------------------------------------
 

@@ -44,6 +44,6 @@ def test_rvdata():
     assert np.all(data2._ivar != data1._ivar)
 
     # check that plotting at least succeeds (TODO: could be better)
-    data1.plot()
-    data1.plot(color='r')
-    data1.plot(ax=plt.gca())
+    # data1.plot()
+    # data1.plot(color='r')
+    # data1.plot(ax=plt.gca())
