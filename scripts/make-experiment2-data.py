@@ -1,9 +1,6 @@
 """
 
-Generate simulated data for Experiment 1 that match all of our assumptions:
-    - A pair of stars, one of which is observed spectroscopically, with radial velocity variations
-      that are described purely through the 2-body problem
-    - Gaussian uncertainties on the RV measurements
+Generate simulated data for Experiment 2 where we inflate the uncertainties successively
 
 """
 
@@ -37,7 +34,7 @@ def main():
     print("phi0:", orbit.pars.phi0.to(u.degree))
     print("v0:", orbit.pars.v0.to(u.km/u.s))
 
-    n_obs = 5 # MAGIC NUMBER: number of observations
+    n_obs = 8 # MAGIC NUMBER: number of observations
 
     # Experiment 1 data
     bmjd = np.random.uniform(0, 3*365, size=n_obs) + 55555. # 3 year survey
@@ -47,15 +44,13 @@ def main():
     rv = np.random.normal(rv.to(default_units['v0']).value,
                           rv_err.to(default_units['v0']).value) * default_units['v0']
 
-    data = RVData(t=bmjd, rv=rv, stddev=rv_err)
-    with h5py.File(os.path.join(paths.root, "data", "experiment1.h5"), "w") as f:
-        data.to_hdf5(f)
-        f.create_dataset('truth_vector', data=opars.pack())
+    with h5py.File(os.path.join(paths.root, "data", "experiment2.h5"), "w") as outf:
+        for fac in 2**np.arange(0, 3+1):
+            g = outf.create_group(str(fac))
 
-    data = RVData(t=bmjd, rv=rv, stddev=0.1*rv_err)
-    with h5py.File(os.path.join(paths.root, "data", "experiment1-wrong-errors.h5"), "w") as f:
-        data.to_hdf5(f)
-        f.create_dataset('truth_vector', data=opars.pack())
+            data = RVData(t=bmjd, rv=rv, stddev=fac*rv_err)
+            data.to_hdf5(g)
+            g.create_dataset('truth_vector', data=opars.pack())
 
 if __name__ == '__main__':
     from argparse import ArgumentParser

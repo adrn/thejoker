@@ -20,4 +20,11 @@ python make-experiment1-data.py -s 1988
 srun python run-sampler.py -v --mpi -o \
 -n 2**28 -s 42 \
 -f ../data/experiment1.h5 \
---name="experiment1.h5"
+--name="experiment1-fixed_jitter.h5" \
+--fixed-jitter='0 m/s'
+
+srun python run-sampler.py -v --mpi -o \
+-n 2**28 -s 42 \
+-f ../data/experiment1.h5 \
+--name="experiment1-sample_jitter.h5"
+
