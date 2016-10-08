@@ -11,7 +11,7 @@ __all__ = ['plot_rv_curves', 'plot_corner']
 _truth_color = '#006837'
 _prev_result_color = '#2166AC'
 
-def plot_rv_curves(orbital_pars, t_grid, rv_unit=None, data=None, t_offset=0,
+def plot_rv_curves(orbital_pars, t_grid, rv_unit=None, data=None,
                    ax=None, plot_kwargs=dict(), data_plot_kwargs=dict(),
                    add_labels=True):
     """
@@ -27,9 +27,6 @@ def plot_rv_curves(orbital_pars, t_grid, rv_unit=None, data=None, t_offset=0,
         The units to use when plotting RV's.
     data : `~thejoker.data.RVData` (optional)
         Over-plot the data as well.
-    t_offset : float (optional)
-        Time offset to apply to the time grid during evaluation of model,
-        but not during plotting of model.
     ax : `~matplotlib.Axes` (optional)
         A matplotlib axes object to plot on to. If not specified, will
         create a new figure and plot on that.
@@ -57,10 +54,6 @@ def plot_rv_curves(orbital_pars, t_grid, rv_unit=None, data=None, t_offset=0,
         logger.warning("Plotting more than 128 radial velocity curves ({}) -- "
                        "are you sure you want to do this?".format(n_samples))
 
-    # get time offset from data if passed in
-    if data is not None:
-        t_offset = data.t_offset
-
     if isinstance(t_grid, atime.Time):
         t_grid = t_grid.tcb.mjd
 
@@ -82,7 +75,7 @@ def plot_rv_curves(orbital_pars, t_grid, rv_unit=None, data=None, t_offset=0,
     model_rv = np.zeros((n_samples, len(t_grid)))
     for i in range(n_samples):
         orbit = orbital_pars.rv_orbit(i)
-        model_rv[i] = orbit.generate_rv_curve(t_grid - t_offset).to(rv_unit).value
+        model_rv[i] = orbit.generate_rv_curve(t_grid).to(rv_unit).value
     ax.plot(t_grid, model_rv.T, **style)
 
     if data is not None:
