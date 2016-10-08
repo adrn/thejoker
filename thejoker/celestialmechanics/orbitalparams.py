@@ -26,9 +26,8 @@ class OrbitalParams(object):
     _name_to_unit['v0'] = default_units['v0']
 
     # Latex plot labels for the parameters
-    # TODO: update
-    _latex_labels = [r'$\ln (P/{\rm day})$', r'$\ln (a_1\,\sin i/{\rm R}_\odot)$', '$e$',
-                     r'$\omega$ [deg]', r'$\phi_0$ [deg]', '$v_0$ [km s$^{-1}$]', 's [m s$^{-1}]$']
+    _latex_labels = [r'$\ln (P/{\rm day})$', '$e$', r'$\omega$ [deg]', r'$\phi_0$ [deg]',
+                     's [m s$^{-1}]$', r'$K$ [m s$^{-1}$]', '$v_0$ [km s$^{-1}$]']
 
     def __init__(self, P, K, ecc, omega, phi0, v0, jitter=0.*u.m/u.s):
         """
@@ -37,7 +36,7 @@ class OrbitalParams(object):
         # parameters are stored internally without units (for speed) but can
         #   be accessed with units without the underscore prefix (e.g., .P vs ._P)
         for name,unit in self._name_to_unit.items():
-            if unit is not None and unit is not u.one:
+            if unit is not None:
                 setattr(self, "_{}".format(name), np.atleast_1d(eval(name)).to(unit).value)
             else:
                 setattr(self, "_{}".format(name), np.atleast_1d(eval(name)))
@@ -119,7 +118,7 @@ class OrbitalParams(object):
 
         if plot_transform:
             # ln P in plots:
-            idx = self._name_to_unit.keys().index('P')
+            idx = list(self._name_to_unit.keys()).index('P')
             all_samples[:,idx] = np.log(all_samples[:,idx])
 
         return all_samples
