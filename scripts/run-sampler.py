@@ -40,7 +40,7 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, hdf5_key=Non
             output_filename = os.path.join(paths.root, "cache", output_filename)
 
     # container for hyper-parameter values
-    hyperpars = dict(jitter=None, P_min=None, P_max=None)
+    hyperpars = dict(fixed_jitter=None, P_min=None, P_max=None)
 
     # see if we already did this:
     if os.path.exists(output_filename):
@@ -61,18 +61,14 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, hdf5_key=Non
 
                 if rerun != 0:
                     logger.debug("Reading hyperparameters from cache file.")
-                    for name in ['jitter_m/s', 'P_min_day', 'P_max_day']:
-                        # HACK
-                        pieces = name.split("_")
-                        unit = u.Unit(pieces[-1])
-                        short_name = "_".join(pieces[:-1])
-                        var = hyperpars_strs[short_name]
 
-                        if var is not None:
-                            logger.warning("'{}' specified at command line, but using value "
-                                           "stored in cache file.".format(short_name))
-
-                        hyperpars[short_name] = f.attrs[name] * unit
+                    # HACK: this should be better
+                    for name,unit in zip(['fixed_jitter', 'P_min', 'P_max'],
+                                         [u.m/u.s, u.day, u.day]):
+                        if f.attrs[name] is not None:
+                            hyperpars[name] = f.attrs[name] * unit
+                        else:
+                            hyperpars[name] = f.attrs[name]
 
         elif overwrite: # restart rerun counter
             rerun = 0
@@ -115,22 +111,28 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, hdf5_key=Non
             data = RVData.from_hdf5(f[hdf5_key])
         else:
             data = RVData.from_hdf5(f)
-    data.add_jitter(hyperpars['jitter'])
 
-    log_jitter2_mean = 0. # HACK:
+    # HACK: these should be customizable
+    # (m/s)^2
+    log_jitter2_mean = 0. # MAGIC NUMBER
+    log_jitter2_std = 3. # MAGIC NUMBER
 
     logger.debug("Number of prior samples: {}".format(n_samples))
     prior_samples = sample_prior(n_samples, P_min=hyperpars['P_min'], P_max=hyperpars['P_max'],
-                                 log_jitter2_mean=log_jitter2_mean, log_jitter2_std=3) # HACK: HARD CODED BABY
+                                 log_jitter2_mean=log_jitter2_mean, log_jitter2_std=log_jitter2_std)
     P = prior_samples['P'].to(default_units['P']).value
     ecc = prior_samples['ecc']
     phi0 = prior_samples['phi0'].to(default_units['phi0']).value
     omega = prior_samples['omega'].to(default_units['omega']).value
     jitter2 = prior_samples['jitter2'].to(default_units['jitter']**2).value
 
+    # if fixing jitter, set all values of jitter samples to the fixed value
+    if hyperpars['fixed_jitter'] is not None:
+        jitter2 = np.ones_like(jitter2) * hyperpars['fixed_jitter'].to(default_units['jitter']).value**2
+
     # pack the nonlinear parameters into an array
     nonlinear_p = np.vstack((P, phi0, ecc, omega, jitter2)).T
-    # Note: the linear parameters are (v0, asini)
+    # Note: the linear parameters are (v0, K)
 
     # cache the prior samples
     with h5py.File(tmp_prior_filename, "w") as f:
@@ -152,9 +154,9 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, hdf5_key=Non
     # save the orbital parameters out to a cache file
     with h5py.File(output_filename, mode) as f:
         f.attrs['rerun'] = rerun
-        f.attrs['jitter_m/s'] = hyperpars['jitter'].to(u.m/u.s).value # HACK: always in m/s?
-        f.attrs['P_min_day'] = hyperpars['P_min'].to(u.day).value
-        f.attrs['P_max_day'] = hyperpars['P_max'].to(u.day).value
+        f.attrs['fixed_jitter'] = hyperpars['fixed_jitter'].to(u.m/u.s).value # HACK: always in m/s?
+        f.attrs['P_min'] = hyperpars['P_min'].to(u.day).value
+        f.attrs['P_max'] = hyperpars['P_max'].to(u.day).value
 
         for i,(name,unit) in enumerate(OrbitalParams._name_to_unit.items()):
             if name in f:
@@ -209,7 +211,7 @@ if __name__ == "__main__":
     parser.add_argument("-n", "--num-samples", dest="n_samples", default=2**20,
                         type=str, help="Number of prior samples.")
 
-    parser.add_argument("--jitter", dest="jitter", default=None, type=str,
+    parser.add_argument("--fixed-jitter", dest="fixed_jitter", default=None, type=str,
                         help="Extra uncertainty to add in quadtrature to the RV measurement "
                              "uncertainties. Must specify a number with units, e.g., '15 m/s'")
     parser.add_argument("--Pmin", dest="P_min", default=None, type=str,
@@ -252,4 +254,4 @@ if __name__ == "__main__":
         main(data_file=args.data_file, pool=pool, n_samples=n_samples, hdf5_key=args.hdf5_key,
              seed=args.seed, overwrite=args.overwrite, continue_sampling=args._continue,
              cache_filename=args.cache_name, tmp_prior_filename=fp.name,
-             hyperpars_strs=dict(jitter=args.jitter, P_min=args.P_min, P_max=args.P_max))
+             hyperpars_strs=dict(fixed_jitter=args.fixed_jitter, P_min=args.P_min, P_max=args.P_max))
