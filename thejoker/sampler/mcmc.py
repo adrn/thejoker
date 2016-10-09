@@ -29,17 +29,15 @@ def unpack_mcmc(p):
                       np.arctan2(sqrte_sin_pomega, sqrte_cos_pomega),
                       np.arctan2(sqrtasini_sin_phi0, sqrtasini_cos_phi0),
                       _v0,
-                      log_s2))
+                      np.exp(log_s2)))
 
 def ln_likelihood(p, data):
-    P, asini, ecc, omega, phi0, v0, log_s2 = unpack_mcmc(p)
+    P, asini, ecc, omega, phi0, v0, s2 = unpack_mcmc(p)
     model_rv = rv_from_elements(data._t, P, asini, ecc, omega, phi0, v0)
-
-    s2 = np.exp(log_s2)
     return -0.5 * (model_rv - data._rv)**2 / (1/data._ivar + s2)
 
 def ln_prior(p):
-    P, asini, ecc, omega, phi0, v0, log_s2 = unpack_mcmc(p)
+    P, asini, ecc, omega, phi0, v0, s2 = unpack_mcmc(p)
 
     lnp = 0.
 
@@ -51,7 +49,7 @@ def ln_prior(p):
     # TODO: do we need P_min, P_max here?
 
     # DFM's idea: wide, Gaussian prior in log(s^2)
-    lnp += norm.logpdf(log_s2, 0, 1)
+    lnp += norm.logpdf(np.log(s2), 0, 4)
 
     return lnp
 
