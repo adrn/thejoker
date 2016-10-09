@@ -22,7 +22,7 @@ from thejoker import config
 
 def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, hdf5_key=None,
          cache_filename=None, overwrite=False, continue_sampling=False,
-         hyperpars_strs=dict()):
+         hyperpars_strs=dict(), log_jitter2_mean=0., log_jitter2_std=3.):
 
     full_path = os.path.abspath(data_file)
     if cache_filename is None:
@@ -111,11 +111,6 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, hdf5_key=Non
             data = RVData.from_hdf5(f[hdf5_key])
         else:
             data = RVData.from_hdf5(f)
-
-    # HACK: these should be customizable
-    # (m/s)^2
-    log_jitter2_mean = 0. # MAGIC NUMBER
-    log_jitter2_std = 3. # MAGIC NUMBER
 
     logger.debug("Number of prior samples: {}".format(n_samples))
     prior_samples = sample_prior(n_samples, P_min=hyperpars['P_min'], P_max=hyperpars['P_max'],
@@ -226,6 +221,11 @@ if __name__ == "__main__":
                              "Must specify a number with units, e.g., '8192 day'"
                              .format(config.defaults['P_max']))
 
+    parser.add_argument("--log-jitter2-mean", dest="log_jitter2_mean", default=0.,
+                        help="TODO")
+    parser.add_argument("--log-jitter2-std", dest="log_jitter2_std", default=3.,
+                        help="TODO")
+
     args = parser.parse_args()
 
     # Set logger level based on verbose flags
@@ -257,4 +257,5 @@ if __name__ == "__main__":
         main(data_file=args.data_file, pool=pool, n_samples=n_samples, hdf5_key=args.hdf5_key,
              seed=args.seed, overwrite=args.overwrite, continue_sampling=args._continue,
              cache_filename=args.cache_name, tmp_prior_filename=fp.name,
-             hyperpars_strs=dict(fixed_jitter=args.fixed_jitter, P_min=args.P_min, P_max=args.P_max))
+             hyperpars_strs=dict(fixed_jitter=args.fixed_jitter, P_min=args.P_min, P_max=args.P_max),
+             log_jitter2_mean=args.log_jitter2_mean, log_jitter2_std=args.log_jitter2_std)
