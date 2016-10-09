@@ -65,10 +65,10 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, hdf5_key=Non
                     # HACK: this should be better
                     for name,unit in zip(['fixed_jitter', 'P_min', 'P_max'],
                                          [u.m/u.s, u.day, u.day]):
-                        if f.attrs[name] is not None:
-                            hyperpars[name] = f.attrs[name] * unit
+                        if np.isnan(f.attrs[name]):
+                            hyperpars[name] = None
                         else:
-                            hyperpars[name] = f.attrs[name]
+                            hyperpars[name] = f.attrs[name] * unit
 
         elif overwrite: # restart rerun counter
             rerun = 0
@@ -154,9 +154,12 @@ def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, hdf5_key=Non
     # save the orbital parameters out to a cache file
     with h5py.File(output_filename, mode) as f:
         f.attrs['rerun'] = rerun
-        f.attrs['fixed_jitter'] = hyperpars['fixed_jitter'].to(u.m/u.s).value # HACK: always in m/s?
-        f.attrs['P_min'] = hyperpars['P_min'].to(u.day).value
-        f.attrs['P_max'] = hyperpars['P_max'].to(u.day).value
+        if hyperpars['fixed_jitter'] is not None:
+            f.attrs['fixed_jitter'] = hyperpars['fixed_jitter']
+        else:
+            f.attrs['fixed_jitter'] = np.nan
+        f.attrs['P_min'] = hyperpars['P_min']
+        f.attrs['P_max'] = hyperpars['P_max']
 
         for i,(name,unit) in enumerate(OrbitalParams._name_to_unit.items()):
             if name in f:
