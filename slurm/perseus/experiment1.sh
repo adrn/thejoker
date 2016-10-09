@@ -26,9 +26,5 @@ srun python run-sampler.py -v --mpi -o \
 srun python run-sampler.py -v --mpi -o \
 -n 2**28 -s 42 \
 -f ../data/experiment1.h5 \
---name="experiment1-sample-jitter.h5"
-
-srun python run-sampler.py -v --mpi -o \
--n 2**28 -s 42 \
--f ../data/experiment1-wrong-errors.h5 \
---name="experiment1-sample-jitter-wrong-errors.h5"
+--name="experiment1-sample-jitter.h5" \
+--log-jitter2-mean=0 --log-jitter2-std=4
