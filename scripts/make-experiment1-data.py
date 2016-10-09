@@ -5,6 +5,8 @@ Generate simulated data for Experiment 1 that match all of our assumptions:
       that are described purely through the 2-body problem
     - Gaussian uncertainties on the RV measurements
 
+Here, we save the true uncertainties used to generate the data.
+
 """
 
 # Standard library
@@ -49,11 +51,6 @@ def main():
 
     data = RVData(t=bmjd, rv=rv, stddev=rv_err)
     with h5py.File(os.path.join(paths.root, "data", "experiment1.h5"), "w") as f:
-        data.to_hdf5(f)
-        f.create_dataset('truth_vector', data=opars.pack())
-
-    data = RVData(t=bmjd, rv=rv, stddev=0.1*rv_err)
-    with h5py.File(os.path.join(paths.root, "data", "experiment1-wrong-errors.h5"), "w") as f:
         data.to_hdf5(f)
         f.create_dataset('truth_vector', data=opars.pack())
 
