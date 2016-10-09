@@ -2,8 +2,8 @@
 #SBATCH -J exp2           # job name
 #SBATCH -o exp2.o%j             # output file name (%j expands to jobID)
 #SBATCH -e exp2.e%j             # error file name (%j expands to jobID)
-#SBATCH -n 512                   # total number of mpi tasks requested
-#SBATCH -t 01:45:00             # run time (hh:mm:ss)
+#SBATCH -n 256                   # total number of mpi tasks requested
+#SBATCH -t 00:30:00             # run time (hh:mm:ss) - 1.5 hours
 #SBATCH --mail-user=adrn@princeton.edu
 #SBATCH --mail-type=begin       # email me when the job starts
 #SBATCH --mail-type=end         # email me when the job finishes
@@ -14,36 +14,17 @@ module load openmpi/gcc/1.10.2/64
 
 source activate thejoker
 
-python make-experiment2-data.py -s 42
-
-export NSAMPLES="2**28"
-export SEED=42
-
-# Run experiment 2, inflating error-bars by factor of 1, 2, 4, 8
-srun python run-sampler.py -v --mpi -o \
--n $NSAMPLES \
--f ../data/experiment2.h5 \
---name="experiment2-1.hdf5" \
---hdf5-key="1" \
---seed=$SEED
+# Run experiment 1!
+python make-experiment2-data.py -s 1234
 
 srun python run-sampler.py -v --mpi -o \
--n $NSAMPLES \
--f ../data/experiment2.h5 \
---name="experiment2-2.hdf5" \
---hdf5-key="2" \
---seed=$SEED
+-n 2**28 -s 42 \
+-f ../data/experiment1.h5 \
+--name="experiment2-fixed-jitter.h5" \
+--fixed-jitter='0 m/s'
 
 srun python run-sampler.py -v --mpi -o \
--n $NSAMPLES \
--f ../data/experiment2.h5 \
---name="experiment2-4.hdf5" \
---hdf5-key="4" \
---seed=$SEED
-
-srun python run-sampler.py -v --mpi -o \
--n $NSAMPLES \
--f ../data/experiment2.h5 \
---name="experiment2-8.hdf5" \
---hdf5-key="8" \
---seed=$SEED
+-n 2**28 -s 42 \
+-f ../data/experiment1.h5 \
+--name="experiment2-sample-jitter.h5" \
+--log-jitter2-mean=10.5 --log-jitter2-std=0.25
