@@ -25,53 +25,61 @@ srun python run-sampler.py -v --mpi -o \
 -f ../data/experiment3.h5 \
 --name="experiment3-0.hdf5" \
 --hdf5-key="0" \
---seed=$SEED
+--seed=$SEED \
+--fixed-jitter='0 m/s'
 
 srun python run-sampler.py -v --mpi -o \
 -n $NSAMPLES \
 -f ../data/experiment3.h5 \
 --name="experiment3-2.hdf5" \
 --hdf5-key="2" \
---seed=$SEED
+--seed=$SEED \
+--fixed-jitter='0 m/s'
 
 srun python run-sampler.py -v --mpi -o \
 -n $NSAMPLES \
 -f ../data/experiment3.h5 \
 --name="experiment3-4.hdf5" \
 --hdf5-key="4" \
---seed=$SEED
+--seed=$SEED \
+--fixed-jitter='0 m/s'
 
 srun python run-sampler.py -v --mpi -o \
 -n $NSAMPLES \
 -f ../data/experiment3.h5 \
 --name="experiment3-6.hdf5" \
 --hdf5-key="6" \
---seed=$SEED
+--seed=$SEED \
+--fixed-jitter='0 m/s'
 
 srun python run-sampler.py -v --mpi -o \
 -n $NSAMPLES \
 -f ../data/experiment3.h5 \
 --name="experiment3-8.hdf5" \
 --hdf5-key="8" \
---seed=$SEED
+--seed=$SEED \
+--fixed-jitter='0 m/s'
 
 srun python run-sampler.py -v --mpi -o \
 -n $NSAMPLES \
 -f ../data/experiment3.h5 \
 --name="experiment3-10.hdf5" \
 --hdf5-key="10" \
---seed=$SEED
+--seed=$SEED \
+--fixed-jitter='0 m/s'
 
 srun python run-sampler.py -v --mpi -o \
 -n $NSAMPLES \
 -f ../data/experiment3.h5 \
 --name="experiment3-12.hdf5" \
 --hdf5-key="12" \
---seed=$SEED
+--seed=$SEED \
+--fixed-jitter='0 m/s'
 
 srun python run-sampler.py -v --mpi -o \
 -n $NSAMPLES \
 -f ../data/experiment3.h5 \
 --name="experiment3-14.hdf5" \
 --hdf5-key="14" \
---seed=$SEED
+--seed=$SEED \
+--fixed-jitter='0 m/s'
