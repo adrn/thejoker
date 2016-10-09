@@ -1,3 +1,10 @@
+"""
+
+TODO: this script doesn't support inferring the jitter and can only handle setting jitter = 0
+
+"""
+
+
 # Standard library
 import os
 import sys
@@ -33,7 +40,8 @@ def main(data_file, cache_filename, pool, n_steps, overwrite=False, seed=42, hdf
                       "'run-sampler.py'?".format(output_filename))
 
     with h5py.File(output_filename, 'a') as f:
-        jitter = f.attrs['jitter_m/s'] * u.m/u.s
+        # TODO:
+        # jitter = f.attrs['fixed_jitter'] * u.m/u.s
 
         if 'emcee' in f:
             if overwrite:
@@ -56,7 +64,6 @@ def main(data_file, cache_filename, pool, n_steps, overwrite=False, seed=42, hdf
             data = RVData.from_hdf5(f[hdf5_key])
         else:
             data = RVData.from_hdf5(f)
-    data.add_jitter(jitter)
 
     logger.debug("Reading cached sample(s) from file at '{}'".format(output_filename))
     opars = OrbitalParams.from_hdf5(output_filename)
@@ -142,7 +149,16 @@ if __name__ == "__main__":
     parser.add_argument("--name", dest="cache_name", default=None,
                         type=str, help="Name to use when saving the cache file.")
 
+    # TODO: add other jitter options from run-sampler.py
+    # THIS IS IGNORED!
+    parser.add_argument("--fixed-jitter", dest="fixed_jitter", default=None, type=str,
+                        help="Extra uncertainty to add in quadtrature to the RV measurement "
+                             "uncertainties. Must specify a number with units, e.g., '15 m/s'")
+
     args = parser.parse_args()
+
+    if args.fixed_jitter is not None:
+        raise NotImplementedError()
 
     # Set logger level based on verbose flags
     if args.verbosity != 0:
