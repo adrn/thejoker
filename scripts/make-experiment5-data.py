@@ -71,7 +71,9 @@ def main():
             data = RVData(t=t, rv=rv, stddev=rv_err)
             g = f.create_group(str(i+1))
             data.to_hdf5(g)
-            g.create_dataset('truth_vector', data=opars.pack())
+
+            g = f.create_group('truth')
+            opars.to_hdf5(g)
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
