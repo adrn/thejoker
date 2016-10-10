@@ -54,6 +54,18 @@ def test_orbitalparams(tmpdir):
 
         assert np.allclose(op1._P, op2._P)
 
+    # to_hdf5
+    with tempfile.NamedTemporaryFile(dir=str(tmpdir)) as fp:
+        with h5py.File(fp.name, 'w') as f:
+            op1.to_hdf5(f)
+        op2 = OrbitalParams.from_hdf5(fp.name)
+        assert np.allclose(op1._P, op2._P)
+
+    with tempfile.NamedTemporaryFile(dir=str(tmpdir)) as fp:
+        op1.to_hdf5(fp.name)
+        op2 = OrbitalParams.from_hdf5(fp.name)
+        assert np.allclose(op1._P, op2._P)
+
     # check pack()
     samples = op1.pack()
     assert samples.shape == (n_test,7)
