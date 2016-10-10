@@ -52,7 +52,9 @@ def main():
     data = RVData(t=bmjd, rv=rv, stddev=rv_err)
     with h5py.File(os.path.join(paths.root, "data", "experiment1.h5"), "w") as f:
         data.to_hdf5(f)
-        f.create_dataset('truth_vector', data=opars.pack())
+
+        g = f.create_group('truth')
+        opars.to_hdf5(g)
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
