@@ -10,7 +10,7 @@ import numpy as np
 import six
 
 # Project
-from ..util import quantity_from_hdf5
+from ..util import quantity_from_hdf5, quantity_to_hdf5
 from ..units import default_units
 
 class OrbitalParams(object):
@@ -93,6 +93,16 @@ class OrbitalParams(object):
 
         return cls(**kwargs)
 
+    def to_hdf5(self, f):
+        if isinstance(f, six.string_types):
+            with h5py.File(f, 'a') as g:
+                for key in self._name_to_unit.keys():
+                    quantity_to_hdf5(g, key, getattr(self, key))
+
+        else:
+            for key in self._name_to_unit.keys():
+                quantity_to_hdf5(f, key, getattr(self, key))
+
     def pack(self, units=None, plot_transform=False):
         """
         Pack the orbital parameters into a single array structure
@@ -122,6 +132,10 @@ class OrbitalParams(object):
         if plot_transform:
             # ln P in plots:
             idx = list(self._name_to_unit.keys()).index('P')
+            all_samples[:,idx] = np.log(all_samples[:,idx])
+
+            # ln s in plots:
+            idx = list(self._name_to_unit.keys()).index('jitter')
             all_samples[:,idx] = np.log(all_samples[:,idx])
 
         return all_samples
