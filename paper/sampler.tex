@@ -144,17 +144,17 @@ astrophysics in the last decades:
 They have permitted the discovery of the first planets around other stars,
 including especially the unanticipated but common ``hot Jupiters,''
 and have been used to discover or confirm hundreds
-of planets.
+of planets \citep[for a review, see][]{Udry:2007}.
 Radial velocity measurements have also been used to find substellar,
 degenerate, and black-hole companions to more normal stars, and hold
 the promise of delivering the full population statistics for binary
-(and trinary) star systems.
+(and trinary) star systems \citep[e.g.][]{Raghavan:2010,Tokovinin:2014,Troup:2016}.
 
-With many new stellar spectroscopic surveys operating or under
+With large stellar spectroscopic surveys operating or under
 construction, we expect to have good quality spectra for millions
 of stars in the next few years.
 Most of these surveys have at least some targets---and many have many
-targets---that are observed multiple times.
+targets---that are observed multiple times \citep[e.g.[]{Majewski:2015}
 These surveys can (as an auxilliary or primary goal of their observing
 strategies) generate discoveries of planetary, substellar, and stellar
 companions.
@@ -163,39 +163,42 @@ programs, and projects to refine precise stellar models.
 
 However, when radial-velocity observations are not designed with
 unambiguous detection and discovery in mind, usually there are
-multiple possible binary-star models that are consistent with any
-small number of radial-velocity measurements that show stellar
+multiple possible binary-star (orbit) models that are consistent with any
+modest number of radial-velocity measurements that show stellar
 acceleration.
 That is, a small number of radial velocity measurements~--~even when the
 uncertainties are small~--~will lead to posterior beliefs about companion
 orbits and masses that put substantial plausibility onto multiple
 qualitatively different solutions.
-In other words, modest numbers of radial-velocity measurements create a
-likelihood function that is highly multi-modal in the relevant parameter spaces
-(e.g., Keplerian orbital parameters).
-There are currently no methods known for exploring these highly multimodal
-functions and delivering correct posterior samplings and reliable
-probabilistic statements about detection and characterization.
+This is then reflected in a likelihood function that is highly multi-modal in
+the relevant parameter spaces (e.g., Keplerian orbital parameters).
+While the problem has of course been recognized for a long time, there are
+currently no methods known for exploring these highly multimodal functions and
+delivering correct posterior samplings and reliable probabilistic statements
+about detection and characterization.
 \todo{Why are we not happy with nested sampling?}
 
 Here we make an attempt at correcting this problem.
 Our approach is to build custom posterior sampling methods that capitalize on
 the structure of the binary-star (or star--exoplanet) kinematics to generate
-robust samplings with only modest computational cost.
+robust samplings also of multiple solutions at manageable computational cost.
 In what follows, we use the term ``binary'' for any system with an observed
 source (the primary, e.g., a star), whose radial velocity variations are
 explained through gravitational two-body interactions with another object (the
-companion, e.g., star, exoplanet, stellar remnant).
+companion, e.g., star, exoplanet, stellar remnant); i.e. we restrict our
+analysis to single-line spectroscopic binary systems.
 
 The structure of this \documentname\ is as follows:
-We state our assumptions, and demonstrate that we have a
-method that is correct under those assumptions.
+We state our assumptions and implementation approach, and demonstrate that we
+have a method that is not only robust, but essentially always correct under
+those assumptions.
 \todo{HOGG: I know that you like this ``provably correct'' terminology but I
 (DFM) really think it doesn't add anything to the discussion.}
 We perform experiments with the method to understand its properties and
 limitations.
 We finish by discussing the astrophysical applicability and potential of the
-method, and the changes we would have to make if we weakened our assumptions, or
+method.
+We discuss the changes we would have to make if we weakened our assumptions, or
 if we don't weaken our assumptions but they indeed prove to be far from correct.
 
 \section{Assumptions and method} \label{sec:method}
@@ -205,8 +208,14 @@ if we don't weaken our assumptions but they indeed prove to be far from correct.
 In order to set up a well-posed problem and build a path to a
 definite solution, we make a set of non-trivial assumptions about the
 stellar systems we will use and observations thereof.
+Ultimately, we assume that the radial velocity curve of a single-line spectroscopic binary system can be specified by six parameters
+(\citealt{Kepler:1609}). Here we adopt a parameterization similar to
+\citep{Murray:2010}: $P$, $\phi_0$, $\omega$,
+$e$, $\asini$, and $v_0$, which are the period, pericenter phase and argument, eccentricity, projected semi-major axis, and the barycenter velocity. As is well-known, this does not fully specify the binary system itself, because of
+the $\sin{i}$ and mass function degeneracies.
+To model this, we assume that
 \begin{itemize}\itemsep0ex  % <- #yourefired
-\item We assume that we have measurements of the radial velocity of a
+\item we have measurements of the radial velocity of a
   star, and that the time dependence of the expectation of that radial
   velocity is well described by the gravitational orbit of a pair of
   point masses (the two-body problem). We assume that the times are
@@ -214,37 +223,29 @@ stellar systems we will use and observations thereof.
   example, Solar-System barycenter Julian date).
   Here we only consider the case of a single-line spectroscopic binary system,
   where we do not have measurements of the companion's orbit.
-\item We assume that each star has exactly one companion, and that the
+\item  each star has exactly one companion, and that the
   radial-velocity measurements are not contaminated by nor affected by
   any other bodies. Since we permit the effective mass of the
   exactly-one companion to go to zero, this assumption is really that
   the star has zero or one companion.
-\item We assume that the noise contributions to individual
+\item the noise contributions to individual
   radial-velocity measurements are well described as draws from
   zero-mean normal (Gaussian) distributions with correctly known
   variances. We assume that there are no outliers.
-\item In addition to all these, we put particular, fairly sensible
+\item we can put a particular, fairly sensible
   prior probability density functions on all the orbital parameters,
   described below.
 \end{itemize}
-Each of these assumptions can be challenged: in particular we expect some stars
+Each of these assumptions could be challenged: in particular we expect some stars
 to have additional companions, and we expect there to be outliers and
 unaccounted sources of noise.
 We will return to these assumptions, and the consequences of relaxing them, in
 \sectionname~\ref{sec:discussion}.
 
-In the two-body celestial mechanics problem (\citealt{Kepler:1609}; and here we
-are working in a parameterization similar to that of \citealt{Murray:2010}), and
-under our above-stated assumptions, the radial-velocity expectation can be
-parameterized by six parameters, which we choose to be period $P$, projected
-semi-major axis of the primary $\asini$, a phase $\phi_0$ corresponding to a
-time of pericenter passage,\footnote{In our implementation, we subtract off the
-median time from our data before starting so this phase actually corresponds to
-the time of pericenter passage relative to the median time.} the eccentricity
-$e$, an argument of perihelion $\omega$, and a constant system barycenter radial
-velocity $v_0$.
-The radial velocity $v$ at time $t$ is then given by (see also
-equation~63 in \citealt{Murray:2010})
+The radial velocity $v$ at time\footnote{In our implementation, we subtract off
+the median time from our data before starting so this phase actually corresponds
+to the time of pericenter passage relative to the median time.} $t$ is then
+given by (see also equation~63 in \citealt{Murray:2010})
 \begin{equation}
   v(t;\bs{\theta}) = v_0 + K\,[\cos(\omega + f) + e\,\cos\omega]
 \end{equation}
@@ -264,11 +265,14 @@ Of these parameters, four ($P$, $\phi_0$, $e$, $\omega$) are
 non-linearly related to the radial-velocity expectation, and two
 ($\asini$, $v_0$) are linearly related.
 
-Fundamentally, our method is to perform \emph{Simple Monte Carlo} in
-the non-linear parameters, and analytically marginalize over the linear
-parameters.
-The method capitalizes on the following aspects of the problem
-structure:
+With such a parameterization, the problem is then to construct the posterior pdf
+of these six parameters, accounting for the fact that the support of this pdf
+may have very complex, multi-modal structure.
+
+Fundamentally, the method we describe and demonstrate here is to perform
+\emph{Simple Monte Carlo} in the non-linear parameters, and analytically
+marginalize over the two linear parameters.
+The method capitalizes on the following aspects of the problem structure:
 \begin{itemize}\itemsep0ex
 \item There are both linear and non-linear parameters, and we can
   treat them differently; in particular, it is possible to
@@ -283,6 +287,8 @@ structure:
 Simple Monte Carlo is a method in which the prior probability density function
 (prior pdf) is densely sampled, and then many of the samples are rejected by a
 rejection-sampling step that uses the likelihood as the rejection scalar.
+\todo{HWR: is that referenceable? Or is it just lore? I am actually more
+familiar with the term `rejection sampling'}
 The rejection step works as follows:
 \begin{enumerate}\itemsep0ex
 \item For each sample $j$ in the prior pdf sampling of the four non-linear
@@ -312,13 +318,17 @@ Our prior pdf in the non-linear parameters is very simple:
 where $\mathcal{U}(x_1, x_2)$ is the uniform distribution over the
 domain $(x_1, x_2)$ and the prior pdf over eccentricity is the Beta
 distribution with $a=0.867$, $b=3.03$ \citep{Kipping:2013}.
+
 In different experiments we use different values for hyperparameters
 $P_{\rm min}$ and $P_{\rm max}$; we are explicit about our choices in
 each of the experiments described below.
 We sample the prior pdf directly and explicitly with standard
 \project{numpy.random} calls (\citealt{Van-der-Walt:2011}).
-In practice, we usually required to take $J=2^{28}$ samples in the prior-pdf
-sampling; that's about a quarter billion samples. % Holy fuck that's a lot!
+
+Next, we have to choose a number of samples that samples the prior sufficiently
+densely.
+In practice, we are usually required to take $J=2^{28}$ samples in the prior-pdf
+sampling; indeed, a quarter billion samples. % Holy fuck that's a lot!
 
 The unmarginalized likelihood function $L$ is
 \begin{equation}
@@ -360,35 +370,33 @@ see \sectionname~\ref{sec:discussion}).
 These $Q_j$ are used in the rejection sampling algorithm described above
 as Simple Monte Carlo.
 
-There are three possible outcomes at the end of the rejection
-sampling, based on two thresholds:
+There are three possible outcomes of this rejection sampling, based on two
+thresholds:
 We set a minimum number of samples $M_{\rm min}=128$.
 We also set a period resolution $\Delta = [4\,P^2] / [2\pi\,T]$, (with
 $P$ set to the median period across the surviving samples and $T$ set to
-the time span of the data; max minus min).
+the epoch span of the data).
 This $\Delta$ is an expansion of the period
-resolution expected from an information-theory (sampling theorems) perspective.
+resolution expected from an information-theory (sampling theorems) perspective
+\todo{~HWR: this previous sentence sounds cool; what does it mean?}.
 The three possible outcomes are:
 \begin{itemize}\itemsep0ex
 \item $M\geq M_{\rm min}$ samples survive the rejection.
   In this case, we are done.
 \item $M<M_{\rm min}$ samples survive the rejection, and these samples
   have a root-variance (rms) in the period parameter $P$ that is
-  smaller than $\Delta$.
-  In this case, we use the surviving samples (or sample) to
+  smaller than $\Delta$; i.e. they give no indication of period ambiguity.
+  In that case we assume that the posterior {\it pdf} is unimodal, and
+  we use the surviving samples (or sample) to
   initialize a MCMC sampling using the \emcee\ package
   (\citealt{Foreman-Mackey:2013}).
-  We sample the
-  prior densely enough \todo{define!} initially that if only a few samples survive,
-  we are fairly confident that the data are informative enough that
-  the posterior pdf is approximately unimodal for our purposes. That's
-  an assumption!
+
 \item $M<M_{\rm min}$ samples survive the rejection, and these samples
   span a period range larger than $\Delta$.
   In this case, we iterate the Simple
   Monte Carlo, starting from new prior-pdf samplings, concatenating
   the surviving samples, until the full set of surviving samples is
-  larger than $M_{\rm min}$. This is expensive!
+  larger than $M_{\rm min}$. This is expensive!\todo{~HWR: What exactly does `iterate' mean here? What do you do operationally? How many samples, over which span?..}
 \end{itemize}
 When we trigger the intialization and operation of \emcee, we do the following:
 \begin{enumerate}\itemsep0ex
@@ -402,6 +410,13 @@ When we trigger the intialization and operation of \emcee, we do the following:
 \end{enumerate}
 This procedure ensures that no matter what path we take, we end up with
 at least $M_{\rm min}$ samples from the posterior for any input data.
+
+Within the initial assumptions, this procedure results basically inevitably in a
+correct parameter {\it pdf}, which is borne out in the numerical experiments in
+the next section.
+\todo{~HWR: the claim that this ALWAYS works is almost as much rooted in the
+logic of the method than in the experiments. Is it not that our pdf sampling is
+sufficiently dense that you cannot miss a relevant part of solution space?}
 
 
 \section{Experiments and results}
