@@ -75,8 +75,6 @@ def make_rv_curve_figure(data, all_pars, truth_pars=None, rv_unit=u.km/u.s,
     for ax in fig.axes:
         ax.set_rasterization_zorder(-1)
 
-    fig.tight_layout()
-
     return fig
 
 def main():
@@ -111,6 +109,8 @@ def main():
     # Make RV curve + 2 projections figures
     fig = make_rv_curve_figure(data, [pars1, pars2], truth_pars=truth_pars,
                                units=units, rv_lim=(21, 67))
+    fig.axes[0].set_title("Experiment 1")
+    fig.tight_layout()
     fig.savefig(join(paths.figures, 'exp1-rv-curves.pdf'), dpi=128)
 
     # Make a corner plot of all samples
@@ -129,9 +129,13 @@ def main():
     fig1 = corner.corner(np.delete(samples1, s_idx, axis=1), range=np.delete(ranges, s_idx, axis=0),
                          truths=np.delete(truth_vec, s_idx), labels=np.delete(labels, s_idx),
                          **corner_style)
+    fig1.subplots_adjust(left=0.08, bottom=0.08)
+    fig1.suptitle("Experiment 1a: fixed jitter", fontsize=26)
     fig1.savefig(join(paths.figures, 'exp1-corner-a.pdf'), dpi=128)
 
     fig2 = corner.corner(samples2, range=ranges, truths=truth_vec, labels=labels, **corner_style)
+    fig2.subplots_adjust(left=0.08, bottom=0.08)
+    fig2.suptitle("Experiment 1b: sample jitter", fontsize=26)
     fig2.savefig(join(paths.figures, 'exp1-corner-b.pdf'), dpi=128)
 
 if __name__ == '__main__':
