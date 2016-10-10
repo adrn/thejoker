@@ -6,7 +6,7 @@ __author__ = "adrn <adrn@astro.columbia.edu>"
 import astropy.units as u
 import numpy as np
 
-__all__ = ['find_t0', 'quantity_from_hdf5']
+__all__ = ['find_t0', 'quantity_from_hdf5', 'quantity_to_hdf5']
 
 def find_t0(phi0, P, epoch):
     """
@@ -63,3 +63,26 @@ def quantity_from_hdf5(f, key, n=None):
         return f[key][:n] * unit
     else:
         return f[key][:] * unit
+
+def quantity_to_hdf5(f, name, q):
+    """
+    Turn an Astropy Quantity object into something we can write out to
+    an HDF5 file.
+
+    Parameters
+    ----------
+    f : :class:`h5py.File`, :class:`h5py.Group`, :class:`h5py.DataSet`
+    key : str
+        The name.
+    q : float, `astropy.units.Quantity`
+        The quantity.
+
+    """
+
+    if hasattr(q, 'unit'):
+        f[name] = q.value
+        f[name].attrs['unit'] = str(q.unit)
+
+    else:
+        f[name] = q
+        f[name].attrs['unit'] = ""
