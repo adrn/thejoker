@@ -8,7 +8,6 @@ import astropy.units as u
 import h5py
 import matplotlib.pyplot as plt
 import numpy as np
-import matplotlib.gridspec as gridspec
 
 # Project
 from thejoker import Paths
@@ -20,93 +19,63 @@ from thejoker.plot import plot_rv_curves, plot_corner, _truth_color
 
 plt.style.use('../thejoker/thejoker.mplstyle')
 
-def make_the_figure(data, pars, samples, truth_pars=None, rv_unit=u.km/u.s,
-                    n_plot_curves=128, title='',
-                    y_name='P', x1_name='ecc', x2_name='K',
-                    rv_lim=None, y_lim=None, x1_lim=None, x2_lim=None,
-                    units=None):
+def make_rv_curve_figure(data, all_pars, truth_pars=None, rv_unit=u.km/u.s,
+                         n_plot_curves=128, titles=None,
+                         rv_lim=None, units=None):
 
-    index_map = dict([(key, i) for i,key in enumerate(pars._name_to_unit.keys())])
-    i_y = index_map[y_name]
-    i_x1 = index_map[x1_name]
-    i_x2 = index_map[x2_name]
+    if isinstance(all_pars, OrbitalParams):
+        all_pars = [all_pars]
+    n_pars = len(all_pars)
 
     # custom units to plot with
     if units is None:
-        units = pars._name_to_unit.copy()
+        units = all_pars[0]._name_to_unit.copy()
 
-    fig = plt.figure(figsize=(8,6.5))
+    # take t_grid from data with max extent
+    min_t = data.t.mjd.min()
+    max_t = data.t.mjd.max()
 
-    gs = gridspec.GridSpec(2, 2)
-
-    # First, plot the RV curves on the top axis
-    ax = fig.add_subplot(gs[0, :])
-    ax.set_title(title)
-
-    dmjd = data.t.mjd.max() - data.t.mjd.min()
-    t_grid = np.linspace(data.t.mjd.min() - 0.25*dmjd,
-                         data.t.mjd.max() + 0.25*dmjd,
+    dmjd = max_t - min_t
+    t_grid = np.linspace(min_t - 0.25*dmjd,
+                         max_t + 0.25*dmjd,
                          1024)
 
-    plot_rv_curves(pars[:128], t_grid, rv_unit=rv_unit,
-                   ax=ax, plot_kwargs={'color': '#888888', 'zorder': -100, 'marker': ''})
+    fig,axes = plt.subplots(n_pars, 1, figsize=(6.5, 3*n_pars), sharex=True, sharey=True)
 
-    data.plot(ax=ax, rv_unit=rv_unit, ecolor='k', markersize=3,
-              elinewidth=1, alpha=1., zorder=100)
-    ax.set_xlim(t_grid.min(), t_grid.max())
+    for i in range(n_pars):
+        ax = axes[i]
+        pars = all_pars[i]
 
-    if rv_lim is None:
-        rv_lim = (truth_pars.v0.to(rv_unit).value - 20, truth_pars.v0.to(rv_unit).value + 20)
-    ax.set_ylim(rv_lim)
+        if titles is not None:
+            ax.set_title(titles[i])
 
-    # Projections of the posterior samples:
-    ax2 = fig.add_subplot(gs[1,0])
-    ax3 = fig.add_subplot(gs[1,1])
+        plot_rv_curves(pars[:n_plot_curves], t_grid, rv_unit=rv_unit, add_labels=False,
+                       ax=ax, plot_kwargs={'color': '#888888', 'zorder': -100, 'marker': ''})
 
-    style = dict(alpha=0.25, marker='.', linestyle='none', zorder=-100, color='#888888')
-    ax2.plot(samples[:,i_x1], samples[:,i_y], **style)
-    ax3.plot(samples[:,i_x2], samples[:,i_y], **style)
+        data.plot(ax=ax, rv_unit=rv_unit, ecolor='k', markersize=3,
+                  elinewidth=1, alpha=1., zorder=100)
+        ax.set_xlim(t_grid.min(), t_grid.max())
 
-    # -------------------------------------------------------------
-    # now plot the truth:
-    truth_rv = truth_pars.rv_orbit(0).generate_rv_curve(t_grid)
-    truth_vec = truth_pars.pack(plot_transform=True, units=units)[0]
-    ax.plot(t_grid, truth_rv.to(rv_unit).value, linestyle='--',
-            marker='', linewidth=1, alpha=0.8, color=_truth_color)
-    ax2.scatter(truth_vec[i_x1], truth_vec[i_y], marker='+', color=_truth_color, s=40, alpha=0.8)
-    ax3.scatter(truth_vec[i_x2], truth_vec[i_y], marker='+', color=_truth_color, s=40, alpha=0.8)
+        if rv_lim is None:
+            rv_lim = (truth_pars.v0.to(rv_unit).value - 20,
+                      truth_pars.v0.to(rv_unit).value + 20)
+        ax.set_ylim(rv_lim)
 
-    if y_lim is None:
-        dy = samples[:,i_y].max() - samples[:,i_y].min()
-        y_lim = (samples[:,i_y].min() - dy*0.05,
-                 samples[:,i_y].max() + dy*0.05)
+        if truth_pars is not None:
+            # now plot the truth:
+            truth_rv = truth_pars.rv_orbit(0).generate_rv_curve(t_grid)
+            ax.plot(t_grid, truth_rv.to(rv_unit).value, linestyle='--',
+                    marker='', linewidth=1, alpha=0.8, color=_truth_color)
 
-    if x1_lim is None:
-        dx1 = samples[:,i_x1].max() - samples[:,i_x1].min()
-        x1_lim = (samples[:,i_x1].min() - dx1*0.05,
-                  samples[:,i_x1].max() + dx1*0.05)
+        unit_label = ' [{}]'.format(rv_unit._repr_latex_())
+        ax.set_ylabel('RV{}'.format(unit_label))
 
-    if x2_lim is None:
-        dx2 = samples[:,i_x2].max() - samples[:,i_x2].min()
-        x2_lim = (samples[:,i_x2].min() - dx2*0.05,
-                  samples[:,i_x2].max() + dx2*0.05)
-
-    ax2.set_xlim(x1_lim)
-    ax2.set_ylim(y_lim)
-    ax3.set_xlim(x2_lim)
-    ax3.set_ylim(y_lim)
-    ax3.set_yticklabels([])
-
-    ax2.set_xlabel(pars._latex_labels[i_x1])
-    ax2.set_ylabel(pars._latex_labels[i_y])
-    ax3.set_xlabel(pars._latex_labels[i_x2])
+    ax.set_xlabel('BMJD')
 
     for ax in fig.axes:
         ax.set_rasterization_zorder(-1)
 
     fig.tight_layout()
-
-    fig.subplots_adjust(hspace=0.5)
 
     return fig
 
@@ -137,30 +106,23 @@ def main():
         samples2 = pars2.pack(plot_transform=True, units=units)
 
     lims = dict(rv_lim=(21, 67), y_lim=(2.55, 6.45),
-                x1_lim=(5, 35), x2_lim=(-0.025, 1.025))
+                x1_lim=(5, 25), x2_lim=(-0.025, 1.025))
 
     # Make RV curve + 2 projections figures
-    fig1 = make_the_figure(data, pars1, samples1, truth_pars=truth_pars,
-                           y_name='P', x1_name='K', x2_name='ecc',
-                           title="Experiment1 (a)", units=units, **lims)
-
-    fig2 = make_the_figure(data, pars2[128:], samples2, truth_pars=truth_pars,
-                           y_name='P', x1_name='K', x2_name='ecc',
-                           title="Experiment1 (b)", units=units, **lims)
-
-    fig1.savefig(join(paths.figures, 'exp1-rv-curves-a.pdf'), dpi=128)
-    fig2.savefig(join(paths.figures, 'exp1-rv-curves-b.pdf'), dpi=128)
+    fig = make_rv_curve_figure(data, [pars1, pars2], truth_pars=truth_pars,
+                               units=units, rv_lim=(21, 67))
+    fig.savefig(join(paths.figures, 'exp1-rv-curves.pdf'), dpi=128)
 
     # Make a corner plot of all samples
     _med_v0 = np.median(samples1[:,-1])
     _mad_v0 = np.median(np.abs(samples1[:,-1] - _med_v0))
-    ranges = [lims['y_lim'], lims['x2_lim'], (0,360), (0,360), (-3., 2.5),
+    ranges = [lims['y_lim'], lims['x2_lim'], (0,360), (0,360), (-3.5, 3.5),
               lims['x1_lim'], (_med_v0 - 5*_mad_v0, _med_v0 + 5*_mad_v0)]
     labels = [r'$\ln \left(\frac{P}{\rm day}\right)$', '$e$', r'$\omega$ [deg]', r'$\phi_0$ [deg]',
               r'$\ln \left(\frac{s}{\rm m\,s^{-1}}\right)$', r'$K$ [km s$^{-1}$]', '$v_0$ [km s$^{-1}$]']
 
-    corner_style = dict(alpha=0.75, truth_color=_truth_color, data_kwargs=dict(markersize=3.),
-                        plot_contours=False, plot_density=False, bins=32, color='#666666')
+    corner_style = dict(truth_color=_truth_color, data_kwargs=dict(alpha=0.5, markersize=2.),
+                        plot_contours=False, plot_density=False, bins=32, color='#555555')
 
     # remove jitter from top plots
     s_idx = 4
