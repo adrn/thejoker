@@ -15,16 +15,16 @@ module load openmpi/gcc/1.10.2/64
 source activate thejoker
 
 # Run experiment 1!
-python make-experiment1-data.py -s 1234
+# python make-experiment1-data.py -s 1234
 
-srun python run-sampler.py -v --mpi -o \
--n 2**28 -s 42 \
--f ../data/experiment1.h5 \
---name="experiment1-fixed-jitter.h5" \
---fixed-jitter='0 m/s'
+# srun python run-sampler.py -v --mpi -o \
+# -n 2**28 -s 42 \
+# -f ../data/experiment1.h5 \
+# --name="experiment1-fixed-jitter.h5" \
+# --fixed-jitter='0 m/s'
 
 srun python run-sampler.py -v --mpi -o \
 -n 2**28 -s 42 \
 -f ../data/experiment1.h5 \
 --name="experiment1-sample-jitter.h5" \
---log-jitter2-mean=0 --log-jitter2-std=4
+--log-jitter2-mean=0 --log-jitter2-std=8
