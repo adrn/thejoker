@@ -25,7 +25,7 @@ from thejoker.units import default_units
 def main():
 
     # high-eccentricity orbit with reasonable or randomly chosen parameters
-    opars = OrbitalParams(P=103.71*u.day, K=8.134*u.km/u.s, ecc=0.313,
+    opars = OrbitalParams(P=103.71*u.day, K=1.134*u.km/u.s, ecc=0.313,
                           omega=np.random.uniform(0, 2*np.pi)*u.rad,
                           phi0=np.random.uniform(0, 2*np.pi)*u.rad,
                           v0=np.random.normal(0, 30) * u.km/u.s)
@@ -34,6 +34,7 @@ def main():
     print("omega:", orbit.pars.omega.to(u.degree))
     print("phi0:", orbit.pars.phi0.to(u.degree))
     print("v0:", orbit.pars.v0.to(u.km/u.s))
+    print("asini:", orbit.pars.asini.to(u.Rsun))
 
     n_obs = 5 # MAGIC NUMBER: number of observations
 
@@ -45,9 +46,14 @@ def main():
     rv = np.random.normal(rv.to(default_units['v0']).value,
                           rv_err.to(default_units['v0']).value) * default_units['v0']
 
-    data = RVData(t=bmjd, rv=rv, stddev=rv_err/8)
     with h5py.File(os.path.join(paths.root, "data", "experiment2.h5"), "w") as f:
-        data.to_hdf5(f)
+        data1 = RVData(t=bmjd, rv=rv, stddev=rv_err)
+        g = f.create_group('a')
+        data1.to_hdf5(g)
+
+        data2 = RVData(t=bmjd, rv=rv, stddev=rv_err/8)
+        g = f.create_group('b')
+        data2.to_hdf5(g)
 
         g = f.create_group('truth')
         opars.to_hdf5(g)
