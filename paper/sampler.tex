@@ -35,9 +35,9 @@
 \newcommand{\documentname}{\textsl{Article}}
 \newcommand{\sectionname}{Section}
 \newcommand{\figname}{Figure}
+\newcommand{\eqname}{Equation}
 
 % define macros for math
-\newcommand{\meterspersecond}{\mathrm{m\,s^{-1}}}
 \newcommand{\asini}{\ensuremath{a_1\,\sin i}}
 \newcommand{\given}{\,|\,}
 \newcommand{\dd}{\mathrm{d}}
@@ -47,6 +47,10 @@
 \newcommand{\rsun}{\mathrm{R}_\odot}
 \newcommand{\kms}{\mathrm{km}~\mathrm{s}^{-1}}
 \newcommand{\bs}[1]{\boldsymbol{#1}}
+
+% For experiments
+\newcounter{expcounter}
+\stepcounter{expcounter}
 
 % TODO
 \newcommand{\todo}[1]{{\color{red}TODO: #1}}
@@ -137,24 +141,23 @@ uncertainties.
 
 \section{Introduction} \label{sec:intro}
 
-\todo{DFM, HWR: This section needs work, and references! Any suggestions would
-be great.}
 Precise radial-velocity measurements of stars have transformed
 astrophysics in the last decades:
 They have permitted the discovery of the first planets around other stars,
 including especially the unanticipated but common ``hot Jupiters,''
 and have been used to discover or confirm hundreds
-of planets \citep[for a review, see][]{Udry:2007}.
+of planets (for a review, see \citealt{Udry:2007}).
 Radial velocity measurements have also been used to find substellar,
 degenerate, and black-hole companions to more normal stars, and hold
 the promise of delivering the full population statistics for binary
-(and trinary) star systems \citep[e.g.][]{Raghavan:2010,Tokovinin:2014,Troup:2016}.
+(and trinary) star systems (e.g., \citealt{Raghavan:2010,
+Tokovinin:2014,Troup:2016}).
 
 With large stellar spectroscopic surveys operating or under
 construction, we expect to have good quality spectra for millions
 of stars in the next few years.
 Most of these surveys have at least some targets---and many have many
-targets---that are observed multiple times \citep[e.g.[]{Majewski:2015}
+targets---that are observed multiple times (e.g., \citealt{Majewski:2015}).
 These surveys can (as an auxilliary or primary goal of their observing
 strategies) generate discoveries of planetary, substellar, and stellar
 companions.
@@ -203,17 +206,19 @@ if we don't weaken our assumptions but they indeed prove to be far from correct.
 
 \section{Assumptions and method} \label{sec:method}
 
-\todo{This section also needs work, and references}
-
-In order to set up a well-posed problem and build a path to a
-definite solution, we make a set of non-trivial assumptions about the
-stellar systems we will use and observations thereof.
-Ultimately, we assume that the radial velocity curve of a single-line spectroscopic binary system can be specified by six parameters
-(\citealt{Kepler:1609}). Here we adopt a parameterization similar to
-\citep{Murray:2010}: $P$, $\phi_0$, $\omega$,
-$e$, $\asini$, and $v_0$, which are the period, pericenter phase and argument, eccentricity, projected semi-major axis, and the barycenter velocity. As is well-known, this does not fully specify the binary system itself, because of
-the $\sin{i}$ and mass function degeneracies.
-To model this, we assume that
+In order to set up a well-posed problem and build a path to a definite solution,
+we make a set of non-trivial assumptions about the stellar systems we will use
+and observations thereof.
+Ultimately, we assume that the radial velocity curve of a single-line
+spectroscopic binary system can be specified by six parameters
+(\citealt{Kepler:1609}).
+Here we adopt a parameterization similar to \citealt{Murray:2010}:
+$P$, $e$, $\phi_0$, $\omega$, $K$, and $v_0$, which are the period,
+eccentricity, pericenter phase and argument, velocity semi-amplitude, and the
+barycenter velocity.
+As is well-known, this does not fully specify the binary system itself, because
+of the $\sin{i}$ and mass function degeneracies.
+To proceed, we assume that
 \begin{itemize}\itemsep0ex  % <- #yourefired
 \item we have measurements of the radial velocity of a
   star, and that the time dependence of the expectation of that radial
@@ -228,10 +233,11 @@ To model this, we assume that
   any other bodies. Since we permit the effective mass of the
   exactly-one companion to go to zero, this assumption is really that
   the star has zero or one companion.
-\item the noise contributions to individual
-  radial-velocity measurements are well described as draws from
-  zero-mean normal (Gaussian) distributions with correctly known
-  variances. We assume that there are no outliers.
+\item the noise contributions to individual radial-velocity measurements are
+  well described as draws from zero-mean normal (Gaussian) distributions with
+  correctly known variances convolved with a zero-mean normal distribution with
+  an additional ``jitter'' variance, $s^2$. We assume that there are no outliers
+  beyond this flexible noise model.
 \item we can put a particular, fairly sensible
   prior probability density functions on all the orbital parameters,
   described below.
@@ -242,31 +248,32 @@ unaccounted sources of noise.
 We will return to these assumptions, and the consequences of relaxing them, in
 \sectionname~\ref{sec:discussion}.
 
-The radial velocity $v$ at time\footnote{In our implementation, we subtract off
-the median time from our data before starting so this phase actually corresponds
-to the time of pericenter passage relative to the median time.} $t$ is then
-given by (see also equation~63 in \citealt{Murray:2010})
+The radial velocity $v$ at time $t$ is then given by (see also \eqname~63 in
+\citealt{Murray:2010})
 \begin{equation}
   v(t;\bs{\theta}) = v_0 + K\,[\cos(\omega + f) + e\,\cos\omega]
 \end{equation}
-where the $\bs{\theta}$ represents the free parameters, $K$ is the velocity
-semi-amplitude, $f$ is the true anomaly given by
-\begin{align}
-  K &= \frac{2\pi\,\asini}{P\,\sqrt{1-e^2}}\\
-  \cos f &= \frac{\cos E - e}{1 - e\, \cos E}
-\end{align}
+where the $\bs{\theta}$ represents the free parameters, $f$ is the true anomaly
+given by
+\begin{equation}
+  \cos f = \frac{\cos E - e}{1 - e\, \cos E}
+\end{equation}
 and the eccentric anomaly, $E$, must be solved for with the mean
 anomaly, $M$,
 \begin{align}
   M &= \frac{2\pi\, t}{P} - \phi_0\\
   M &= E - e\,\sin E \quad .
 \end{align}
-Of these parameters, four ($P$, $\phi_0$, $e$, $\omega$) are
-non-linearly related to the radial-velocity expectation, and two
-($\asini$, $v_0$) are linearly related.
+Of these parameters, four ($P$, $e$, $\omega$, $\phi_0$) are non-linearly
+related to the radial-velocity expectation, and two ($K$, $v_0$) are
+linearly related.
+We additionally allow the jitter, $s^2$, to vary to partially account for
+imperfect knowledge of the radial velocity uncertainties and any intrinsic
+radial-velocity scatter; the jitter must also be treated as a non-linear
+parameter.
 
 With such a parameterization, the problem is then to construct the posterior pdf
-of these six parameters, accounting for the fact that the support of this pdf
+for these seven parameters, accounting for the fact that the support of this pdf
 may have very complex, multi-modal structure.
 
 Fundamentally, the method we describe and demonstrate here is to perform
@@ -284,12 +291,11 @@ The method capitalizes on the following aspects of the problem structure:
   modes in the multimodal posterior pdf.
 \end{itemize}
 
-Simple Monte Carlo is a method in which the prior probability density function
-(prior pdf) is densely sampled, and then many of the samples are rejected by a
-rejection-sampling step that uses the likelihood as the rejection scalar.
-\todo{HWR: is that referenceable? Or is it just lore? I am actually more
-familiar with the term `rejection sampling'}
-The rejection step works as follows:
+The method we refer to as Simple Monte Carlo is a specific case of
+rejection-sampling (\citealt{TODO}) in which we densely sample from the prior
+probability density function (prior pdf) and use the likelihood evaluated at
+these samples as the rejection scalar.
+In detail, the rejection step works as follows:
 \begin{enumerate}\itemsep0ex
 \item For each sample $j$ in the prior pdf sampling of the four non-linear
   parameters, there is a (linear, not logarithmic) likelihood value $L_j$ (a
@@ -311,43 +317,45 @@ constitute a fair sampling from the posterior pdf.
 Our prior pdf in the non-linear parameters is very simple:
 \begin{align}
     p(\ln P) &= \mathcal{U}(\ln P_{\rm min}, \ln P_{\rm max})\\
+    p(e) &= {\rm Beta}(a, b) = \frac{\Gamma(a+b)}{\Gamma(a) \, \Gamma(b)} \, e^{a-1} \, [1 - e]^{b-1}\\
     p(\omega) &= \mathcal{U}(0, 2\pi) ~ [{\rm rad}]\\
     p(\phi_0) &= \mathcal{U}(0, 2\pi) ~ [{\rm rad}]\\
-    p(e) &= {\rm Beta}(a, b) = \frac{\Gamma(a+b)}{\Gamma(a) \, \Gamma(b)} \, e^{a-1} \, [1 - e]^{b-1}
+    p(\ln s^2) &= \mathcal{N}(\mu_s, \sigma^2_s)
 \end{align}
-where $\mathcal{U}(x_1, x_2)$ is the uniform distribution over the
-domain $(x_1, x_2)$ and the prior pdf over eccentricity is the Beta
+where $\mathcal{U}(x_1, x_2)$ is the uniform distribution over the domain $(x_1,
+x_2)$, $\mathcal{N}(\mu, \sigma^2)$ is the normal distribution with mean $\mu$
+and variance $\sigma^2$, and the prior pdf over eccentricity is the Beta
 distribution with $a=0.867$, $b=3.03$ \citep{Kipping:2013}.
 
-In different experiments we use different values for hyperparameters
-$P_{\rm min}$ and $P_{\rm max}$; we are explicit about our choices in
-each of the experiments described below.
+In \sectionname~\ref{sec:experiments} or in the subsections specific to the
+different experiments we specify the values for hyperparameters $P_{\rm min}$,
+$P_{\rm max}$, $\mu_s$, and $\sigma^2_s$.
+In practice, the choice of $\mu_s$ and $\sigma^2_s$ can be tuned appropriately
+depending on knowledge about intrinsic variability of the source or suspicions
+about the reported uncertainties.
 We sample the prior pdf directly and explicitly with standard
 \project{numpy.random} calls (\citealt{Van-der-Walt:2011}).
-
-Next, we have to choose a number of samples that samples the prior sufficiently
-densely.
-In practice, we are usually required to take $J=2^{28}$ samples in the prior-pdf
-sampling; indeed, a quarter billion samples. % Holy fuck that's a lot!
+In practice, we are usually required to take around $J=2^{28}$ samples (indeed,
+a quarter billion samples) from the prior-pdf to produce sufficient final
+samplings; in each experiment below, we state  the total number of prior samples
+generated and the number of surviving samples.
 
 The unmarginalized likelihood function $L$ is
 \begin{equation}
-\ln L = -\frac{1}{2}\,\sum_{n=1}^N \frac{[v_n - v(t_n;\bs{\theta})]^2}{\sigma_n^2}
- + \mathrm{constant}
+\ln L = -\frac{1}{2}\,\sum_{n=1}^N \left[\frac{[v_n - v(t_n;\bs{\theta})]^2}{\sigma_n^2 + s^2}
+ -\ln \left(s^2 + \sigma_n^2\right) \right] + \mathrm{constant}
 \end{equation}
-where $n$ indexes the individual data points $v_n$, $v(t)$ is the
-radial velocity prediction at time $t$ given the parameters $\bs{\theta}$, the
-data-point times are the $t_n$, and $\sigma_n^2$ is the (presumed
-correctly known) Gaussian noise variance for data point $n$.
-Note that the form of this likelihood function is set entirely by
-the assumptions, given above.
+where $n$ indexes the individual data points $v_n$, $v(t)$ is the radial
+velocity prediction at time $t$ given the orbital parameters $\bs{\theta}$, the
+data-point times are the $t_n$, and $\sigma_n^2$ is the Gaussian noise variance
+for data point $n$.
+Note that the form of this likelihood function is set entirely by the
+assumptions, given above.
 
-We rejection-sample, however, using a marginalized likelihood, where
-we analytically marginalize out the linear parameters ($\asini$,
-$v_0$).
-We construct a $N\times 2$ design matrix consisting of a column of
-unit-$[\asini]$ predictions (given the non-linear parameters) and a
-column of ones.
+We rejection-sample, however, using a marginalized likelihood, where we
+analytically marginalize out the linear parameters ($K$, $v_0$).
+We construct a $N \times 2$ design matrix consisting of a column of unit-$[K]$
+predictions (given the non-linear parameters) and a column of ones.
 We perform standard linear least-square fitting with this design
 matrix to obtain the best-fit values for the two linear parameters,
 and the standard $2\times 2$ linear-fitting covariance matrix $C_j$ for their
@@ -355,7 +363,8 @@ uncertainties.
 With these, we can construct---for each prior sample---the marginalized
 likelihood $Q_j$
 \begin{equation}
-\ln Q_j = -\frac{1}{2}\,\sum_{n=1}^N \frac{[v_n - v(t_n;\bs{\theta}_j)]^2}{\sigma_n^2} -\frac{1}{2}\,\ln ||C_j||
+\ln Q_j = -\frac{1}{2}\,\sum_{n=1}^N \left[\frac{[v_n - v(t_n;\bs{\theta})]^2}{\sigma_n^2 + s^2}
+ -\ln \left(s^2 + \sigma_n^2\right) \right] -\frac{1}{2}\,\ln ||C_j||
  + \mathrm{constant}
 \end{equation}
 where the prediction $v(t_n;\bs{\theta}_j)$ is taken at the best-fit values of
@@ -383,28 +392,26 @@ The three possible outcomes are:
 \begin{itemize}\itemsep0ex
 \item $M\geq M_{\rm min}$ samples survive the rejection.
   In this case, we are done.
-\item $M<M_{\rm min}$ samples survive the rejection, and these samples
-  have a root-variance (rms) in the period parameter $P$ that is
-  smaller than $\Delta$; i.e. they give no indication of period ambiguity.
-  In that case we assume that the posterior {\it pdf} is unimodal, and
-  we use the surviving samples (or sample) to
-  initialize a MCMC sampling using the \emcee\ package
-  (\citealt{Foreman-Mackey:2013}).
-
+\item $M<M_{\rm min}$ samples survive the rejection, and these samples have a
+  root-variance (rms) in the period parameter $P$ that is smaller than $\Delta$
+  (i.e. they give no indication of period ambiguity).
+  In this case we assume that the posterior pdf is unimodal, and we use the
+  surviving samples (or sample) to initialize a MCMC sampling using the \emcee\
+  package (\citealt{Foreman-Mackey:2013}).
 \item $M<M_{\rm min}$ samples survive the rejection, and these samples
   span a period range larger than $\Delta$.
-  In this case, we iterate the Simple
-  Monte Carlo, starting from new prior-pdf samplings, concatenating
-  the surviving samples, until the full set of surviving samples is
-  larger than $M_{\rm min}$. This is expensive!\todo{~HWR: What exactly does `iterate' mean here? What do you do operationally? How many samples, over which span?..}
+  In this case, we iterate the Simple Monte Carlo procedure: We generate new
+  prior-pdf samplings and rejection sample until the number of surviving samples
+  is larger than $M_{\rm min}$.
+  This is expensive.
 \end{itemize}
 When we trigger the intialization and operation of \emcee, we do the following:
 \begin{enumerate}\itemsep0ex
 \item Randomly generate $M_{\rm min}$ sets of parameters $\bs{\theta}_m$
   (linear and nonlinear parameters) in a small, Gaussian ball around
   the highest-$Q_j$ sample from the Simple Monte Carlo.
-\item Run \emcee\ on this ensemble as per the instructions written on the side
-  of the \emcee\ packaging (\citealt{Foreman-Mackey:2013}) for $2^{16}$ steps.
+\item Run \emcee\ on this ensemble (with $M_{\rm min}$ walkers) for $2^{16}$
+  steps.
 \item Take the final state of the $M_{\rm min}$-element ensemble as a
   fair sampling of the posterior pdf.
 \end{enumerate}
@@ -419,9 +426,10 @@ logic of the method than in the experiments. Is it not that our pdf sampling is
 sufficiently dense that you cannot miss a relevant part of solution space?}
 
 
-\section{Experiments and results}
+\section{Experiments and results} \label{sec:experiments}
 
-In what follows, we use spectroscopic data from Data Release 13 (DR13;
+In what follows, we use (1) simulated data with known properties and (2)
+spectroscopic data from Data Release 13 (DR13;
 \citealt{SDSS-Collaboration:2016}) of the Apache Point Obsevatory Galactic
 Evolution Experiment (\apogee; \citealt{Majewski:2015}) in a series of
 experiments that demonstrate the robustness and utility of \samplername.
@@ -480,40 +488,57 @@ velocity phase coverage and more observations and show how the complexity of
 the posterior pdf increases as data points are artificially deleted from the
 analysis.
 
-\subsection{Experiment 1: Validation with simulated data}
+\subsection{Experiment~\arabic{expcounter}: Validation with simulated data}
+\stepcounter{expcounter}
 
 As a first demonstration, we generate fake radial velocity observations (with
 uncertainties) that are consistent with our assumptions
 (\sectionname~\ref{sec:method}), then sample from the posterior pdf over orbital
 parameters with \samplername.
-The eccentricity, period, and $\asini$ are chosen to be broadly consistent with
-the typical sub-stellar companion found in recent analysis of the \apogee\ data
-(\citealt{Troup:2016}), the angle parameters ($\omega$, $\phi_0$) are sampled
-from a uniform distribution, and the velocity is drawn from a zero-mean Gaussian
-with variance $\sigma^2 = (30~\kms)^2$
+The eccentricity, period, and velocity semi-amplitude are chosen to be broadly
+consistent with the typical sub-stellar companion found in recent analysis of
+the \apogee\ data (\citealt{Troup:2016}), the angle parameters ($\omega$,
+$\phi_0$) are sampled from a uniform distribution, and the barycenter velocity
+is drawn from a zero-mean Gaussian with variance $\sigma^2 = (30~\kms)^2$.
 The values of the parameters used for the simulated data (e.g., the truth) are:
-$P = 103.71~{\rm day}$, $\asini = 12.124~\rsun$, $e = 0.313$, $\omega =
-68.95^\circ$, $\phi_0 = 223.96^\circ$, $v_0 = 42.98~\kms$.
-We uniformly sample 4 observation times over the interval $(0,1095)~{\rm day}$
+$P = 103.71~{\rm day}$, $e = 0.313$, $\omega = 68.95^\circ$,
+$\phi_0 = 223.96^\circ$, $K = 8.134~\kms$, $v_0 = 42.98~\kms$.
+We uniformly sample 5 observation times over the interval $(0,1095)~{\rm day}$
 imagining a 3-year survey with no observing strategy and arbitrarily set the
 survey start date (in barycentric MJD) to be 55555.
 The radial velocity measurement uncertainties are drawn from a uniform
 distribution over the interval $(0.1, 0.2)~\kms$, motivated by the \apogee\
 radial velocity uncertainties.
+
+We perform two samplings as a validation of \samplername: (a) we fix the jitter
+parameter $s^2 = 0$, i.e. we assume the uncertainties are known perfectly and
+there is no intrinsic scatter, and (b) we sample over the jitter parameter as
+well, setting $\mu_s = 0$, and $\sigma^2_s = 8$ (note that these are
+dimensionless because they set the scale of a Gaussian in $\ln s^2$).
 We start by generating $J=2^{28}$ prior samples over the nonlinear parameters
 with a period domain of $(P_{\rm min}, P_{\rm max}) = (16, 8192)~{\rm day}$ (see
-\sectionname~\ref{sec:method}), of which 30,082 samples pass our rejection
-sampling step.
+\sectionname~\ref{sec:method}) and use these same prior samples for both runs.
+For (a), 678 samples pass our rejection sampling step, and for (b), 580 samples
+survive.
 
-\figname~\ref{fig:exp1-rv}, top panel, shows the simulated data (black points)
-along with the true orbit (dashed, green line) and orbits computed from samples
-from the posterior pdf (grey lines).
-The bottom panels show two projections of all posterior samples (grey points)
-and the input orbit parameters (green +'s).
-The modes in period-space are narrow with a variety of separations, as can be
-seen in the radial-velocity curves plotted in the top panel
-\figname~\ref{fig:exp1-corner} shows all projections of the posterior samples
-(grey points) and the true, input parameters (green lines and markers).
+\figname~\ref{fig:exp1-rv} shows the simulated data (black points) along with
+the true orbit (dashed, green line) and orbits computed from samples from the
+posterior pdf (grey lines) for the sampling with fixed jitter (top panel) and
+the sampling including jitter as a non-linear parameter (bottom panel).
+Because we use the same prior samples in each, these look almost identical.
+\figname s~\ref{fig:exp1-corner-a}--\ref{fig:exp1-corner-b} show all projections
+of the posterior samples (grey points) and the true, input parameters (green
+lines and markers) for the case with fixed jitter and the case where jitter is
+treated as a free parameter.
+The surviving samples in each case look very similar, as expected.
+The typical uncertainties for these simulated data are $\sigma_v \approx
+0.15~\kms$; for values of $\ln s \lesssim 3$ (where most are concentrated), this extra jitter is negligible compared to the uncertainties.
+Note that samples above $\ln s \approx 5$ are mostly rejected, indicating that,
+as constructed, the uncertainties are purely Gaussian and known.
+
+In both cases, the modes in period-space are narrow with a variety of
+separations, as can be seen in the radial-velocity curves plotted in the top
+panel.
 For small numbers of observations with poor phase-coverage, the posterior pdf
 over orbital parameters is extremely complex and structured, but we are still
 able to generate samples using \samplername.
@@ -523,86 +548,85 @@ able to generate samples using \samplername.
 \includegraphics[width=\textwidth]{figures/exp1-rv-curves.pdf}
 \end{center}
 \caption{%
-{\sl Top panel}: Black points show simulated radial velocity measurements
-plotted against Barycentric Modified Julian Date (BMJD) of the observations.
-Dashed green line shows the true, input orbit that the radial velocity
-measurements were drawn from.
-Grey curves show orbits computed from 128 samples from the posterior pdf for
-these data.
+\todo{update this}
+In both panels, black points show simulated radial velocity measurements plotted
+against Barycentric Modified Julian Date (BMJD) of the observations and dashed
+green line shows the true, input orbit that the radial velocity measurements
+were drawn from.
+Grey curves show orbits computed from 128 samples from, in the top panel, the
+posterior pdf with the jitter held fixed at $s^2 = 0$ and, in the bottom panel,
+the posterior pdf including jitter as a free parameter.
 Several qualitatively different orbital solutions are found over a range of
-eccentricities and periods.
-{\sl Bottom panels}: Projections of the posterior samples (grey points) and
-value of true, input orbit (green +).
+eccentricities and periods for each case.
+This is simply a validation of the method.
 \label{fig:exp1-rv}}
 \end{figure*}
 
 \begin{figure*}[p]
 \begin{center}
-\includegraphics[width=\textwidth]{figures/exp1-corner.pdf}
+\includegraphics[width=\textwidth]{figures/exp1-corner-a.pdf}
 \end{center}
 \caption{%
-All projections of the 30,082 surviving posterior samples (grey points) with
-value of true, input orbit shown as green cross-hairs.
-\label{fig:exp1-corner}}
+\todo{update this}
+Projections of the 678 surviving posterior samples when jitter is fixed (grey
+points).
+The values used to generate the input orbit are shown as green cross-hairs.
+\label{fig:exp1-corner-a}}
 \end{figure*}
 
-\subsection{Experiment 2: A system known to be a binary with few observations}
+\begin{figure*}[p]
+\begin{center}
+\includegraphics[width=\textwidth]{figures/exp1-corner-b.pdf}
+\end{center}
+\caption{%
+\todo{update this}
+Same as \figname~\ref{fig:exp1-corner-a} for the 580 surviving posterior samples
+when also sampling over an unknown jitter parameter, $s^2$.
+\label{fig:exp1-corner-b}}
+\end{figure*}
 
-For a more realistic application of \samplername, we choose an \apogee\ target
-with a previously identified companion (2M00110648+6609349) but with few radial
-velocity measurements (\citealt{Troup:2016}).
-\figname~\ref{fig:exp2-rv}, top panel, shows radial velocity data for the star
-(black points).\footnote{We don't plot the best-fit orbit from
-\citealt{Troup:2016} because the parameter values reported in their work do not
-produce Keplerian orbits that look like reasonable fits to the data.
-\todo{APW: say this better / nicer?}}
-Similar to Experiment 1, these data are sparse and have poor phase coverage,
-however the time sampling is quite different and is representative of realistic
-survey design choices.
+\subsection{Experiment~\arabic{expcounter}: Underestimated uncertainties}
+\stepcounter{expcounter}
 
+Another aspect of the data that determines the complexity of the posterior pdf
+are the uncertainties on the individual data points.
+To explore this, we again use the \apogee\ target 2M03080601+7950502 and
+downsample the data points so that there are 17 observations (the same as shown
+in the top panels of \figname~\ref{fig:exp3-rv-0}).
+We then steadily increase the uncertainties on the individual radial velocity
+measurements by factors of 2 and run \samplername\ to generate posterior
+samples.
 We again generate $2^{28}$ prior samples over the nonlinear parameters with a
-period domain of $(P_{\rm min}, P_{\rm max}) = (16, 8192)~{\rm day}$, of which
-45,242 samples pass our rejection sampling step.
-Over-plotted as grey lines on the top panel of \figname~\ref{fig:exp2-rv} are
-128 orbits computed from random samples from the posterior pdf, sampled using
-\samplername.
-From these orbits, it appears that there are at least a few distinct period
-modes, and a wide variety of eccentricities, represented in the posterior
-sampling.
-As with \figname~\ref{fig:exp1-rv}, bottom panels show two projections of the
-posterior samples (grey points), but now the blue plus mark indicates the
-previously found orbital parameter values (\citealt{Troup:2016}).
+period domain of $(P_{\rm min}, P_{\rm max}) = (16, 8192)~{\rm day}$ and re-use
+these prior samples for each iteration of increasing the uncertainties.
 
-\figname~\ref{fig:exp2-corner} shows projections of all posterior samples in
-different parameter combinations.
-Here it is clear there are at least three period modes: the dominant mode at $P
-\approx 300~{\rm day}$ is broadly consistent with the previously measured period
-(\citealt{Troup:2016}), but other modes are clearly present at shorter periods
-with low eccentricity and longer periods with higher eccentricity.
+\figname~\ref{fig:exp4-rv} shows the data and uncertainties (left panels, black
+points), 128 orbits chosen at random from the posterior sampling, and all
+samples plotted in projection of log-period, $\ln P$, and eccentricity, $e$.
+The data in the top panel of \figname~\ref{fig:exp4-rv} have uncertainties
+artificially increased by a factor of 2 relative to the data in the top panel of
+\figname~\ref{fig:exp3-rv-0}, and each successive row has another increase by a
+factor of 2.
+For this particular target, increasing the uncertainties by a factor of 4 or
+more makes the posterior pdf multi-modal, even with 17 observations over a range
+of phases.
 
 \begin{figure*}[p]
 \begin{center}
-\includegraphics[width=\textwidth]{figures/exp2-rv-curves.pdf}
+\includegraphics[width=\textwidth]{figures/exp4-rv-curves.pdf}
 \end{center}
 \caption{%
-Same as \figname~\ref{fig:exp1-rv} but now using \apogee\ radial-velocity
-measurements of the target 2M00110648+6609349.
-Blue plus mark in bottom panels indicate orbital parameter values found in a
-previous study (\citealt{Troup:2016}).
-\label{fig:exp2-rv}}
+Similar to \figname~\ref{fig:exp3-rv-0} but now varying the magnitude of the
+uncertainties instead of the number of data points.
+Each row has uncertainties increased by a factor of 2 relative to the previous
+row.
+The mean value of the uncertainties for all data points is shown on the left
+panels as $\langle \sigma_n \rangle$, along with the number of samples that
+survive the rejection sampling with \samplername\, $M$.
+\label{fig:exp4-rv}}
 \end{figure*}
 
-\begin{figure*}[p]
-\begin{center}
-\includegraphics[width=\textwidth]{figures/exp2-corner.pdf}
-\end{center}
-\caption{%
-All projections of the 45,242 surviving posterior samples (grey points) with
-previously found orbital parameter values shown as the blue cross-hairs.
-\label{fig:exp2-corner}}
-\end{figure*}
-
-\subsection{Experiment 3: Varying the number of data points}
+\subsection{Experiment~\arabic{expcounter}: Varying the number of data points}
 
 When the phase coverage of the radial velocity observations is good and the
 number of observations is large, the posterior pdf over orbital parameters will
@@ -716,47 +740,65 @@ that there are multiple modes in the posterior pdf for all cases in this figure.
 % \label{fig:exp3-corner-1}}
 % \end{figure*}
 
-\subsection{Experiment 4: Increasing the uncertainties}
+\subsection{Experiment~\arabic{expcounter}: A system known to be a binary with few observations}
+\stepcounter{expcounter}
 
-Another aspect of the data that determines the complexity of the posterior pdf
-are the uncertainties on the individual data points.
-To explore this, we again use the \apogee\ target 2M03080601+7950502 and
-downsample the data points so that there are 17 observations (the same as shown
-in the top panels of \figname~\ref{fig:exp3-rv-0}).
-We then steadily increase the uncertainties on the individual radial velocity
-measurements by factors of 2 and run \samplername\ to generate posterior
-samples.
+For a more realistic application of \samplername, we choose an \apogee\ target
+with a previously identified companion (2M00110648+6609349) but with few radial
+velocity measurements (\citealt{Troup:2016}).
+\figname~\ref{fig:exp2-rv}, top panel, shows radial velocity data for the star
+(black points).\footnote{We don't plot the best-fit orbit from
+\citealt{Troup:2016} because the parameter values reported in their work do not
+produce Keplerian orbits that look like reasonable fits to the data.
+\todo{APW: say this better / nicer?}}
+Similar to Experiment 1, these data are sparse and have poor phase coverage,
+however the time sampling is quite different and is representative of realistic
+survey design choices.
+
 We again generate $2^{28}$ prior samples over the nonlinear parameters with a
-period domain of $(P_{\rm min}, P_{\rm max}) = (16, 8192)~{\rm day}$ and re-use
-these prior samples for each iteration of increasing the uncertainties.
+period domain of $(P_{\rm min}, P_{\rm max}) = (16, 8192)~{\rm day}$, of which
+45,242 samples pass our rejection sampling step.
+Over-plotted as grey lines on the top panel of \figname~\ref{fig:exp2-rv} are
+128 orbits computed from random samples from the posterior pdf, sampled using
+\samplername.
+From these orbits, it appears that there are at least a few distinct period
+modes, and a wide variety of eccentricities, represented in the posterior
+sampling.
+As with \figname~\ref{fig:exp1-rv}, bottom panels show two projections of the
+posterior samples (grey points), but now the blue plus mark indicates the
+previously found orbital parameter values (\citealt{Troup:2016}).
 
-\figname~\ref{fig:exp4-rv} shows the data and uncertainties (left panels, black
-points), 128 orbits chosen at random from the posterior sampling, and all
-samples plotted in projection of log-period, $\ln P$, and eccentricity, $e$.
-The data in the top panel of \figname~\ref{fig:exp4-rv} have uncertainties
-artificially increased by a factor of 2 relative to the data in the top panel of
-\figname~\ref{fig:exp3-rv-0}, and each successive row has another increase by a
-factor of 2.
-For this particular target, increasing the uncertainties by a factor of 4 or
-more makes the posterior pdf multi-modal, even with 17 observations over a range
-of phases.
+\figname~\ref{fig:exp2-corner} shows projections of all posterior samples in
+different parameter combinations.
+Here it is clear there are at least three period modes: the dominant mode at $P
+\approx 300~{\rm day}$ is broadly consistent with the previously measured period
+(\citealt{Troup:2016}), but other modes are clearly present at shorter periods
+with low eccentricity and longer periods with higher eccentricity.
 
 \begin{figure*}[p]
 \begin{center}
-\includegraphics[width=\textwidth]{figures/exp4-rv-curves.pdf}
+\includegraphics[width=\textwidth]{figures/exp2-rv-curves.pdf}
 \end{center}
 \caption{%
-Similar to \figname~\ref{fig:exp3-rv-0} but now varying the magnitude of the
-uncertainties instead of the number of data points.
-Each row has uncertainties increased by a factor of 2 relative to the previous
-row.
-The mean value of the uncertainties for all data points is shown on the left
-panels as $\langle \sigma_n \rangle$, along with the number of samples that
-survive the rejection sampling with \samplername\, $M$.
-\label{fig:exp4-rv}}
+Same as \figname~\ref{fig:exp1-rv} but now using \apogee\ radial-velocity
+measurements of the target 2M00110648+6609349.
+Blue plus mark in bottom panels indicate orbital parameter values found in a
+previous study (\citealt{Troup:2016}).
+\label{fig:exp2-rv}}
 \end{figure*}
 
-\subsection{Experiment 5: Prospects for observation planning}
+\begin{figure*}[p]
+\begin{center}
+\includegraphics[width=\textwidth]{figures/exp2-corner.pdf}
+\end{center}
+\caption{%
+All projections of the 45,242 surviving posterior samples (grey points) with
+previously found orbital parameter values shown as the blue cross-hairs.
+\label{fig:exp2-corner}}
+\end{figure*}
+
+\subsection{Experiment \arabic{expcounter}: Prospects for observation planning}
+\stepcounter{expcounter}
 
 A noticable feature of the middle two panels of \figname~\ref{fig:exp3-rv-1} is
 that the posterior pdf collapses significantly between the $N=5$ and $N=7$
