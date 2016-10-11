@@ -38,6 +38,7 @@ def main():
     print("omega:", orbit.pars.omega.to(u.degree))
     print("phi0:", orbit.pars.phi0.to(u.degree))
     print("v0:", orbit.pars.v0.to(u.km/u.s))
+    print("asini:", orbit.pars.asini.to(u.Rsun))
 
     n_obs = 5 # MAGIC NUMBER: number of observations
 
