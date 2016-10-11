@@ -21,10 +21,12 @@ srun python run-sampler.py -v --mpi -o \
 -n 2**28 -s 42 \
 -f ../data/experiment1.h5 \
 --name="experiment2-fixed-jitter.h5" \
+--hdf5-key="a" \
 --fixed-jitter='0 m/s'
 
 srun python run-sampler.py -v --mpi -o \
 -n 2**28 -s 42 \
 -f ../data/experiment1.h5 \
 --name="experiment2-sample-jitter.h5" \
+--hdf5-key="b" \
 --log-jitter2-mean=10.5 --log-jitter2-std=0.25
