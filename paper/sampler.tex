@@ -46,6 +46,7 @@
 \newcommand{\msun}{\mathrm{M}_\odot}
 \newcommand{\rsun}{\mathrm{R}_\odot}
 \newcommand{\kms}{\mathrm{km}~\mathrm{s}^{-1}}
+\newcommand{\mps}{\mathrm{m}~\mathrm{s}^{-1}}
 \newcommand{\bs}[1]{\boldsymbol{#1}}
 
 % For experiments
@@ -510,11 +511,11 @@ The radial velocity measurement uncertainties are drawn from a uniform
 distribution over the interval $(0.1, 0.2)~\kms$, motivated by the \apogee\
 radial velocity uncertainties.
 
-We perform two samplings as a validation of \samplername: (a) we fix the jitter
-parameter $s^2 = 0$, i.e. we assume the uncertainties are known perfectly and
-there is no intrinsic scatter, and (b) we sample over the jitter parameter as
-well, setting $\mu_s = 0$, and $\sigma^2_s = 8$ (note that these are
-dimensionless because they set the scale of a Gaussian in $\ln s^2$).
+We perform two samplings as a validation of \samplername:
+(a) we fix the jitter parameter $s^2 = 0$, i.e. we assume the uncertainties are
+known perfectly and there is no intrinsic scatter, and (b) we sample over the
+jitter parameter as well, setting $(\mu_s,\sigma^2_s) = (0,8)$ (note that these
+are dimensionless because they set the scale of a Gaussian in $\ln s^2$).
 We start by generating $J=2^{28}$ prior samples over the nonlinear parameters
 with a period domain of $(P_{\rm min}, P_{\rm max}) = (16, 8192)~{\rm day}$ (see
 \sectionname~\ref{sec:method}) and use these same prior samples for both runs.
@@ -588,45 +589,106 @@ when also sampling over an unknown jitter parameter, $s^2$.
 \subsection{Experiment~\arabic{expcounter}: Underestimated uncertainties}
 \stepcounter{expcounter}
 
-Another aspect of the data that determines the complexity of the posterior pdf
-are the uncertainties on the individual data points.
-To explore this, we again use the \apogee\ target 2M03080601+7950502 and
-downsample the data points so that there are 17 observations (the same as shown
-in the top panels of \figname~\ref{fig:exp3-rv-0}).
-We then steadily increase the uncertainties on the individual radial velocity
-measurements by factors of 2 and run \samplername\ to generate posterior
-samples.
-We again generate $2^{28}$ prior samples over the nonlinear parameters with a
-period domain of $(P_{\rm min}, P_{\rm max}) = (16, 8192)~{\rm day}$ and re-use
-these prior samples for each iteration of increasing the uncertainties.
+The magnitude of the uncertainties on the individual data points relative to the
+amplitude of radial velocity amplitude will change the complexity of the
+posterior pdf: Less precise data will admit more qualitatively different
+orbital solutions.
+The structure and complexity of the posterior pdf (at fixed jitter) will
+therefore rely strongly on knowing the uncertainties and instrinsic variability
+of the system.
+Here we demonstrate this using another simulated radial velocity curve with
+smaller signal-to-noise and show that if the uncertainties are underestimated,
+the posterior pdf over orbital parameters can look well-constrained but may be
+discrepant with the true orbital parameters.
+We also show that by simultaneously sampling over an unknown extra variance in
+the data (the jitter), we can account for additional, unknown sources of noise.
 
-\figname~\ref{fig:exp4-rv} shows the data and uncertainties (left panels, black
-points), 128 orbits chosen at random from the posterior sampling, and all
-samples plotted in projection of log-period, $\ln P$, and eccentricity, $e$.
-The data in the top panel of \figname~\ref{fig:exp4-rv} have uncertainties
-artificially increased by a factor of 2 relative to the data in the top panel of
-\figname~\ref{fig:exp3-rv-0}, and each successive row has another increase by a
-factor of 2.
-For this particular target, increasing the uncertainties by a factor of 4 or
-more makes the posterior pdf multi-modal, even with 17 observations over a range
-of phases.
+For this experiment, we use the following parameter values to generate the
+simulated data: $P = 103.71~{\rm day}$, $e = 0.313$, $\omega = 250.73^\circ$,
+$\phi_0 = 103.01^\circ$, $K = 1.134~\kms$, $v_0 = 8.489~\kms$.
+We again uniformly sample 5 observation times over the interval $(0,1095)~{\rm
+day}$ and use radial velocity measurement uncertainties drawn from a uniform
+distribution over the interval $(0.1, 0.2)~\kms$ (the median true uncertainty is
+$\ln \left(\frac{\sigma_v}{\mps}\right) \approx 5$).
+
+When running \samplername\ for this experiment, we consider three cases:
+(a) the uncertainties are known and jitter is fixed and ignored ($s^2=0$), (b)
+the uncertainties are underestimated by a factor of 8 and jitter is fixed and
+ignored ($s^2=0$), and (c) the uncertainties are underestimated by a factor of 8
+and we treat the jitter as a free parameter to sample over.
+For each case, we again generate $2^{28}$ prior samples over the nonlinear
+parameters with a period domain of $(P_{\rm min}, P_{\rm max}) = (16, 8192)~{\rm
+day}$ and re-use these prior samples for each case.
+In case (c), we generate samples in the jitter by setting
+$(\mu_s,\sigma^2_s) = (10,1)$---here we are assuming that we have some suspicion
+about the true magnitude of the uncertainties.
+
+\figname~\ref{fig:exp2-rv} shows the simulated data and uncertainties (black
+points), the true orbit (dashed, green line), and orbits computed from samples
+from the posterior pdf (grey lines) for the three different samplings.
+Note that many fewer modes are present in the middle panel (case (b), when the
+uncertainties are underestimated).
+\figname s~\ref{fig:exp2-corner-a}--\ref{fig:exp2-corner-c} show the
+corresponding corner plots for these three cases.
+For this data set, when the uncertainties are known, the posterior pdf is highly
+multi-modal (case (a)).
+When the uncertainties are underestimated, the posterior pdf has fewer modes,
+but the true orbital parameters do not appear consistent with any of the
+strongest modes (case (b)).
+When the uncertainties are underestimated but the jitter is allowed to vary
+(case (c)), the model prefers solutions with a finite jitter comparable to the
+input true uncertainties ($\ln \left(\frac{\sigma_v}{\mps}\right) \approx 5$).
+We have therefore shown that \samplername\ is useful even when uncertainties are
+underestimated or the intrinsic variability of a system is unknown.
 
 \begin{figure*}[p]
 \begin{center}
-\includegraphics[width=\textwidth]{figures/exp4-rv-curves.pdf}
+\includegraphics[width=\textwidth]{figures/exp2-rv-curves.pdf}
 \end{center}
 \caption{%
-Similar to \figname~\ref{fig:exp3-rv-0} but now varying the magnitude of the
-uncertainties instead of the number of data points.
-Each row has uncertainties increased by a factor of 2 relative to the previous
-row.
-The mean value of the uncertainties for all data points is shown on the left
-panels as $\langle \sigma_n \rangle$, along with the number of samples that
-survive the rejection sampling with \samplername\, $M$.
-\label{fig:exp4-rv}}
+Same as \figname~\ref{fig:exp1-rv} for the three cases in this experiment:
+(a) known uncertainties and jitter fixed to $s^2 = 0$, (b) underestimated
+uncertainties and jitter fixed to $s^2 = 0$, (c) underestimated uncertainties
+and jitter allowed to vary.
+\label{fig:exp2-rv}}
+\end{figure*}
+
+\begin{figure*}[p]
+\begin{center}
+\includegraphics[width=\textwidth]{figures/exp2-corner-a.pdf}
+\end{center}
+\caption{%
+Same as \figname~\ref{fig:exp1-corner-a} for case (a) in Experiment 2 where the
+uncertainties are known and jitter is fixed to $s^2 = 0$.
+Henceforth we will drop the angular parameters $\omega$ and $\phi_0$ from the
+corner plots to conserve space.
+\label{fig:exp2-corner-a}}
+\end{figure*}
+
+\begin{figure*}[p]
+\begin{center}
+\includegraphics[width=\textwidth]{figures/exp2-corner-b.pdf}
+\end{center}
+\caption{%
+Same as \figname~\ref{fig:exp2-corner-a} for case (b) in Experiment 2 where the
+uncertainties are underestimated by a factor of 8 and jitter is fixed to
+$s^2 = 0$.
+\label{fig:exp2-corner-b}}
+\end{figure*}
+
+\begin{figure*}[p]
+\begin{center}
+\includegraphics[width=\textwidth]{figures/exp2-corner-c.pdf}
+\end{center}
+\caption{%
+Same as \figname~\ref{fig:exp2-corner-a} for case (c) in Experiment 2 where the
+uncertainties are underestimated by a factor of 8 and the jitter is sampled as
+a non-linear parameter.
+\label{fig:exp2-corner-c}}
 \end{figure*}
 
 \subsection{Experiment~\arabic{expcounter}: Varying the number of data points}
+\stepcounter{expcounter}
 
 When the phase coverage of the radial velocity observations is good and the
 number of observations is large, the posterior pdf over orbital parameters will
@@ -740,7 +802,7 @@ that there are multiple modes in the posterior pdf for all cases in this figure.
 % \label{fig:exp3-corner-1}}
 % \end{figure*}
 
-\subsection{Experiment~\arabic{expcounter}: A system known to be a binary with few observations}
+\subsection{Experiment~\arabic{expcounter}: Real data for a known binary}
 \stepcounter{expcounter}
 
 For a more realistic application of \samplername, we choose an \apogee\ target
@@ -775,27 +837,27 @@ Here it is clear there are at least three period modes: the dominant mode at $P
 (\citealt{Troup:2016}), but other modes are clearly present at shorter periods
 with low eccentricity and longer periods with higher eccentricity.
 
-\begin{figure*}[p]
-\begin{center}
-\includegraphics[width=\textwidth]{figures/exp2-rv-curves.pdf}
-\end{center}
-\caption{%
-Same as \figname~\ref{fig:exp1-rv} but now using \apogee\ radial-velocity
-measurements of the target 2M00110648+6609349.
-Blue plus mark in bottom panels indicate orbital parameter values found in a
-previous study (\citealt{Troup:2016}).
-\label{fig:exp2-rv}}
-\end{figure*}
+% \begin{figure*}[p]
+% \begin{center}
+% \includegraphics[width=\textwidth]{figures/exp4-rv-curves.pdf}
+% \end{center}
+% \caption{%
+% Same as \figname~\ref{fig:exp1-rv} but now using \apogee\ radial-velocity
+% measurements of the target 2M00110648+6609349.
+% Blue plus mark in bottom panels indicate orbital parameter values found in a
+% previous study (\citealt{Troup:2016}).
+% \label{fig:exp4-rv}}
+% \end{figure*}
 
-\begin{figure*}[p]
-\begin{center}
-\includegraphics[width=\textwidth]{figures/exp2-corner.pdf}
-\end{center}
-\caption{%
-All projections of the 45,242 surviving posterior samples (grey points) with
-previously found orbital parameter values shown as the blue cross-hairs.
-\label{fig:exp2-corner}}
-\end{figure*}
+% \begin{figure*}[p]
+% \begin{center}
+% \includegraphics[width=\textwidth]{figures/exp4-corner.pdf}
+% \end{center}
+% \caption{%
+% All projections of the 45,242 surviving posterior samples (grey points) with
+% previously found orbital parameter values shown as the blue cross-hairs.
+% \label{fig:exp4-corner}}
+% \end{figure*}
 
 \subsection{Experiment \arabic{expcounter}: Prospects for observation planning}
 \stepcounter{expcounter}
