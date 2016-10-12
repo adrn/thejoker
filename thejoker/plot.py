@@ -95,8 +95,6 @@ def plot_rv_curves(orbital_pars, t_grid, rv_unit=None, data=None,
     ax.set_xlim(t_grid.min(), t_grid.max())
     if add_labels:
         ax.set_xlabel('BMJD')
-
-        unit_label = ' [{}]'.format(rv_unit._repr_latex_())
-        ax.set_ylabel('RV{}'.format(unit_label))
+        ax.set_ylabel('RV [{}]'.format(rv_unit.to_string(format='latex_inline')))
 
     return fig

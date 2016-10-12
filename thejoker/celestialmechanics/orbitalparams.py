@@ -25,10 +25,6 @@ class OrbitalParams(object):
     _name_to_unit['K'] = default_units['K']
     _name_to_unit['v0'] = default_units['v0']
 
-    # # Latex plot labels for the parameters
-    # _latex_labels = [r'$\ln (P/{\rm day})$', '$e$', r'$\omega$ [deg]', r'$\phi_0$ [deg]',
-    #                  's [m s$^{-1}]$', r'$K$ [m s$^{-1}$]', '$v_0$ [km s$^{-1}$]']
-
     def __init__(self, P, K, ecc, omega, phi0, v0, jitter=0.*u.m/u.s):
         """
         """
@@ -78,6 +74,31 @@ class OrbitalParams(object):
             slice_val = getattr(self, "_{}".format(key))[slicey]
             setattr(cpy, "_{}".format(key), slice_val)
         return cpy
+
+    @classmethod
+    def get_labels(cls, units=None):
+        _u = dict()
+        if units is None:
+            units = cls._name_to_unit
+
+        else:
+            for k,unit in cls._name_to_unit.items():
+                if k in units:
+                    _u[k] = units[k]
+                else:
+                    _u[k] = unit
+
+        _labels = [
+            r'$\ln (P/1\,${}$)$'.format(_u['P'].long_names[0]),
+            '$e$',
+            r'$\omega$ [{}]'.format(_u['omega']),
+            r'$\phi_0$ [{}]'.format(_u['omega']),
+            r'$\ln (s/1\,${}$)$'.format(_u['jitter'].to_string(format='latex_inline')),
+            r'$K$ [{}]'.format(_u['K'].to_string(format='latex_inline')),
+            '$v_0$ [{}]'.format(_u['v0'].to_string(format='latex_inline'))
+        ]
+
+        return _labels
 
     @classmethod
     def from_hdf5(cls, f):
