@@ -698,117 +698,66 @@ number of observations is large, the posterior pdf over orbital parameters will
 likely be unimodal.
 Under these conditions, \samplername\ is a very inefficient sampler for this
 problem and will return very few samples (as few as one).
-As we have seen in the previous experiments, when the number of data points
-decreases, the posterior pdf will generally become more multi-modal.
+As we have seen in the previous experiments, when the number of data points is
+small or the uncertainties are large, the posterior pdf is generally
+multi-modal.
 He we study the dependence of the complexity of the posterior pdf on the number
-of observations by using another \apogee\ target with a previously identified
-companion (2M03080601+7950502) by successively and randomly removing
-observations from the repeated analysis of these data with \samplername.
-In DR13, this target has 30 visits; we remove 13 of these observations at random
-so that we begin with 17 observtions.
-After running the sampler with the set of 17 visits, we successively remove 2
-data points and re-run the sampling until we are left with 3 observations as
-input data (a total of 8 consecutive runs).
+of observations by generating simulated observations of a radial velocity curve
+and successively removing data points from 11 observations down to 3:
+After running \samplername\ with the full 11 observations, we successively
+remove 2 data points and re-run the sampling until we are left with 3
+observations as input data (a total of 5 consecutive runs).
 
 In detail, we again generate $2^{28}$ prior samples over the nonlinear
 parameters with a period domain of $(P_{\rm min}, P_{\rm max}) = (16, 8192)~{\rm
 day}$ and re-use these prior samples for each sub-sampling of the data.
-\figname s~\ref{fig:exp3-rv-0}--\ref{fig:exp3-rv-1} show the data and orbits
-computed from posterior samples returned by \samplername.
-Starting from the top of \figname~\ref{fig:exp3-rv-0} with the full set of 17
-measurements, each panel below has 2 fewer data points than the previous.
+We fix the jitter to $s^2 = 0$ and assume that the uncertainties are known.
+\figname s~\ref{fig:exp3-rv} shows the simulated data and orbits computed from
+posterior samplings.
+Starting from the top of \figname~\ref{fig:exp3-rv} with the full set of 11
+data points, each panel below has 2 fewer data points than the previous.
 The data used for the sampling shown in a given panel are plotted as black
-circles.
-The number of measurements used, $N$, and the number of samples that survive the
-rejection step, $M$, after one run of \samplername\ are indicated on each panel.
-As described in \sectionname~\ref{sec:method}, when $M < M_{\rm min}=128$ we
-either (1) if the periods of the surviving sample(s) are sufficiently close,
-initialize \emcee\ using the remaining sample(s), or (2) re-run \samplername\
-with a new set of prior samples until we have at least $M_{\rm min}$ samples
-from the posterior pdf.
+circles and the number of data points used in each panel, $N$, are indicated.
+As described in \sectionname~\ref{sec:method}, when the number of surviving
+samples $M < M_{\rm min}=128$ after rejection sampling, we either (1) initialize
+\emcee\ using the remaining sample(s) if the periods of the surviving sample(s)
+are sufficiently close, or (2) re-run \samplername\ with a new set of prior
+samples until we have at least $M_{\rm min}$ samples from the posterior pdf.
 In all panels, 128 orbits computed from the posterior samples are shown.
 
-For all sub-samplings shown in \figname~\ref{fig:exp3-rv-0}, the posterior pdf
-appears to be uni-modal.
-The structure in the posterior samples shown in the right panels of
-\figname~\ref{fig:exp3-rv-1} is much more interesting.
-Already in the top panels ($N=9$), multiple modes appear.
-These become more apparent in the panels below, until ultimately forming a
-harmonic series of modes in the bottom two rows of panels.
-This highlights the highly complex but structured posterior pdfs that are
-expected for stars with very few radial velocity measurements.
-Still, we are able to sample from these pdfs using \samplername.
-
-It's worth noting that even for the case with 2 observations, only XX\% of the
-samples pass the rejection step:
-Most of our prior beliefs are rejected, meaning that even 2 observations can be
-informative!
+The structure in the posterior samples in one projection of the posterior pdf is
+shown in the right panels of \figname~\ref{fig:exp3-rv}.
+For the cases with 9 and 11 data points, the posterior pdf appears to be
+uni-modal.
+Multiple modes first appear when $N=7$ and the posterior pdf become more
+structured in further sub-samplings of the data until ultimately forming a
+harmonic series of modes in the final case of $N=3$.
+It's worth emphasizing that even for the case with 3 data points, $<1\%$ of the
+prior samples pass the rejection step:
+Even 3 radial velocity observations are informative!
 
 \begin{figure*}[p]
 \begin{center}
-\includegraphics[width=\textwidth]{figures/exp3-rv-curves-0.pdf}
+\includegraphics[width=\textwidth]{figures/exp3-rv-curves.pdf}
 \end{center}
 \caption{%
 {\sl Left panels}: Similar to top panel of \figname~\ref{fig:exp1-rv}, black
 points show \apogee\ radial velocity measurements used to generate samples from
 the posterior pdf over orbital parameters sub-sampled from the full set of
-observations for this target 2M19405532+2401157.
+simulated data.
 Grey curves show orbits compute from 128 samples from the posterior pdf, either
 from using \samplername, or, if \samplername\ returns few samples in a small
 range, from switching to \emcee\ to continue sampling until 128 samples are
 returned.
 The number of data points, $N$, and the number of samples that pass the
-rejection sampling in the first step of \samplername, $M$, are printed on each
-panel.
+rejection sampling in the first step of \samplername, $M_{\rm rej}$, are printed
+on each panel.
 {\sl Right panels}: A single projection of the posterior samples in each case
 showing the log-period, $\ln P$, and eccentricity, $e$.
-In all cases shown, the posterior pdf appears to be uni-modal.
-\label{fig:exp3-rv-0}}
+The structure of the posterior pdf when the number of data points is small is
+highly complex but still much more compact than our prior beliefs.
+\label{fig:exp3-rv}}
 \end{figure*}
-
-\begin{figure*}[p]
-\begin{center}
-\includegraphics[width=\textwidth]{figures/exp3-rv-curves-1.pdf}
-\end{center}
-\caption{%
-Same as \figname~\ref{fig:exp3-rv-0} for further sub-samplings of the original
-data set.
-Note that the axis limits for the right panels have expanded considerably, and
-that there are multiple modes in the posterior pdf for all cases in this figure.
-\label{fig:exp3-rv-1}}
-\end{figure*}
-
-% \figname s~\ref{fig:exp3-corner-0}--\ref{fig:exp3-corner-1} show a few
-% projections of the posterior samples for each of the data sub-samplings (i.e.
-% the panels in these figures match the panels in
-% \figname s~\ref{fig:exp3-rv-0}--\ref{fig:exp3-rv-1}).
-% All panels in \figname s~\ref{fig:exp3-corner-0} show that the posterior pdf is
-% very compact and unimodal when $N=19,17,15,13$ data points are used.
-% We have fixed the axis limits to be the same in \figname
-% s~\ref{fig:exp3-corner-0} and \ref{fig:exp3-corner-1}), so the single dark point
-% in some of the panels of \figname~\ref{fig:exp3-corner-0} are very compact
-% visualizations of the posterior samples.
-
-% \begin{figure*}[p]
-% \begin{center}
-% \includegraphics[height=0.9\textheight]{figures/exp3-corner-0.pdf}
-% \end{center}
-% \caption{%
-% TODO
-% \todoapw{More comments here..}
-% \label{fig:exp3-corner-0}}
-% \end{figure*}
-
-% \begin{figure*}[p]
-% \begin{center}
-% \includegraphics[height=0.9\textheight]{figures/exp3-corner-1.pdf}
-% \end{center}
-% \caption{%
-% Same as \figname~\ref{fig:exp3-corner-0} for smaller sub-samplings of the
-% original data set.
-% \todoapw{More comments here..}
-% \label{fig:exp3-corner-1}}
-% \end{figure*}
 
 \subsection{Experiment~\arabic{expcounter}: Real data for a known binary}
 \stepcounter{expcounter}
