@@ -25,9 +25,9 @@ class OrbitalParams(object):
     _name_to_unit['K'] = default_units['K']
     _name_to_unit['v0'] = default_units['v0']
 
-    # Latex plot labels for the parameters
-    _latex_labels = [r'$\ln (P/{\rm day})$', '$e$', r'$\omega$ [deg]', r'$\phi_0$ [deg]',
-                     's [m s$^{-1}]$', r'$K$ [m s$^{-1}$]', '$v_0$ [km s$^{-1}$]']
+    # # Latex plot labels for the parameters
+    # _latex_labels = [r'$\ln (P/{\rm day})$', '$e$', r'$\omega$ [deg]', r'$\phi_0$ [deg]',
+    #                  's [m s$^{-1}]$', r'$K$ [m s$^{-1}$]', '$v_0$ [km s$^{-1}$]']
 
     def __init__(self, P, K, ecc, omega, phi0, v0, jitter=0.*u.m/u.s):
         """
