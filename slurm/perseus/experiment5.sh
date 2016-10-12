@@ -2,8 +2,8 @@
 #SBATCH -J exp5           # job name
 #SBATCH -o exp5.o%j             # output file name (%j expands to jobID)
 #SBATCH -e exp5.e%j             # error file name (%j expands to jobID)
-#SBATCH -n 520                   # total number of mpi tasks requested
-#SBATCH -t 00:300:00             # run time (hh:mm:ss) - 1.5 hours
+#SBATCH -n 260                   # total number of mpi tasks requested
+#SBATCH -t 00:45:00             # run time (hh:mm:ss) - 1.5 hours
 #SBATCH --mail-user=adrn@princeton.edu
 #SBATCH --mail-type=begin       # email me when the job starts
 #SBATCH --mail-type=end         # email me when the job finishes
@@ -33,4 +33,18 @@ srun python run-sampler.py -v --mpi -o \
 -f ../data/experiment5.h5 \
 --name="experiment5-1.hdf5" \
 --hdf5-key="1" \
+--seed=$SEED
+
+srun python run-sampler.py -v --mpi -o \
+-n $NSAMPLES \
+-f ../data/experiment5.h5 \
+--name="experiment5-2.hdf5" \
+--hdf5-key="2" \
+--seed=$SEED
+
+srun python run-sampler.py -v --mpi -o \
+-n $NSAMPLES \
+-f ../data/experiment5.h5 \
+--name="experiment5-3.hdf5" \
+--hdf5-key="3" \
 --seed=$SEED
