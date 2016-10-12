@@ -1,7 +1,6 @@
 """
 
-Create an HDF5 file containing the same RV data with random points deleted
-in succession.
+Same parameters as Experiment 3, but here we successively remove data points.
 
 """
 
@@ -9,57 +8,58 @@ in succession.
 import os
 
 # Third-party
+import astropy.units as u
 import h5py
+import matplotlib
+matplotlib.use('agg')
 import numpy as np
 
 # Project
 from thejoker import Paths
 paths = Paths()
+from thejoker.celestialmechanics import OrbitalParams
+from thejoker.data import RVData
+from thejoker.units import default_units
 
-apogee_id = "2M03080601+7950502"
+def main():
 
-def main(seed):
-    np.random.seed(seed)
+    # high-eccentricity orbit with reasonable or randomly chosen parameters
+    opars = OrbitalParams(P=103.71*u.day, K=4.227*u.km/u.s, ecc=0.313,
+                          omega=np.random.uniform(0, 2*np.pi)*u.rad,
+                          phi0=np.random.uniform(0, 2*np.pi)*u.rad,
+                          v0=np.random.normal(0, 30) * u.km/u.s)
+    orbit = opars.rv_orbit(0)
+    print("Mass function:", orbit.pars.mf)
+    print("omega:", orbit.pars.omega.to(u.degree))
+    print("phi0:", orbit.pars.phi0.to(u.degree))
+    print("v0:", orbit.pars.v0.to(u.km/u.s))
+    print("asini:", orbit.pars.asini.to(u.Rsun))
 
-    with h5py.File(paths.troup_allVisit, 'r') as f:
-        bmjd = f[apogee_id]['mjd'][:]
-        rv = f[apogee_id]['rv'][:]
-        rv_err = f[apogee_id]['rv_err'][:]
-        rv_unit = f[apogee_id]['rv'].attrs['unit']
+    n_obses = 2**np.arange(4,0,-1)
 
-    # HACK: downsample to 17 observations
-    print("Target has {} observations".format(len(bmjd)))
-    idx = np.random.choice(len(bmjd), size=len(bmjd)-17, replace=False)
-    bmjd = np.delete(bmjd, idx)
-    rv = np.delete(rv, idx)
-    rv_err = np.delete(rv_err, idx)
-    assert len(bmjd) == 17
+    # Experiment 1 data
+    bmjd = np.random.uniform(0, 3*365, size=n_obses.max()) + 55555. # 3 year survey
+    bmjd.sort()
+    rv = orbit.generate_rv_curve(bmjd)
+    rv_err = np.random.uniform(100, 200, size=n_obses.max()) * u.m/u.s # apogee-like
+    rv = np.random.normal(rv.to(default_units['v0']).value,
+                          rv_err.to(default_units['v0']).value) * default_units['v0']
 
-    n_delete = 2 # HACK: MAGIC NUMBER
-    with h5py.File(os.path.join(paths.root, "data", "experiment3.h5"), "w") as outf:
-        outf.attrs['APOGEE_ID'] = apogee_id
-
-        for i in range(0,14+1,n_delete): # HACK: MAGIC NUMBER
-            if i > 0:
+    with h5py.File(os.path.join(paths.root, "data", "experiment2.h5"), "w") as f:
+        for n_obs in n_obses:
+            if len(bmjd) > n_obs:
                 # pick random data points to delete
-                idx = np.random.choice(len(bmjd), size=n_delete, replace=False)
+                idx = np.random.choice(len(bmjd), size=len(bmjd)-n_obs, replace=False)
                 bmjd = np.delete(bmjd, idx)
                 rv = np.delete(rv, idx)
                 rv_err = np.delete(rv_err, idx)
 
-            g = outf.create_group(str(i))
+            data = RVData(t=bmjd, rv=rv, stddev=rv_err)
+            g = f.create_group(str(n_obs))
+            data.to_hdf5(g)
 
-            d = g.create_dataset('mjd', data=bmjd)
-            d.attrs['format'] = 'mjd'
-            d.attrs['scale'] = 'tcb'
-
-            d = g.create_dataset('rv', data=rv)
-            d.attrs['unit'] = str(rv_unit)
-
-            d = g.create_dataset('rv_err', data=rv_err)
-            d.attrs['unit'] = str(rv_unit)
-
-            print(i, len(rv))
+        g = f.create_group('truth')
+        opars.to_hdf5(g)
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
@@ -67,9 +67,12 @@ if __name__ == '__main__':
     # Define parser object
     parser = ArgumentParser(description="")
 
-    parser.add_argument("-s", "--seed", dest="seed", default=42,
+    parser.add_argument("-s", "--seed", dest="seed", default=None,
                         type=int, help="Random number seed.")
 
     args = parser.parse_args()
 
-    main(args.seed)
+    if args.seed is not None:
+        np.random.seed(args.seed)
+
+    main()
