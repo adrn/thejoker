@@ -21,7 +21,7 @@ from thejoker import Paths
 paths = Paths()
 from thejoker import config
 from thejoker.data import RVData
-from thejoker.units import usys
+from thejoker.units import default_units
 from thejoker.pool import choose_pool
 from thejoker.sampler import mcmc
 from thejoker.celestialmechanics import OrbitalParams
@@ -70,10 +70,10 @@ def main(data_file, cache_filename, pool, n_steps, overwrite=False, seed=42, hdf
 
     # Fire up emcee
     if len(opars) > 1:
-        P = np.median(opars.P.decompose(usys).value)
+        P = np.median(opars.P.to(default_units['P']).value)
         T = data._t.max() - data._t.min()
         Delta = 4*P**2 / (2*np.pi*T)
-        P_rms = np.std(opars.P.decompose(usys).value)
+        P_rms = np.std(opars.P.to(default_units['P']).value)
         logger.debug("Period rms for surviving samples: {}, Delta: {}".format(P_rms, Delta))
 
         if P_rms > Delta:
@@ -85,32 +85,42 @@ def main(data_file, cache_filename, pool, n_steps, overwrite=False, seed=42, hdf
     else:
         logger.debug("Only one surviving sample.")
 
+    # HACK: this is a major hack, only support fixed jitter at 0
+    fixed_jitter = True
+
     # transform samples to the parameters we'll sample using emcee
     samples = opars.pack()
-    samples_trans = mcmc.pack_mcmc(samples.T)
-    j_max = np.argmax([mcmc.ln_posterior(s, data) for s in samples_trans.T])
-    p0 = samples_trans[:,j_max]
+
+    if fixed_jitter: # HACK
+        samples = np.delete(samples, 4, axis=1)
+
+    samples_trans = mcmc.pack_mcmc(samples.T, fixed_jitter=fixed_jitter).T
+
+    if fixed_jitter: # HACK
+        samples_trans = np.delete(samples_trans, -1, axis=1)
+
+    j_max = np.argmax([mcmc.ln_posterior(s, data, fixed_jitter=fixed_jitter) for s in samples_trans])
+    p0 = samples_trans[j_max]
 
     n_walkers = config.defaults['M_min']
     p0 = emcee.utils.sample_ball(p0, 1E-5*np.abs(p0), size=n_walkers)
 
     sampler = emcee.EnsembleSampler(n_walkers, p0.shape[1],
-                                    lnpostfn=mcmc.ln_posterior, args=(data,),
+                                    lnpostfn=mcmc.ln_posterior, args=(data,fixed_jitter),
                                     pool=pool)
 
     pos,prob,state = sampler.run_mcmc(p0, n_steps) # MAGIC NUMBER
 
     pool.close()
 
+    pos = np.hstack((pos, np.zeros((pos.shape[0],1))))
     emcee_samples = mcmc.unpack_mcmc(pos.T)
     with h5py.File(output_filename, 'a') as f:
         g = f.create_group('emcee')
 
-        for i,(name,phystype) in enumerate(OrbitalParams._name_phystype.items()):
-            g.create_dataset(name, data=emcee_samples[i])
-
-            if phystype is not None: # note: could get in to a weird state with mismatched units...
-                g[name].attrs['unit'] = str(usys[phystype])
+        for i,(name,unit) in enumerate(OrbitalParams._name_to_unit.items()):
+            g.create_dataset(name, data=emcee_samples.T[i])
+            g[name].attrs['unit'] = str(unit)
 
 if __name__ == "__main__":
     from argparse import ArgumentParser
