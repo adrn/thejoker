@@ -35,7 +35,7 @@ def main():
     print("v0:", orbit.pars.v0.to(u.km/u.s))
     print("asini:", orbit.pars.asini.to(u.Rsun))
 
-    n_obses = 2**np.arange(4,0,-1)
+    n_obses = np.arange(11, 3-1, -2)
 
     # Experiment 1 data
     bmjd = np.random.uniform(0, 3*365, size=n_obses.max()) + 55555. # 3 year survey

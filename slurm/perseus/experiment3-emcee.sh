@@ -21,6 +21,6 @@ export SEED=42
 srun python continue-with-emcee.py -v --mpi -o \
 --nsteps=$NSTEPS \
 -f ../data/experiment3.h5 \
---hdf5-key="16" \
---name="experiment3-16.hdf5" \
+--hdf5-key="11" \
+--name="experiment3-11.hdf5" \
 --seed=$SEED
