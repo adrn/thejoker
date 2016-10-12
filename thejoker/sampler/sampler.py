@@ -107,8 +107,6 @@ u.quantity_input(P_min=u.day, P_max=u.day)
 def sample_prior(n=1, P_min=defaults['P_min'], P_max=defaults['P_min'],
                  log_jitter2_mean=0., log_jitter2_std=1.):
     """
-    TODO: add option for sampling jitter prior
-
     Generate samples from the prior. Logarithmic in period, uniform in
     phase and argument of pericenter, Beta distribution in eccentricity.
 
