@@ -119,7 +119,7 @@ def main(data_file, cache_filename, pool, n_steps, overwrite=False, seed=42, hdf
         g = f.create_group('emcee')
 
         for i,(name,unit) in enumerate(OrbitalParams._name_to_unit.items()):
-            g.create_dataset(name, data=emcee_samples.T[i])
+            g.create_dataset(name, data=emcee_samples[i])
             g[name].attrs['unit'] = str(unit)
 
 if __name__ == "__main__":
