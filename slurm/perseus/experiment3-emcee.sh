@@ -14,7 +14,7 @@ module load openmpi/gcc/1.10.2/64
 
 source activate thejoker
 
-export NSTEPS=65536
+export NSTEPS=16384
 export SEED=42
 
 # Run emcee on output from experiment 3
@@ -23,4 +23,11 @@ srun python continue-with-emcee.py -v --mpi -o \
 -f ../data/experiment3.h5 \
 --hdf5-key="11" \
 --name="experiment3-11.hdf5" \
+--seed=$SEED
+
+srun python continue-with-emcee.py -v --mpi -o \
+--nsteps=$NSTEPS \
+-f ../data/experiment3.h5 \
+--hdf5-key="9" \
+--name="experiment3-9.hdf5" \
 --seed=$SEED
