@@ -45,7 +45,7 @@ def main():
     rv = np.random.normal(rv.to(default_units['v0']).value,
                           rv_err.to(default_units['v0']).value) * default_units['v0']
 
-    with h5py.File(os.path.join(paths.root, "data", "experiment2.h5"), "w") as f:
+    with h5py.File(os.path.join(paths.root, "data", "experiment3.h5"), "w") as f:
         for n_obs in n_obses:
             if len(bmjd) > n_obs:
                 # pick random data points to delete
