@@ -739,6 +739,11 @@ This highlights the highly complex but structured posterior pdfs that are
 expected for stars with very few radial velocity measurements.
 Still, we are able to sample from these pdfs using \samplername.
 
+It's worth noting that even for the case with 2 observations, only XX\% of the
+samples pass the rejection step:
+Most of our prior beliefs are rejected, meaning that even 2 observations can be
+informative!
+
 \begin{figure*}[p]
 \begin{center}
 \includegraphics[width=\textwidth]{figures/exp3-rv-curves-0.pdf}
