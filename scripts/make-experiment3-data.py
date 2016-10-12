@@ -37,7 +37,7 @@ def main():
 
     n_obses = np.arange(11, 3-1, -2)
 
-    # Experiment 1 data
+    # Experiment 3 data
     bmjd = np.random.uniform(0, 3*365, size=n_obses.max()) + 55555. # 3 year survey
     bmjd.sort()
     rv = orbit.generate_rv_curve(bmjd)

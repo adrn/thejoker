@@ -20,13 +20,12 @@ from thejoker import Paths
 paths = Paths()
 from thejoker.celestialmechanics import OrbitalParams
 from thejoker.data import RVData
-from thejoker.units import usys
 
 def main():
 
     # Designer RV curves!
 
-    opars = OrbitalParams(P=127.31*u.day, asini=22.124*u.R_sun, ecc=0.213,
+    opars = OrbitalParams(P=127.31*u.day, K=8.996045*u.m/u.s, ecc=0.213,
                           omega=137.234*u.degree,
                           phi0=36.231*u.degree,
                           v0=17.643*u.km/u.s)
@@ -51,14 +50,6 @@ def main():
     for t in ts:
         rvs.append(orbit.generate_rv_curve(t) + _rnd*rv_err)
 
-    # import matplotlib.pyplot as plt
-    # plt.errorbar(t1, rv1.to(u.km/u.s).value, rv_err.to(u.km/u.s).value, linestyle='none', marker='o', zorder=90)
-    # plt.errorbar(t2, rv2.to(u.km/u.s).value, rv_err.to(u.km/u.s).value, linestyle='none', marker='o', zorder=100)
-    # t_grid = np.linspace(t1.min()-150, t1.max()+150, 1024)
-    # plt.plot(t_grid, orbit.generate_rv_curve(t_grid).to(u.km/u.s), marker=None, linestyle='--', zorder=-1, alpha=0.5)
-    # plt.show()
-    # return
-
     with h5py.File(os.path.join(paths.root, "data", "experiment5.h5"), "w") as f:
         _data = RVData(t=ts[0], rv=rvs[0], stddev=rv_err)
         data0 = _data[:-2]
@@ -72,8 +63,8 @@ def main():
             g = f.create_group(str(i+1))
             data.to_hdf5(g)
 
-            g = f.create_group('truth')
-            opars.to_hdf5(g)
+        g = f.create_group('truth')
+        opars.to_hdf5(g)
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
