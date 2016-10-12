@@ -752,6 +752,9 @@ returned.
 The number of data points, $N$, and the number of samples that pass the
 rejection sampling in the first step of \samplername, $M_{\rm rej}$, are printed
 on each panel.
+Note that two of the (randomly chosen) observation times are so close that the
+markers overlap, so counting the number of data points appears inconsistent with
+the reported number.
 {\sl Right panels}: A single projection of the posterior samples in each case
 showing the log-period, $\ln P$, and eccentricity, $e$.
 The structure of the posterior pdf when the number of data points is small is
@@ -765,67 +768,71 @@ highly complex but still much more compact than our prior beliefs.
 For a more realistic application of \samplername, we choose an \apogee\ target
 with a previously identified companion (2M00110648+6609349) but with few radial
 velocity measurements (\citealt{Troup:2016}).
-\figname~\ref{fig:exp2-rv}, top panel, shows radial velocity data for the star
-(black points).\footnote{We don't plot the best-fit orbit from
-\citealt{Troup:2016} because the parameter values reported in their work do not
-produce Keplerian orbits that look like reasonable fits to the data.
-\todo{APW: say this better / nicer?}}
+\figname~\ref{fig:exp4-rv} shows radial velocity data for the star (black
+points). %\footnote{We don't plot the best-fit orbit from
+%\citealt{Troup:2016} because the parameter values reported in their work do not
+%produce Keplerian orbits that look like reasonable fits to the data.}
 Similar to Experiment 1, these data are sparse and have poor phase coverage,
 however the time sampling is quite different and is representative of realistic
 survey design choices.
 
 We again generate $2^{28}$ prior samples over the nonlinear parameters with a
-period domain of $(P_{\rm min}, P_{\rm max}) = (16, 8192)~{\rm day}$, of which
-45,242 samples pass our rejection sampling step.
-Over-plotted as grey lines on the top panel of \figname~\ref{fig:exp2-rv} are
-128 orbits computed from random samples from the posterior pdf, sampled using
-\samplername.
-From these orbits, it appears that there are at least a few distinct period
-modes, and a wide variety of eccentricities, represented in the posterior
-sampling.
-As with \figname~\ref{fig:exp1-rv}, bottom panels show two projections of the
-posterior samples (grey points), but now the blue plus mark indicates the
-previously found orbital parameter values (\citealt{Troup:2016}).
+period domain of $(P_{\rm min}, P_{\rm max}) = (16, 8192)~{\rm day}$ and with
+$(\mu_s,\sigma^2_s) = (10.5,1)$, of which 22,313 samples pass our rejection
+sampling step.
+Over-plotted as grey lines on \figname~\ref{fig:exp4-rv} are 256 orbits computed
+from these samples.
+From viasualizing these orbits, it appears that there are at least a few
+distinct period modes, and a wide variety of eccentricities, represented in the
+posterior sampling.
 
-\figname~\ref{fig:exp2-corner} shows projections of all posterior samples in
+\figname~\ref{fig:exp4-corner} shows projections of all posterior samples in
 different parameter combinations.
 Here it is clear there are at least three period modes: the dominant mode at $P
 \approx 300~{\rm day}$ is broadly consistent with the previously measured period
 (\citealt{Troup:2016}), but other modes are clearly present at shorter periods
 with low eccentricity and longer periods with higher eccentricity.
+Interestingly, we also find that the model prefers having a finite jitter
+around $s \approx 116~\mps$ indicating that the uncertainties might be
+underestimated by a factor of $\approx 2$.
 
-% \begin{figure*}[p]
-% \begin{center}
-% \includegraphics[width=\textwidth]{figures/exp4-rv-curves.pdf}
-% \end{center}
-% \caption{%
-% Same as \figname~\ref{fig:exp1-rv} but now using \apogee\ radial-velocity
-% measurements of the target 2M00110648+6609349.
-% Blue plus mark in bottom panels indicate orbital parameter values found in a
-% previous study (\citealt{Troup:2016}).
-% \label{fig:exp4-rv}}
-% \end{figure*}
+\begin{figure*}[p]
+\begin{center}
+\includegraphics[width=\textwidth]{figures/exp4-rv-curves.pdf}
+\end{center}
+\caption{%
+Black points and uncertainties show \apogee\ radial velocity measurements for
+the target 2M00110648+6609349.
+Grey curves show orbits computed from 256 samples from the posterior pdf
+generated with \samplername\ with jitter as a free parameter.
+Several qualitatively different orbital solutions are found for this source.
+\label{fig:exp4-rv}}
+\end{figure*}
 
-% \begin{figure*}[p]
-% \begin{center}
-% \includegraphics[width=\textwidth]{figures/exp4-corner.pdf}
-% \end{center}
-% \caption{%
-% All projections of the 45,242 surviving posterior samples (grey points) with
-% previously found orbital parameter values shown as the blue cross-hairs.
-% \label{fig:exp4-corner}}
-% \end{figure*}
+\begin{figure*}[p]
+\begin{center}
+\includegraphics[width=\textwidth]{figures/exp4-corner.pdf}
+\end{center}
+\caption{%
+All projections of the 22,313 surviving posterior samples (grey points) with
+previously found orbital parameter values shown as the blue cross-hairs
+(\citealt{Troup:2016}).
+\label{fig:exp4-corner}}
+\end{figure*}
 
 \subsection{Experiment \arabic{expcounter}: Prospects for observation planning}
 \stepcounter{expcounter}
 
-A noticable feature of the middle two panels of \figname~\ref{fig:exp3-rv-1} is
-that the posterior pdf collapses significantly between the $N=5$ and $N=7$
-cases.
-This implies that the two added observations are extremely informative, and that
-we can use \samplername\ to predict when observations would be most valuable for
-a given source.
-We will explore this topic in detail in future work, but here we simply show
+A noticable difference between the $N=5$ and $N=7$ panels in
+\figname~\ref{fig:exp3-rv} is that the posterior pdf collapses significantly
+between these cases (from $\gtrsim$20 period modes to 3):
+This implies that the two added observations are extremely informative.
+Inverting this idea, it also suggests that we can use \samplername\ to (1)
+predict the observation time that maximally collapses the posterior pdf for a
+previously measured source, and (2) for an expected population of sources, we
+can identify the optimal sampling pattern to maximize discovery or
+characterization of the sources.
+We will explore these ideas in detail in future work, but here we simply show
 that the timing of subsequent observations can lead to very different
 structure in the posterior samples.
 
