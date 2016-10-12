@@ -25,7 +25,7 @@ def main():
 
     # Designer RV curves!
 
-    opars = OrbitalParams(P=127.31*u.day, K=8.996045*u.m/u.s, ecc=0.213,
+    opars = OrbitalParams(P=127.31*u.day, K=8.996045*u.km/u.s, ecc=0.213,
                           omega=137.234*u.degree,
                           phi0=36.231*u.degree,
                           v0=17.643*u.km/u.s)
