@@ -21,31 +21,6 @@ export SEED=42
 srun python continue-with-emcee.py -v --mpi -o \
 --nsteps=$NSTEPS \
 -f ../data/experiment3.h5 \
---name="experiment3-0.hdf5" \
---hdf5-key="0" \
---seed=$SEED \
---fixed-jitter='0 m/s'
-
-srun python continue-with-emcee.py -v --mpi -o \
---nsteps=$NSTEPS \
--f ../data/experiment3.h5 \
---name="experiment3-2.hdf5" \
---hdf5-key="2" \
---seed=$SEED \
---fixed-jitter='0 m/s'
-
-srun python continue-with-emcee.py -v --mpi -o \
---nsteps=$NSTEPS \
--f ../data/experiment3.h5 \
---name="experiment3-4.hdf5" \
---hdf5-key="4" \
---seed=$SEED \
---fixed-jitter='0 m/s'
-
-srun python continue-with-emcee.py -v --mpi -o \
---nsteps=$NSTEPS \
--f ../data/experiment3.h5 \
---name="experiment3-6.hdf5" \
---hdf5-key="6" \
---seed=$SEED \
---fixed-jitter='0 m/s'
+--hdf5-key="16" \
+--name="experiment3-16.hdf5" \
+--seed=$SEED
