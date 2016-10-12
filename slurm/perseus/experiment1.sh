@@ -2,7 +2,7 @@
 #SBATCH -J exp1           # job name
 #SBATCH -o exp1.o%j             # output file name (%j expands to jobID)
 #SBATCH -e exp1.e%j             # error file name (%j expands to jobID)
-#SBATCH -n 256                   # total number of mpi tasks requested
+#SBATCH -n 260                   # total number of mpi tasks requested
 #SBATCH -t 00:30:00             # run time (hh:mm:ss) - 1.5 hours
 #SBATCH --mail-user=adrn@princeton.edu
 #SBATCH --mail-type=begin       # email me when the job starts
