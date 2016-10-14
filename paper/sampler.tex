@@ -107,7 +107,7 @@ orbital parameters.
 % Aims
 Here we create a custom-built Monte Carlo sampler that can produce a posterior
 sampling for orbital parameters given any number of noisy radial-velocity
-measurements~--~even when the likelihood function is poorly behaved.
+measurements~-- even when the likelihood function is poorly behaved.
 % Methods
 The six standard orbital parameters can be split into the four non-linear
 parameters (period, eccentricity, argument of pericenter, phase) and two linear
@@ -425,13 +425,10 @@ When we trigger the intialization and operation of \emcee, we do the following:
 This procedure ensures that no matter what path we take, we end up with
 at least $M_{\rm min}$ samples from the posterior for any input data.
 
-Within the initial assumptions, this procedure results basically inevitably in a
-correct parameter {\it pdf}, which is borne out in the numerical experiments in
-the next section.
-\todo{~HWR: the claim that this ALWAYS works is almost as much rooted in the
-logic of the method than in the experiments. Is it not that our pdf sampling is
-sufficiently dense that you cannot miss a relevant part of solution space?}
-
+Within the initial assumptions, this procedure more-or-less inevitably results in a
+correct sampling of the parameter {\it pdf}. This is ensured by the density of the
+prior sampling in the nonlinear parameters, and also borne out in the numerical experiments
+in the following \sectionname.
 
 \section{Experiments and results} \label{sec:experiments}
 
@@ -589,7 +586,7 @@ The values used to generate the input orbit are shown as green cross-hairs.
 \end{center}
 \caption{%
 \todo{update this}
-Same as \figname~\ref{fig:validation-corner-a} for the 580 surviving posterior
+Same as \figname~\ref{fig:validation-corner-a} but for the 580 surviving posterior
 samples when also sampling over an unknown jitter parameter, $s^2$.
 \label{fig:validation-corner-b}}
 \end{figure*}
@@ -655,7 +652,7 @@ underestimated or the intrinsic variability of a system is unknown.
 \includegraphics[width=\textwidth]{figures/undunc-rv-curves.pdf}
 \end{center}
 \caption{%
-Same as \figname~\ref{fig:validation-rv} for the three cases in this experiment:
+Same as \figname~\ref{fig:validation-rv} but for the three cases in this experiment:
 (a) known uncertainties and jitter fixed to $s^2 = 0$, (b) underestimated
 uncertainties and jitter fixed to $s^2 = 0$, (c) underestimated uncertainties
 and jitter allowed to vary.
@@ -667,7 +664,7 @@ and jitter allowed to vary.
 \includegraphics[width=\textwidth]{figures/undunc-corner-a.pdf}
 \end{center}
 \caption{%
-Same as \figname~\ref{fig:validation-corner-a} for case (a) in Experiment 2 where the
+Same as \figname~\ref{fig:validation-corner-a} but for case (a) in Experiment 2, where the
 uncertainties are known and jitter is fixed to $s^2 = 0$.
 46330 samples survive the rejection step.
 Henceforth we will drop the angular parameters $\omega$ and $\phi_0$ from the
@@ -680,7 +677,7 @@ corner plots to conserve space.
 \includegraphics[width=\textwidth]{figures/undunc-corner-b.pdf}
 \end{center}
 \caption{%
-Same as \figname~\ref{fig:undunc-corner-a} for case (b) in Experiment 2 where the
+Same as \figname~\ref{fig:undunc-corner-a} but for case (b) in Experiment 2, where the
 uncertainties are underestimated by a factor of 8 and jitter is fixed to
 $s^2 = 0$.
 146 samples survive the rejection step.
@@ -692,7 +689,7 @@ $s^2 = 0$.
 \includegraphics[width=\textwidth]{figures/undunc-corner-c.pdf}
 \end{center}
 \caption{%
-Same as \figname~\ref{fig:undunc-corner-a} for case (c) in Experiment 2 where the
+Same as \figname~\ref{fig:undunc-corner-a} but for case (c) in Experiment 2, where the
 uncertainties are underestimated by a factor of 8 and the jitter is sampled as
 a non-linear parameter.
 1323 samples survive the rejection step.
@@ -793,7 +790,7 @@ $(\mu_s,\sigma^2_s) = (10.5,1)$, of which 22,313 samples pass our rejection
 sampling step.
 Over-plotted as grey lines on \figname~\ref{fig:apogee-rv} are 256 orbits
 computed from these samples.
-From viasualizing these orbits, it appears that there are at least a few
+From visualizing these orbits, it appears that there are at least a few
 distinct period modes, and a wide variety of eccentricities, represented in the
 posterior sampling.
 
@@ -1003,31 +1000,20 @@ period is short.
 For now \samplername\ simply addresses the prior sampling density issues
 by using as many prior samples as it possibly can!
 
-All these caveats noted, \emph{by far} the worst assumption made by
-\samplername\ is that the noise is Gaussian with known variances:
-All data sets show occasional outliers (catastrophic errors), almost
-all data sets under-estimate the true radial-velocity errors, and the
-fact that the radial-velocity measurments depend on stellar parameters
-(the stellar photosphere model, say) leads to added radial-velocity
-noise, usually unaccounted for.
-What can we do in these cases?
-There is nothing we can simply do here, if we want to maintain the
+All these caveats noted~-- and despite the flexibility of the noise
+model introduced with the jitter parameter $s^2$~-- \emph{by far} the
+worst assumption made by \samplername\ is that the noise is Gaussian:
+Essentially all data sets show occasional outliers (catastrophic errors).
+There is nothing we can do simply here, if we want to maintain the
 trick of treating the linear and non-linear parameters separately.
-Our advice to users who believe that they have additional sources or
-forms of noise is to inflate the uncertainty variance estimates and
-try to get conservative conclusions about the posterior pdf.
-
-If the only problem is an underestimate of the noise variances, the
-factor or offset to be applied to the variances can be promoted to a
-non-linear parameter and sampled along with the other nonlinear parameters.
-This is probably (just) practical.
-If the only problem is occasional outliers, the method could be
-modified to do all leave-one-out samplings, take the union, and then
+To deal with very rare outliers (such that no star would be likely to
+suffer from more than one), one possible modification 
+would be to do all leave-one-out samplings, take the union, and then
 importance sample the results using some ratio of the mixture of
 leave-one-out Gaussian likelihoods to some more realistic likelihood
 that involves an outlier model (as, for example, we suggest in
 \cite{fittingalline}).
-These modifications to the method are beyond the scope of this
+Such a modification to the method is beyond the scope of this
 \documentname\, but (once again) not beyond the scope of our ambitions.
 
 \acknowledgements
