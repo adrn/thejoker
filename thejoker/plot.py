@@ -2,11 +2,10 @@
 import astropy.time as atime
 from astropy import log as logger
 import astropy.units as u
-import corner
 import matplotlib.pyplot as plt
 import numpy as np
 
-__all__ = ['plot_rv_curves', 'plot_corner']
+__all__ = ['plot_rv_curves']
 
 _truth_color = '#006837'
 _prev_result_color = '#2166AC'
@@ -81,7 +80,7 @@ def plot_rv_curves(orbital_pars, t_grid, rv_unit=None, data=None,
     if data is not None:
         data_style = data_plot_kwargs.copy()
         data_style.setdefault('rv_unit', rv_unit)
-        data_style.setdefault('markersize', 5.)
+        data_style.setdefault('markersize', 4.)
 
         if data_style['rv_unit'] != rv_unit:
             raise u.UnitsError("Data plot units don't match rv_unit!")

@@ -554,11 +554,11 @@ able to generate samples using \samplername.
 \includegraphics[width=\textwidth]{figures/validation-rv-curves.pdf}
 \end{center}
 \caption{%
-\todo{update this}
 In both panels, black points show simulated radial velocity measurements plotted
 against Barycentric Modified Julian Date (BMJD) of the observations and dashed
 green line shows the true, input orbit that the radial velocity measurements
 were drawn from.
+Uncertainties on the data points are much smaller than the marker size.
 Grey curves show orbits computed from 128 samples from, in the top panel, the
 posterior pdf with the jitter held fixed at $s^2 = 0$ and, in the bottom panel,
 the posterior pdf including jitter as a free parameter.
@@ -573,7 +573,6 @@ This is simply a validation of the method.
 \includegraphics[width=\textwidth]{figures/validation-corner-a.pdf}
 \end{center}
 \caption{%
-\todo{update this}
 Projections of the 678 surviving posterior samples when jitter is fixed (grey
 points).
 The values used to generate the input orbit are shown as green cross-hairs.
@@ -585,7 +584,6 @@ The values used to generate the input orbit are shown as green cross-hairs.
 \includegraphics[width=\textwidth]{figures/validation-corner-b.pdf}
 \end{center}
 \caption{%
-\todo{update this}
 Same as \figname~\ref{fig:validation-corner-a} but for the 580 surviving posterior
 samples when also sampling over an unknown jitter parameter, $s^2$.
 \label{fig:validation-corner-b}}
@@ -757,8 +755,8 @@ from using \samplername, or, if \samplername\ returns few samples in a small
 range, from switching to \emcee\ to continue sampling until 128 samples are
 returned.
 The number of data points, $N$, and the number of samples that pass the
-rejection sampling in the first step of \samplername, $M_{\rm rej}$, are printed
-on each panel.
+rejection sampling in the first step of \samplername, $M$, are printed on each
+panel.
 Note that two of the (randomly chosen) observation times are so close that the
 markers overlap, so counting the number of data points appears inconsistent with
 the reported number.
