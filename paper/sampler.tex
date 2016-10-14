@@ -929,14 +929,16 @@ could never be perfectly known!
 However, the addition of an additional jitter parameter helps
 alleviate these issues.
 
-\todo{Clean up Hogg language below...}
+When multiple Keplerian periodic signals are super-imposed in an observed
+radial-velocity curve, \samplername\ will typically lock on to one at a time,
+leading to ``clusters'' of solutions (which may be multi-modal themselves).
 Although the single-companion assumption is a severe assumption, it
 is pretty-much required for the method to be tractable.
-Of course, in reality, it is likely that most stars have thousands or
-millions of companions (the Sun does, after all).
-Even going to two companions, however, the non-linear parameter space
-jumps to eight-dimensional, and (at least) ten-dimensional if there
-are companion--companion interactions.
+Of course, in reality, it is likely that many stars reside in higher-order
+multiplets.
+Sampling over orbital parameters even for two companions, however, is already
+intractable as the non-linear parameter space jumps to eight-dimensional, and
+(at least) ten-dimensional if there are companion--companion interactions.
 This would be absolutely intractable to sample by brute-force Simple
 Monte Carlo; our advice would be to switch to some kind of Markov
 Chain method that deals as well as possible with multi-modal
@@ -948,59 +950,48 @@ fairly!
 There is no comparably simple way of determining that any nested
 sampling is converged.
 
-That said, there is a simple three-body problem that \emph{can} be
-solved tractably, with only small modifications:
-If the third body is on a very long-period orbit, it appears only
-as an overall acceleration (velocity gradient with time).
-This can be modeled with just one more parameter, and that parameter
-is linear, so it doesn't worsen the prior pdf sampling (which happens
-over the nonlinear parameters only).
+That said, there is a simple $N$-body problem that \emph{can} be solved
+tractably:
+For systems with one short-period companion and $\geq1$ very long-period
+companion(s), \samplername\ can be easily extended to include additional linear
+parameters that allow long-period velocity trends that are, e.g., polynomial in
+time; these additional parameters don't worsen the prior pdf sampling (which
+happens over the nonlinear parameters only).
+These extra linear parameters could alternatively include extra $v_0$ terms that
+come in when, say, the data come from a set of different radial-velocity
+programs with different calibrations (as is the case for the recent, impressive
+Proxima b discovery; \citealt{Anglada-Escude:2016}).
 
-Actually, the number of linear parameters could be increased
-dramatically without any serious loss of performance, since almost all
-of the compute time is taken up with the dense sampling in the nonlinear
-subspace.
-These extra linear parameters could be the extra $v_0$ terms that come
-in when, say, the data come from a set of different radial-velocity
-programs with different calibrations (as is the case for the recent,
-impressive Proxima b discovery; \citealt{Anglada-Escude:2016}).
-Another case for additional linear parameters would be the regressing
-out of confounding signals that correlate with housekeeping data,
-like, say, radial-velocity shifts that correlate with activity signals
-(HOGG CITE?).
-
-Although we have argued that our prior pdf sampling is dense enough,
-and---by God---we spend enough time on it, it might not be dense enough
-if we push to very short periods.
-The problem structure points (in \sectionname~\ref{sec:method})
+Although we have argued that our prior pdf sampling is dense enough,it might not
+be dense enough if we push to very short periods.
+The problem structure assumptions (in \sectionname~\ref{sec:method})
 includes the point that, given a finite time span for the data, there
 is a finite width to any period peak in the likelihood function.
-This finite width goes like period squared, so at very short periods,
-it gets very narrow.
+This finite width is proportional to the period squared, so at very short
+periods, it gets very narrow.
 Our prior sampling is uniform in the logarithm of period, or the
-density of samples in period goes like inverse period.
-If we wanted to make sure a minimal prior sampling was always dense
-enough at every period, we should weight it by an additional factor of
-inverse period.
-A change like this could improve the reliability of the method when the data
-are informative, the observations span a long time, and the true
-period is short.
+density of samples in period is proportional to inverse period.
+% If we wanted to make sure a minimal prior sampling was always dense
+% enough at every period, we should weight it by an additional factor of
+% inverse period.
+% A change like this could improve the reliability of the method when the data
+% are informative, the observations span a long time, and the true
+% period is short.
 For now \samplername\ simply addresses the prior sampling density issues
 by using as many prior samples as it possibly can!
 
-All these caveats noted~-- and despite the flexibility of the noise
-model introduced with the jitter parameter $s^2$~-- \emph{by far} the
-worst assumption made by \samplername\ is that the noise is Gaussian:
+All these caveats noted---and despite the flexibility of the noise model
+introduced with the jitter parameter $s^2$---the worst assumption made by
+\samplername\ is that the noise is Gaussian:
 Essentially all data sets show occasional outliers (catastrophic errors).
-There is nothing we can do simply here, if we want to maintain the
-trick of treating the linear and non-linear parameters separately.
-To deal with very rare outliers (such that no star would be likely to
-suffer from more than one), one possible modification
-would be to do all leave-one-out samplings, take the union, and then
-importance sample the results using some ratio of the mixture of
-leave-one-out Gaussian likelihoods to some more realistic likelihood
-that involves an outlier model (as, for example, we suggest in
-\cite{Hogg:2010a}).
+There is nothing we can do simply here, if we want to capitalize on treating the
+linear and non-linear parameters separately.
+To deal with very rare outliers (such that no star would be likely to suffer
+from more than one), one possible modification would be to do all leave-one-out
+samplings, take the union, and then importance sample the results using some
+ratio of the mixture of leave-one-out Gaussian likelihoods to some more
+realistic likelihood that involves an outlier model (as, for example, we suggest
+in \cite{Hogg:2010a}).
 Such a modification to the method is beyond the scope of this
 \documentname\, but (once again) not beyond the scope of our ambitions.
 
