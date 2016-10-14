@@ -84,7 +84,7 @@
                      Department of Physics,
                      New York University, 4 Washington Place,
                      New York, NY 10003, USA}
-\altaffiltext{\cds}{Center for Data Scinece,
+\altaffiltext{\cds}{Center for Data Science,
                      New York University, 60 Fifth Avenue,
                      New York, NY 10011, USA}
 \altaffiltext{\mpia}{Max-Planck-Institut f\"ur Astronomie,
@@ -118,16 +118,15 @@ perform rejection sampling using a marginalized likelihood, marginalizing out
 the linear orbital parameters.
 In the case of sparse or uninformative data, the sampling obtained by the Simple
 Monte Carlo is generally multimodal and dense.
-With informative data, the sampling is generally unimodal but insufficient.
+As the data becomes more informative, the sampling becomes effectively unimodal but too sparse.
 In the unimodal case, we follow the Simple Monte Carlo with standard MCMC to
-make the sampling more substantial.
+make the sampling denser.
 % Results
 The method produces correct samplings in orbital parameters for data sets
 that include as few as three noisy time points.
 \samplername\ can therefore be used to (1) verify that the likelihood function
-is unimodal \todo{(None of the datasets will actually have unimodal
-likelihoods\ldots what does this mean?)} for a given set of data, and (2)
-produce proper samplings of multimodal pdf to use in hierarchical modeling
+is effectively unimodal for a given set of data, and (2)
+produce proper samplings of multimodal pdfs to use in hierarchical modeling
 (e.g., population modeling).
 We give some examples that show how the posterior probability depends extremely
 strongly on the number and time coverage of the observations and their
@@ -184,11 +183,14 @@ orbits and masses that put substantial plausibility onto multiple
 qualitatively different solutions.
 This is then reflected in a likelihood function that is highly multi-modal in
 the relevant parameter spaces (e.g., Keplerian orbital parameters).
-While the problem has of course been recognized for a long time, there are
-currently no methods known for exploring these highly multimodal functions and
+While the problem has of course been recognized for a long time, there
+are currently no methods that explore these highly multimodal
+functions with good guarantees of correctness (that is, converged
+samplings that fairly sample the full posterior; but see
+\citealt{brewerrv}).
+Good samplings are essential to the jobs of 
 delivering correct posterior samplings and reliable probabilistic statements
 about detection and characterization.
-\todo{Why are we not happy with nested sampling?}
 
 Here we make an attempt at correcting this problem.
 Our approach is to build custom posterior sampling methods that capitalize on
@@ -202,10 +204,8 @@ analysis to single-line spectroscopic binary systems.
 
 The structure of this \documentname\ is as follows:
 We state our assumptions and implementation approach, and demonstrate that we
-have a method that is not only robust, but essentially always correct under
+have a method that is reliable and essentially always correct under
 those assumptions.
-\todo{HOGG: I know that you like this ``provably correct'' terminology but I
-(DFM) really think it doesn't add anything to the discussion.}
 We perform experiments with the method to understand its properties and
 limitations.
 We finish by discussing the astrophysical applicability and potential of the
@@ -227,28 +227,28 @@ eccentricity, pericenter phase and argument, velocity semi-amplitude, and the
 barycenter velocity.
 As is well-known, this does not fully specify the binary system itself, because
 of the $\sin{i}$ and mass function degeneracies.
-To proceed, we assume that
+To proceed, we assume the following:
 \begin{itemize}\itemsep0ex  % <- #yourefired
-\item we have measurements of the radial velocity of a
+\item We have measurements of the radial velocity of a
   star, and that the time dependence of the expectation of that radial
   velocity is well described by the gravitational orbit of a pair of
   point masses (the two-body problem). We assume that the times are
   (effectively) perfectly known, and in an inertial frame (for
-  example, Solar-System barycenter Julian date).
+  example, Solar-System barycentric Julian date).
   Here we only consider the case of a single-line spectroscopic binary system,
   where we do not have measurements of the companion's orbit.
-\item  each star has exactly one companion, and that the
+\item  Each star has exactly one companion, and that the
   radial-velocity measurements are not contaminated by nor affected by
   any other bodies. Since we permit the effective mass of the
   exactly-one companion to go to zero, this assumption is really that
   the star has zero or one companion.
-\item the noise contributions to individual radial-velocity measurements are
+\item The noise contributions to individual radial-velocity measurements are
   well described as draws from zero-mean normal (Gaussian) distributions with
   correctly known variances convolved with a zero-mean normal distribution with
   an additional ``jitter'' variance, $s^2$. We assume that there are no outliers
   beyond this flexible noise model.
-\item we can put a particular, fairly sensible
-  prior probability density functions on all the orbital parameters,
+\item We can put a particular, fairly sensible
+  prior pdfs on all the orbital parameters,
   described below.
 \end{itemize}
 Each of these assumptions could be challenged: in particular we expect some stars
@@ -282,18 +282,17 @@ radial-velocity scatter; the jitter must also be treated as a non-linear
 parameter.
 
 With such a parameterization, the problem is then to construct the posterior pdf
-for these seven parameters, accounting for the fact that the support of this pdf
+for these seven parameters, accounting for the fact that this pdf
 may have very complex, multi-modal structure.
-
-Fundamentally, the method we describe and demonstrate here is to perform
-\emph{Simple Monte Carlo} in the non-linear parameters, and analytically
-marginalize over the two linear parameters.
-The method capitalizes on the following aspects of the problem structure:
+Fundamentally, the method we describe and demonstrate here is
+\emph{Simple Monte Carlo} in the non-linear parameters, but with analytic
+marginalization over the two linear parameters.
+The method capitalizes on the unique problem structure:
 \begin{itemize}\itemsep0ex
 \item There are both linear and non-linear parameters, and we can
   treat them differently; in particular, it is possible to
-  analytically marginalize the linear parameters (provided that the
-  noise model is well-behaved and the prior probability is conjugate).
+  analytically marginalize out the linear parameters (provided that the
+  noise model is well-behaved and the prior pdf is conjugate).
 \item There is a finite, time-sampling-imposed minimum size or
   resolution---in the period---of any features in the
   likelihood function. That is, there cannot be arbitrarily narrow
@@ -320,8 +319,8 @@ Note that this algorithm is guaranteed to produce at least one
 surviving sample; of course if only one sample survives (or any very
 small number), the sampling is not guaranteed to be fair.
 That said, if the original sampling of the prior pdf is dense enough
-that many survive the rejection step, the surviving samples do
-constitute a fair sampling from the posterior pdf.
+that many survive the rejection step, the surviving samples do, by construction,
+constitute a fair, uncorrelated sampling from the posterior pdf.
 
 Our prior pdf in the non-linear parameters is very simple:
 \begin{align}
@@ -352,7 +351,7 @@ generated and the number of surviving samples.
 The unmarginalized likelihood function $L$ is
 \begin{equation}
 \ln L = -\frac{1}{2}\,\sum_{n=1}^N \left[\frac{[v_n - v(t_n;\bs{\theta})]^2}{\sigma_n^2 + s^2}
- -\ln \left(s^2 + \sigma_n^2\right) \right] + \mathrm{constant}
+ +\ln \left(2\pi\,s^2 + 2\pi\,\sigma_n^2\right) \right]
 \end{equation}
 where $n$ indexes the individual data points $v_n$, $v(t)$ is the radial
 velocity prediction at time $t$ given the orbital parameters $\bs{\theta}$, the
@@ -373,8 +372,7 @@ With these, we can construct---for each prior sample---the marginalized
 likelihood $Q_j$
 \begin{equation}
 \ln Q_j = -\frac{1}{2}\,\sum_{n=1}^N \left[\frac{[v_n - v(t_n;\bs{\theta})]^2}{\sigma_n^2 + s^2}
- -\ln \left(s^2 + \sigma_n^2\right) \right] -\frac{1}{2}\,\ln ||C_j||
- + \mathrm{constant}
+ -\ln \left(2\pi\,s^2 + 2\pi\,\sigma_n^2\right) \right] -\frac{1}{2}\,\ln ||2\pi\,C_j||
 \end{equation}
 where the prediction $v(t_n;\bs{\theta}_j)$ is taken at the best-fit values of
 the linear parameters given sample $j$ of the non-linear parameters, and the
@@ -404,7 +402,7 @@ The three possible outcomes are:
 \item $M<M_{\rm min}$ samples survive the rejection, and these samples have a
   root-variance (rms) in the period parameter $P$ that is smaller than $\Delta$
   (i.e. they give no indication of period ambiguity).
-  In this case we assume that the posterior pdf is unimodal, and we use the
+  In this case we assume that the posterior pdf is effectively unimodal, and we use the
   surviving samples (or sample) to initialize a MCMC sampling using the \emcee\
   package (\citealt{Foreman-Mackey:2013}).
 \item $M<M_{\rm min}$ samples survive the rejection, and these samples
@@ -441,7 +439,7 @@ In what follows, we use (1) simulated data with known properties and (2)
 spectroscopic data from Data Release 13 (DR13;
 \citealt{SDSS-Collaboration:2016}) of the Apache Point Obsevatory Galactic
 Evolution Experiment (\apogee; \citealt{Majewski:2015}) in a series of
-experiments that demonstrate the robustness and utility of \samplername.
+experiments that demonstrate the reliability and utility of \samplername.
 \apogee\ is one of the four sub-surveys of the Sloan Digital Sky Survey-III
 (SDSS-III; \citealt{Eisenstein:2011}) and utilized a new infrared spectrograph
 to obtain moderate-resolution, H-band spectra for over 160,000 stars throughout
@@ -707,7 +705,7 @@ a non-linear parameter.
 
 When the phase coverage of the radial velocity observations is good and the
 number of observations is large, the posterior pdf over orbital parameters will
-likely be unimodal.
+likely be effectively unimodal.
 Under these conditions, \samplername\ is a very inefficient sampler for this
 problem and will return very few samples (as few as one).
 As we have seen in the previous experiments, when the number of data points is
@@ -897,8 +895,8 @@ without the need for convergence or other diagnostic checks.
 The primary innovation we bring is a separation of the parameters into linear
 and nonlinear subsets, such that the brute force is only required in the
 nonlinear subspace.
-We further capitalize on the problem structure by identifying unimodal and
-multi-modal posterior pdfs using the minimum possible width of a likelihood peak
+We further capitalize on the problem structure by identifying effectively unimodal and
+effectively multimodal posterior pdfs using the minimum possible width of a likelihood peak
 in the period direction, given the time sampling.
 
 Our experiments show that \samplername\ can be used for discovery and
