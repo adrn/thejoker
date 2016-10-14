@@ -482,16 +482,6 @@ While useful for searching for new candidate binaries, this pipeline does not
 easily fit within hierarchical probabilistic modeling of the population of
 companions.
 
-\todo{APW: Update this to reflect new experiments}
-In Experiment 1, we use DR13 data for an \apogee\ star with a companion
-(identified by \citealt{Troup:2016}) to demonstrate that the posterior pdf over
-Keplerian orbital parameters can be highly multi-modal by using \samplername\
-to generate samples from this distribution.
-In Experiment 2, we use DR13 data for an \apogee\ star with better radial
-velocity phase coverage and more observations and show how the complexity of
-the posterior pdf increases as data points are artificially deleted from the
-analysis.
-
 \subsection{Experiment~\arabic{expcounter}: Validation with simulated data}
 \label{sec:validation}
 \stepcounter{expcounter}
@@ -906,7 +896,7 @@ These hierarchical inferences are the only population inferences
 that properly propagate non-trivial uncertainties at the
 individual-system level to the conclusions at the population level.
 
-Interestingly, as we show in Experiment~\ref{sec:numpts}, even very sparse
+Interestingly, as we show in \sectionname~\ref{sec:numpts}, even very sparse
 samplings of the radial-velocity history of a star provide highly
 informative posterior pdfs.
 The bottom-right panel in \figurename~\ref{fig:numpts-rv} shows a highly
@@ -920,7 +910,7 @@ provide a very informative prior pdf for further observing campaigns.
 
 Indeed, one of the purposes for which we built \samplername\ is
 observation planning, or cadence evaluation, or survey strategy:
-As Experiment~\ref{sec:obsplan} shows, \samplername\ could be used to plan the
+As \sectionname~\ref{sec:obsplan} shows, \samplername\ could be used to plan the
 times of next observations to maximize their expected information content.
 That is beyond the scope of this \documentname, but it is not beyond the scope
 of our ambitions.
