@@ -351,7 +351,7 @@ generated and the number of surviving samples.
 The unmarginalized likelihood function $L$ is
 \begin{equation}
 \ln L = -\frac{1}{2}\,\sum_{n=1}^N \left[\frac{[v_n - v(t_n;\bs{\theta})]^2}{\sigma_n^2 + s^2}
- +\ln \left(2\pi\,s^2 + 2\pi\,\sigma_n^2\right) \right]
+ +\ln \left(2\pi\,[\sigma_n^2 + s^2]\right) \right]
 \end{equation}
 where $n$ indexes the individual data points $v_n$, $v(t)$ is the radial
 velocity prediction at time $t$ given the orbital parameters $\bs{\theta}$, the
@@ -372,7 +372,7 @@ With these, we can construct---for each prior sample---the marginalized
 likelihood $Q_j$
 \begin{equation}
 \ln Q_j = -\frac{1}{2}\,\sum_{n=1}^N \left[\frac{[v_n - v(t_n;\bs{\theta})]^2}{\sigma_n^2 + s^2}
- -\ln \left(2\pi\,s^2 + 2\pi\,\sigma_n^2\right) \right] -\frac{1}{2}\,\ln ||2\pi\,C_j||
+ +\ln \left(2\pi\,[\sigma_n^2 + s^2]\right) \right] -\frac{1}{2}\,\ln ||2\pi\,C_j||
 \end{equation}
 where the prediction $v(t_n;\bs{\theta}_j)$ is taken at the best-fit values of
 the linear parameters given sample $j$ of the non-linear parameters, and the
