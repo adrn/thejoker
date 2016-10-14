@@ -396,9 +396,9 @@ The three possible outcomes are:
 \item $M<M_{\rm min}$ samples survive the rejection, and these samples have a
   root-variance (rms) in the period parameter $P$ that is smaller than $\Delta$
   (i.e. they give no indication of period ambiguity).
-  In this case we assume that the posterior pdf is unimodal, and we use the
-  surviving samples (or sample) to initialize a MCMC sampling using the \emcee\
-  package (\citealt{Foreman-Mackey:2013}).
+  In this case we assume that the posterior pdf is effectively unimodal, and we
+  use the surviving samples (or sample) to initialize a MCMC sampling using the
+  \emcee\ package (\citealt{Foreman-Mackey:2013}).
 \item $M<M_{\rm min}$ samples survive the rejection, and these samples
   span a period range larger than $\Delta$.
   In this case, we iterate the Simple Monte Carlo procedure: We generate new
@@ -699,7 +699,7 @@ a non-linear parameter.
 
 When the phase coverage of the radial velocity observations is good and the
 number of observations is large, the posterior pdf over orbital parameters will
-likely be unimodal.
+likely be effectively unimodal.
 Under these conditions, \samplername\ is a very inefficient sampler for this
 problem and will return very few samples (as few as one).
 As we have seen in the previous experiments, when the number of data points is
@@ -889,9 +889,9 @@ without the need for convergence or other diagnostic checks.
 The primary innovation we bring is a separation of the parameters into linear
 and nonlinear subsets, such that the brute force is only required in the
 nonlinear subspace.
-We further capitalize on the problem structure by identifying unimodal and
-multi-modal posterior pdfs using the minimum possible width of a likelihood peak
-in the period direction, given the time sampling.
+We further capitalize on the problem structure by identifying effectively
+unimodal and multi-modal posterior pdfs using the minimum possible width of a
+likelihood peak in the period direction, given the time sampling.
 
 Our experiments show that \samplername\ can be used for discovery and
 characterization of stellar binaries or exoplanets, even with the presence of
