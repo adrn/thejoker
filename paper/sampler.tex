@@ -187,7 +187,7 @@ While the problem has of course been recognized for a long time, there
 are currently no methods that explore these highly multimodal
 functions with good guarantees of correctness (that is, converged
 samplings that fairly sample the full posterior; but see
-\citealt{brewerrv}).
+\citealt{Brewer:2015}).
 Good samplings are essential to the jobs of
 delivering correct posterior samplings and reliable probabilistic statements
 about detection and characterization.
@@ -300,9 +300,9 @@ The method capitalizes on the unique problem structure:
 \end{itemize}
 
 The method we refer to as Simple Monte Carlo is a specific case of
-rejection-sampling (\citealt{TODO}) in which we densely sample from the prior
-probability density function (prior pdf) and use the likelihood evaluated at
-these samples as the rejection scalar.
+rejection-sampling (\citealt{VonNeumann:1951}) in which we densely sample from
+the prior probability density function (prior pdf) and use the likelihood
+evaluated at these samples as the rejection scalar.
 In detail, the rejection step works as follows:
 \begin{enumerate}\itemsep0ex
 \item For each sample $j$ in the prior pdf sampling of the four non-linear
@@ -900,7 +900,7 @@ Our experiments show that \samplername\ can be used for discovery and
 characterization of stellar binaries or exoplanets, even with the presence of
 unknown or unreported noise contributions.
 It can also be used to generate inputs for a hierarchical inference.
-In previous work (\citealt{hoggeccentricity, dfmexopop}) we have shown
+In previous work (\citealt{Hogg:2010, Foreman-Mackey:2014}) we have shown
 that posterior samplings under an interim prior can be importance-sampled
 with a hierarchical inference to generate posterior beliefs about the
 full population.
@@ -952,7 +952,7 @@ are companion--companion interactions.
 This would be absolutely intractable to sample by brute-force Simple
 Monte Carlo; our advice would be to switch to some kind of Markov
 Chain method that deals as well as possible with multi-modal
-posteriors, such as nested sampling (\citealt{skilling, brewer}).
+posteriors, such as nested sampling (\citealt{Skilling:2004, Brewer:2009}).
 This change would be associated with the loss of the simple
 convergence criterion that Simple Monte Carlo provides: If lots of
 samples survive the rejection step, the posterior has been sampled
@@ -975,7 +975,7 @@ subspace.
 These extra linear parameters could be the extra $v_0$ terms that come
 in when, say, the data come from a set of different radial-velocity
 programs with different calibrations (as is the case for the recent,
-impressive Proxima b discovery; \citealt{proximab}).
+impressive Proxima b discovery; \citealt{Anglada-Escude:2016}).
 Another case for additional linear parameters would be the regressing
 out of confounding signals that correlate with housekeeping data,
 like, say, radial-velocity shifts that correlate with activity signals
@@ -1012,7 +1012,7 @@ would be to do all leave-one-out samplings, take the union, and then
 importance sample the results using some ratio of the mixture of
 leave-one-out Gaussian likelihoods to some more realistic likelihood
 that involves an outlier model (as, for example, we suggest in
-\cite{fittingalline}).
+\cite{Hogg:2010a}).
 Such a modification to the method is beyond the scope of this
 \documentname\, but (once again) not beyond the scope of our ambitions.
 
