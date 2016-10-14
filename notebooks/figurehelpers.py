@@ -67,9 +67,9 @@ def make_rv_curve_figure(all_data, all_pars, truth_pars=None, rv_unit=u.km/u.s,
             ax.set_title(titles[i])
 
         plot_rv_curves(pars[:n_plot_curves], t_grid, rv_unit=rv_unit, add_labels=False,
-                       ax=ax, plot_kwargs={'color': '#888888', 'zorder': -100, 'marker': ''})
+                       ax=ax, plot_kwargs={'color': '#aaaaaa', 'zorder': -100, 'marker': ''})
 
-        data.plot(ax=ax, rv_unit=rv_unit, ecolor='k', markersize=3,
+        data.plot(ax=ax, rv_unit=rv_unit, ecolor='k', markersize=4,
                   elinewidth=1, alpha=1., zorder=100)
         ax.set_xlim(t_grid.min(), t_grid.max())
 
