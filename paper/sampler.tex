@@ -186,8 +186,8 @@ While the problem has of course been recognized for a long time, there
 are currently no methods that explore these highly multimodal
 functions with good guarantees of correctness (that is, converged
 samplings that fairly sample the full posterior; but see
-\citealt{brewerrv}).
-Good samplings are essential to the jobs of 
+\citealt{Brewer:2015}).
+Good samplings are essential to the jobs of
 delivering correct posterior samplings and reliable probabilistic statements
 about detection and characterization.
 
@@ -299,9 +299,9 @@ The method capitalizes on the unique problem structure:
 \end{itemize}
 
 The method we refer to as Simple Monte Carlo is a specific case of
-rejection-sampling (\citealt{TODO}) in which we densely sample from the prior
-probability density function (prior pdf) and use the likelihood evaluated at
-these samples as the rejection scalar.
+rejection-sampling (\citealt{VonNeumann:1951}) in which we densely sample from
+the prior probability density function (prior pdf) and use the likelihood
+evaluated at these samples as the rejection scalar.
 In detail, the rejection step works as follows:
 \begin{enumerate}\itemsep0ex
 \item For each sample $j$ in the prior pdf sampling of the four non-linear
@@ -401,9 +401,9 @@ The three possible outcomes are:
 \item $M<M_{\rm min}$ samples survive the rejection, and these samples have a
   root-variance (rms) in the period parameter $P$ that is smaller than $\Delta$
   (i.e. they give no indication of period ambiguity).
-  In this case we assume that the posterior pdf is effectively unimodal, and we use the
-  surviving samples (or sample) to initialize a MCMC sampling using the \emcee\
-  package (\citealt{Foreman-Mackey:2013}).
+  In this case we assume that the posterior pdf is effectively unimodal, and we
+  use the surviving samples (or sample) to initialize a MCMC sampling using the
+  \emcee\ package (\citealt{Foreman-Mackey:2013}).
 \item $M<M_{\rm min}$ samples survive the rejection, and these samples
   span a period range larger than $\Delta$.
   In this case, we iterate the Simple Monte Carlo procedure: We generate new
@@ -466,8 +466,8 @@ Under this criterion, stars with fewer than eight visits were rejected from
 consideration, leaving $\approx$15,000 stars.
 For each of the remaining stars, the radial velocity curves are searched for
 significant periods, which are then used to initialize $\chi^2$ fits of a
-Keplerian orbit using a custom least-squares fitter \todo{APW: cite De Lee even
-though we don't use it?}.
+Keplerian orbit using a custom least-squares fitter (\acronym{MPRVFIT};
+\citealt{De-Lee:2013}).
 In cases where multiple significant periods are found, the parameters obtained
 from the fit with the best modified $\chi^2$ value are retained (modulo a
 number of other considerations described in \sectionname~3.3.4 of
@@ -480,16 +480,6 @@ When there are few data points or poor phase coverage this is especially true.
 While useful for searching for new candidate binaries, this pipeline does not
 easily fit within hierarchical probabilistic modeling of the population of
 companions.
-
-\todo{APW: Update this to reflect new experiments}
-In Experiment 1, we use DR13 data for an \apogee\ star with a companion
-(identified by \citealt{Troup:2016}) to demonstrate that the posterior pdf over
-Keplerian orbital parameters can be highly multi-modal by using \samplername\
-to generate samples from this distribution.
-In Experiment 2, we use DR13 data for an \apogee\ star with better radial
-velocity phase coverage and more observations and show how the complexity of
-the posterior pdf increases as data points are artificially deleted from the
-analysis.
 
 \subsection{Experiment~\arabic{expcounter}: Validation with simulated data}
 \label{sec:validation}
@@ -553,11 +543,11 @@ able to generate samples using \samplername.
 \includegraphics[width=\textwidth]{figures/validation-rv-curves.pdf}
 \end{center}
 \caption{%
-\todo{update this}
 In both panels, black points show simulated radial velocity measurements plotted
 against Barycentric Modified Julian Date (BMJD) of the observations and dashed
 green line shows the true, input orbit that the radial velocity measurements
 were drawn from.
+Uncertainties on the data points are much smaller than the marker size.
 Grey curves show orbits computed from 128 samples from, in the top panel, the
 posterior pdf with the jitter held fixed at $s^2 = 0$ and, in the bottom panel,
 the posterior pdf including jitter as a free parameter.
@@ -572,7 +562,6 @@ This is simply a validation of the method.
 \includegraphics[width=\textwidth]{figures/validation-corner-a.pdf}
 \end{center}
 \caption{%
-\todo{update this}
 Projections of the 678 surviving posterior samples when jitter is fixed (grey
 points).
 The values used to generate the input orbit are shown as green cross-hairs.
@@ -584,7 +573,6 @@ The values used to generate the input orbit are shown as green cross-hairs.
 \includegraphics[width=\textwidth]{figures/validation-corner-b.pdf}
 \end{center}
 \caption{%
-\todo{update this}
 Same as \figname~\ref{fig:validation-corner-a} but for the 580 surviving posterior
 samples when also sampling over an unknown jitter parameter, $s^2$.
 \label{fig:validation-corner-b}}
@@ -756,8 +744,8 @@ from using \samplername, or, if \samplername\ returns few samples in a small
 range, from switching to \emcee\ to continue sampling until 128 samples are
 returned.
 The number of data points, $N$, and the number of samples that pass the
-rejection sampling in the first step of \samplername, $M_{\rm rej}$, are printed
-on each panel.
+rejection sampling in the first step of \samplername, $M$, are printed on each
+panel.
 Note that two of the (randomly chosen) observation times are so close that the
 markers overlap, so counting the number of data points appears inconsistent with
 the reported number.
@@ -891,15 +879,15 @@ without the need for convergence or other diagnostic checks.
 The primary innovation we bring is a separation of the parameters into linear
 and nonlinear subsets, such that the brute force is only required in the
 nonlinear subspace.
-We further capitalize on the problem structure by identifying effectively unimodal and
-effectively multimodal posterior pdfs using the minimum possible width of a likelihood peak
-in the period direction, given the time sampling.
+We further capitalize on the problem structure by identifying effectively
+unimodal and effectively multi-modal posterior pdfs using the minimum possible
+width of a likelihood peak in the period direction, given the time sampling.
 
 Our experiments show that \samplername\ can be used for discovery and
 characterization of stellar binaries or exoplanets, even with the presence of
 unknown or unreported noise contributions.
 It can also be used to generate inputs for a hierarchical inference.
-In previous work (\citealt{hoggeccentricity, dfmexopop}) we have shown
+In previous work (\citealt{Hogg:2010, Foreman-Mackey:2014}) we have shown
 that posterior samplings under an interim prior can be importance-sampled
 with a hierarchical inference to generate posterior beliefs about the
 full population.
@@ -907,7 +895,7 @@ These hierarchical inferences are the only population inferences
 that properly propagate non-trivial uncertainties at the
 individual-system level to the conclusions at the population level.
 
-Interestingly, as we show in Experiment~\ref{sec:numpts}, even very sparse
+Interestingly, as we show in \sectionname~\ref{sec:numpts}, even very sparse
 samplings of the radial-velocity history of a star provide highly
 informative posterior pdfs.
 The bottom-right panel in \figurename~\ref{fig:numpts-rv} shows a highly
@@ -921,7 +909,7 @@ provide a very informative prior pdf for further observing campaigns.
 
 Indeed, one of the purposes for which we built \samplername\ is
 observation planning, or cadence evaluation, or survey strategy:
-As Experiment~\ref{sec:obsplan} shows, \samplername\ could be used to plan the
+As \sectionname~\ref{sec:obsplan} shows, \samplername\ could be used to plan the
 times of next observations to maximize their expected information content.
 That is beyond the scope of this \documentname, but it is not beyond the scope
 of our ambitions.
@@ -940,18 +928,20 @@ could never be perfectly known!
 However, the addition of an additional jitter parameter helps
 alleviate these issues.
 
-\todo{Clean up Hogg language below...}
+When multiple Keplerian periodic signals are super-imposed in an observed
+radial-velocity curve, \samplername\ will typically lock on to one at a time,
+leading to ``clusters'' of solutions (which may be multi-modal themselves).
 Although the single-companion assumption is a severe assumption, it
 is pretty-much required for the method to be tractable.
-Of course, in reality, it is likely that most stars have thousands or
-millions of companions (the Sun does, after all).
-Even going to two companions, however, the non-linear parameter space
-jumps to eight-dimensional, and (at least) ten-dimensional if there
-are companion--companion interactions.
+Of course, in reality, it is likely that many stars reside in higher-order
+multiplets.
+Sampling over orbital parameters even for two companions, however, is already
+intractable as the non-linear parameter space jumps to eight-dimensional, and
+(at least) ten-dimensional if there are companion--companion interactions.
 This would be absolutely intractable to sample by brute-force Simple
 Monte Carlo; our advice would be to switch to some kind of Markov
 Chain method that deals as well as possible with multi-modal
-posteriors, such as nested sampling (\citealt{skilling, brewer}).
+posteriors, such as nested sampling (\citealt{Skilling:2004, Brewer:2009}).
 This change would be associated with the loss of the simple
 convergence criterion that Simple Monte Carlo provides: If lots of
 samples survive the rejection step, the posterior has been sampled
@@ -959,59 +949,48 @@ fairly!
 There is no comparably simple way of determining that any nested
 sampling is converged.
 
-That said, there is a simple three-body problem that \emph{can} be
-solved tractably, with only small modifications:
-If the third body is on a very long-period orbit, it appears only
-as an overall acceleration (velocity gradient with time).
-This can be modeled with just one more parameter, and that parameter
-is linear, so it doesn't worsen the prior pdf sampling (which happens
-over the nonlinear parameters only).
+That said, there is a simple $N$-body problem that \emph{can} be solved
+tractably:
+For systems with one short-period companion and $\geq1$ very long-period
+companion(s), \samplername\ can be easily extended to include additional linear
+parameters that allow long-period velocity trends that are, e.g., polynomial in
+time; these additional parameters don't worsen the prior pdf sampling (which
+happens over the nonlinear parameters only).
+These extra linear parameters could alternatively include extra $v_0$ terms that
+come in when, say, the data come from a set of different radial-velocity
+programs with different calibrations (as is the case for the recent, impressive
+Proxima b discovery; \citealt{Anglada-Escude:2016}).
 
-Actually, the number of linear parameters could be increased
-dramatically without any serious loss of performance, since almost all
-of the compute time is taken up with the dense sampling in the nonlinear
-subspace.
-These extra linear parameters could be the extra $v_0$ terms that come
-in when, say, the data come from a set of different radial-velocity
-programs with different calibrations (as is the case for the recent,
-impressive Proxima b discovery; \citealt{proximab}).
-Another case for additional linear parameters would be the regressing
-out of confounding signals that correlate with housekeeping data,
-like, say, radial-velocity shifts that correlate with activity signals
-(HOGG CITE?).
-
-Although we have argued that our prior pdf sampling is dense enough,
-and---by God---we spend enough time on it, it might not be dense enough
-if we push to very short periods.
-The problem structure points (in \sectionname~\ref{sec:method})
+Although we have argued that our prior pdf sampling is dense enough,it might not
+be dense enough if we push to very short periods.
+The problem structure assumptions (in \sectionname~\ref{sec:method})
 includes the point that, given a finite time span for the data, there
 is a finite width to any period peak in the likelihood function.
-This finite width goes like period squared, so at very short periods,
-it gets very narrow.
+This finite width is proportional to the period squared, so at very short
+periods, it gets very narrow.
 Our prior sampling is uniform in the logarithm of period, or the
-density of samples in period goes like inverse period.
-If we wanted to make sure a minimal prior sampling was always dense
-enough at every period, we should weight it by an additional factor of
-inverse period.
-A change like this could improve the reliability of the method when the data
-are informative, the observations span a long time, and the true
-period is short.
+density of samples in period is proportional to inverse period.
+% If we wanted to make sure a minimal prior sampling was always dense
+% enough at every period, we should weight it by an additional factor of
+% inverse period.
+% A change like this could improve the reliability of the method when the data
+% are informative, the observations span a long time, and the true
+% period is short.
 For now \samplername\ simply addresses the prior sampling density issues
 by using as many prior samples as it possibly can!
 
-All these caveats noted~-- and despite the flexibility of the noise
-model introduced with the jitter parameter $s^2$~-- \emph{by far} the
-worst assumption made by \samplername\ is that the noise is Gaussian:
+All these caveats noted---and despite the flexibility of the noise model
+introduced with the jitter parameter $s^2$---the worst assumption made by
+\samplername\ is that the noise is Gaussian:
 Essentially all data sets show occasional outliers (catastrophic errors).
-There is nothing we can do simply here, if we want to maintain the
-trick of treating the linear and non-linear parameters separately.
-To deal with very rare outliers (such that no star would be likely to
-suffer from more than one), one possible modification 
-would be to do all leave-one-out samplings, take the union, and then
-importance sample the results using some ratio of the mixture of
-leave-one-out Gaussian likelihoods to some more realistic likelihood
-that involves an outlier model (as, for example, we suggest in
-\cite{fittingalline}).
+There is nothing we can do simply here, if we want to capitalize on treating the
+linear and non-linear parameters separately.
+To deal with very rare outliers (such that no star would be likely to suffer
+from more than one), one possible modification would be to do all leave-one-out
+samplings, take the union, and then importance sample the results using some
+ratio of the mixture of leave-one-out Gaussian likelihoods to some more
+realistic likelihood that involves an outlier model (as, for example, we suggest
+in \cite{Hogg:2010a}).
 Such a modification to the method is beyond the scope of this
 \documentname\, but (once again) not beyond the scope of our ambitions.
 
