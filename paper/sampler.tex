@@ -150,16 +150,12 @@ uncertainties.
 \section{Introduction} \label{sec:intro}
 
 Precise radial-velocity measurements of stars have transformed
-astrophysics in the last decades:
-They have permitted the discovery of the first planets around other stars,
-including especially the unanticipated but common ``hot Jupiters,''
-and have been used to discover or confirm hundreds
-of planets (for a review, see \citealt{Udry:2007}).
-Radial velocity measurements have also been used to find substellar,
-degenerate, and black-hole companions to more normal stars, and hold
-the promise of delivering the full population statistics for binary
-(and trinary) star systems (e.g., \citealt{Raghavan:2010,
-Tokovinin:2014,Troup:2016}).
+astrophysics in the last decades.
+They have permitted the discovery and confirmation of companions (planetary,
+stellar, and otherwise) orbiting thousands of stars.
+Radial velocity surveys hold the promise of delivering the full population
+statistics for binary and trinary star systems (for example,
+\citealt{Raghavan:2010, Tokovinin:2014, Troup:2016}).
 
 With large stellar spectroscopic surveys operating or under
 construction, we expect to have good quality spectra for millions
@@ -506,7 +502,7 @@ is drawn from a zero-mean Gaussian with variance $\sigma^2 = (30~\kms)^2$.
 The values of the parameters used for the simulated data (e.g., the truth) are:
 $P = 103.71~{\rm day}$, $e = 0.313$, $\omega = 68.95^\circ$,
 $\phi_0 = 223.96^\circ$, $K = 8.134~\kms$, $v_0 = 42.98~\kms$.
-We uniformly sample five observation epochs over the interval $(0,1095)~{\rm day}$
+We randomly sample five observation epochs uniformly over the interval $(0,1095)~{\rm day}$
 imagining a 3-year survey with no observing strategy and arbitrarily set the
 survey start date (in barycentric MJD) to be 55555.
 The radial velocity measurement uncertainties are drawn from a uniform
@@ -893,15 +889,15 @@ pdf) is highly multi-modal; (2) the method is based on Simple Monte Carlo,  in
 some sense a pure brute-force method, which parallelizes trivially; and (3) the
 samplings are guaranteed to be correct under the sensible assumptions presented here,
 without the need for convergence or other diagnostic checks.
-If the pdf is monomodal, \samplername tells us that the solution is unique.
-If the pdf is multi-modal, \samplername captures all relevant different solutions.
+If the pdf is monomodal, \samplername\ tells us that the solution is unique.
+If the pdf is multi-modal, \samplername\ captures all relevant different solutions.
 
 Our experiments show that \samplername\ can be used for discovery and
 characterization of stellar binaries or exoplanets, even with the presence of
 unrecognized or unaccounted noise contributions.
 
 
-Perhaps the primary innovation \samplername brings is a separation of the parameters into linear
+Perhaps the primary innovation \samplername\ brings is a separation of the parameters into linear
 and nonlinear subsets. The brute force sampling is only required in the
 nonlinear subspace, aiding computational feasability.
 We further capitalize on the problem structure by identifying effectively
@@ -1016,7 +1012,7 @@ from more than one), one possible modification would be to do all leave-one-out
 samplings, take the union, and then importance sample the results using some
 ratio of the mixture of leave-one-out Gaussian likelihoods to some more
 realistic likelihood that involves an outlier model (as, for example, we suggest
-in \cite{Hogg:2010a}).
+in \citealt{Hogg:2010a}).
 Such a modification to the method is beyond the scope of this
 \documentname\, but (once again) not beyond the scope of our ambitions.
 
