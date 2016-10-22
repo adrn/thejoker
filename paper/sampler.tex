@@ -363,8 +363,8 @@ where $n$ indexes the individual data points $v_n$, $v(t)$ is the radial
 velocity prediction at time $t$ given the orbital parameters $\bs{\theta}$, the
 data-point times are the $t_n$, and $\sigma_n^2$ is the Gaussian noise variance
 for data point $n$.
-Note that the form of this likelihood function is fully specified {\color{red} right?}
- by the assumptions, given above.
+Note that the form of this likelihood function is fully specified by the
+assumptions, given above.
 
 We rejection-sample, however, using a marginalized likelihood, where we
 analytically marginalize out the linear parameters ($K$, $v_0$).
@@ -398,8 +398,10 @@ We set a minimum number of samples $M_{\rm min}=128$.
 We also set a period resolution $\Delta = [4\,P^2] / [2\pi\,T]$, (with
 $P$ set to the median period across the surviving samples and $T$ set to
 the epoch span of the data).
-This $\Delta$ is an expansion of the period
-resolution expected from an information-theory (sampling theorems) perspective
+This $\Delta$ is an expansion of the period resolution expected from an
+information-theory (sampling theorems) perspective:
+for a periodic signal with period $P$ observed over a window with size $T$,
+peaks in the Fourier transform of the time series cannot [...] -- Nyquist argument??
 \todo{~HWR: this previous sentence sounds cool; what does it mean? i.e. pls. rephrase,
 including an operative instruction how to set $\Delta$.}.
 The three possible outcomes are:
@@ -544,12 +546,11 @@ separations, as can be seen in the radial-velocity curves plotted in the top
 panel.
 For small numbers of observations with poor phase-coverage, the posterior pdf
 over orbital parameters is extremely complex and structured, but we are still
-able to generate samples using \samplername that capture the complexity.
+able to generate samples using \samplername\ that capture the complexity.
 It is obvious that these multimodal samples are essentially useless when
 trying to understand one particular system at hand. Yet, they rule out almost
-all of the parameter space encompassed by the prior distribution: even a few
-radial velocity measurements are manifestly very informative.
-{\color{red} Make sure you feel comfortable about this statement.}
+all of the parameter space encompassed by the prior distribution:
+even a few radial velocity measurements are manifestly very informative.
 
 \begin{figure*}[p]
 \begin{center}
@@ -597,13 +598,11 @@ samples when also sampling over an unknown jitter parameter, $s^2$.
 \stepcounter{expcounter}
 Besides the number and spacing of the observation epochs, the
 precision of the individual radial velocity measurements matters.
-Less precise data, compared to the radial velocityamplitude,
+Less precise data, compared to the radial velocity amplitude,
 will admit more qualitatively different orbital solutions.
 The structure and complexity of the posterior pdf (at fixed jitter) will
 therefore depend strongly on knowing the measurement uncertainties and
-the  instrinsic velocity variability of the system.
-{\color{red} HWR: the original sentence talks about `fixed jitter', and the `intrinsic variability'
-of the system. Are these concepts different?}
+the instrinsic velocity variability of the system.
 We illustrate this using another simulated radial velocity curve with
 lower signal-to-noise. And we show that for underestimated uncertainties,
 the posterior pdf over orbital parameters can look well-constrained, but may be
@@ -839,8 +838,9 @@ previously found orbital parameter values shown as the blue cross-hairs
 A noticable difference between the $N=5$ and $N=7$ panels in
 \figname~\ref{fig:numpts-rv} is that the posterior pdf collapses significantly
 between these cases (from $\gtrsim$20 period modes to 3):
-{\color{red} HWR: Here Troup et al will say ``we told you so!'' To which extent are they right?}
 This implies that the two added observations are extremely informative.
+% However, there is nothing inherently special about these particular choices for
+% the number of observations. TODO: respond to Rix's note about Troup
 Inverting this idea, it also suggests that we can use \samplername\ to (1)
 predict the observation time that maximally collapses the posterior pdf for a
 previously measured source, and (2) for an expected population of sources, we
