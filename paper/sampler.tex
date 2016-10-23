@@ -384,6 +384,11 @@ are very broad and Gaussian---or
 at least very flat over the range of relevance---and that they do not depend
 on the nonlinear parameters in any way (which is a substantial restriction;
 see \sectionname~\ref{sec:discussion}).
+Of course, we may have stronger prior beliefs about the systemic velocity of the
+binary, $v_0$ (i.e. we may want to impose that it belong to the Galactic disk,
+or use a mixture model for the different kinematic components of the Galaxy).
+Using a more informative prior would require only a minimal change to the
+method.
 These $Q_j$ are used in the rejection sampling algorithm described above
 as Simple Monte Carlo.
 
@@ -395,10 +400,10 @@ $P$ set to the median period across the surviving samples and $T$ set to
 the epoch span of the data).
 This $\Delta$ is an expansion of the period resolution expected from an
 information-theory (sampling theorems) perspective:
-for a periodic signal with period $P$ observed over a window with size $T$,
-peaks in the Fourier transform of the time series cannot [...] -- Nyquist argument??
-\todo{~HWR: this previous sentence sounds cool; what does it mean? i.e. pls. rephrase,
-including an operative instruction how to set $\Delta$.}.
+for a periodic signal with frequency $\omega$ observed over a window with size
+$T$, the smallest resolvable frequency differences will be $\Delta\omega \approx
+XX$ (sometimes referred to as the Rayleigh frequency) corresponding to period
+differences of $\Delta P \approx XX$ APW TODO.
 The three possible outcomes are:
 \begin{itemize}\itemsep0ex
 \item $M\geq M_{\rm min}$ samples survive the rejection.
@@ -903,8 +908,6 @@ nonlinear subspace, aiding computational feasability.
 We further capitalize on the problem structure by identifying effectively
 unimodal and effectively multi-modal posterior pdfs using the minimum possible
 width of a likelihood peak in the period direction, given the time sampling.
-{\color{red} HWR: I mentioned this earlier; but the relation of the epoch sampling
-to the period width is not clearly, or operationally, stated; or I missed it.}
 
 Interestingly, as we show in \sectionname~\ref{sec:numpts}, even very sparse
 samplings of the radial-velocity history of a star provide highly
@@ -938,17 +941,15 @@ of our ambitions.
 
 \samplername\ is based on a set of assumptions, itemized in
 \sectionname~\ref{sec:method}.
-The method delivers provably {\color{red} HWR: I thought a more pragmatic phrasing was in order..}
-correct samplings when these specific assumptions hold.
+The method delivers correct samplings when these specific assumptions hold.
 Of course, these specific assumptions do \emph{not} hold sufficiently well!
 
 Astrophysically, we know that a star's radial-velocity history
 need not be set entirely by a single companion, with no other perturbers or
 sources of radial-velocity signal.
-When multiple Keplerian periodic signals are super-imposed in an observed
-radial-velocity curve, \samplername\ will typically lock on to one at a time,
-leading to ``clusters'' of solutions (which may be multi-modal themselves).
- {\color{red} HWR: Have you actually done such experiments, and written about them in the preceding parts?}
+% When multiple Keplerian periodic signals are super-imposed in an observed
+% radial-velocity curve, \samplername\ will typically lock on to one at a time,
+% leading to ``clusters'' of solutions (which may be multi-modal themselves).
 Although the single-companion assumption is a severe assumption, it
 is pretty-much required for the method to be tractable.
 Of course, in reality, it is likely that many stars reside in higher-order
