@@ -912,17 +912,15 @@ width of a likelihood peak in the period direction, given the time sampling.
 Interestingly, as we show in \sectionname~\ref{sec:numpts}, even very sparse
 samplings of the radial-velocity history of a star provide highly
 informative posterior pdfs.  The bottom-right panel in
- \figurename~\ref{fig:numpts-rv} shows a highly
-multi-modal posterior pdf. But nonetheless
-the vast majority of prior pdf samples have been eliminated, and
-only a tiny subset of periods, eccentricities, and amplitudes are
-consistent with the data.
+\figname~\ref{fig:numpts-rv} shows a highly multi-modal posterior pdf.
+But nonetheless the vast majority of prior pdf samples have been eliminated, and
+only a tiny subset of periods, eccentricities, and amplitudes are consistent
+with the data.
 These posterior pdfs may look bewilderingly complex, but they can contribute
 extremely valuable information to any hierarchical inference, or
 provide a very informative prior pdf for further observing campaigns.
 
-
-Indeed,  \samplername\  can be used to generate inputs for a hierarchical inference.
+Indeed, \samplername\  can be used to generate inputs for a hierarchical inference.
 In previous work (\citealt{Hogg:2010, Foreman-Mackey:2014}) we have shown
 that posterior samplings under an interim prior can be importance-sampled
 with a hierarchical inference to generate posterior beliefs about the
@@ -930,6 +928,19 @@ full population.
 These hierarchical inferences are the only population inferences
 that properly propagate non-trivial uncertainties at the
 individual-system level to the conclusions at the population level.
+
+In the experiments above we have used massive prior samplings, starting with
+$2^{28}$ samples before rejection sampling.
+When the data are sparse or have a low signal-to-noise (e.g., bottom panels in
+\figname~\ref{fig:numpts-rv}), many prior samples pass the rejection-sampling
+step:
+If the goal is to learn about an individual system and the data are poor, many
+fewer prior samples can be used to initialize \samplername.
+The same is true when the data are high-quality and the samples that pass the
+rejection step will be used to initialize an MCMC sampling.
+Many prior samples are needed when (a) many posterior pdf samples are needed for
+hierarchical inference, or (b) the data are of intermediate quality (the
+definition of which is left intentionally vague).
 
 Consequently,  \samplername\ should also be valuable in
 observation planning, or cadence evaluation, or survey strategy:
