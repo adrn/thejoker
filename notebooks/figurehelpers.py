@@ -114,6 +114,7 @@ def apw_corner(samples, **corner_kwargs):
     truth_style['color'] = corner_kw.pop('truth_color')
     truth_style['alpha'] = corner_kw.pop('truth_alpha')
     truth_style['linestyle'] = corner_kw.pop('truth_linestyle')
+    truth_style['marker'] = '' # Don't show markers
 
     if 'truths' in corner_kw: # draw lines only
         truths = corner_kw.pop('truths')
