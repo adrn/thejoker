@@ -2,7 +2,7 @@
 
 % to-do list
 % ----------
-% - search for occurrences of HOGG, DWH, APW, DFM, HWR in the text to make sure all issues are addressed.
+% -
 
 % style notes
 % -----------
@@ -106,7 +106,7 @@ orbital parameters.
 % Aims
 Here we create a custom-built Monte Carlo sampler that can produce a posterior
 sampling for orbital parameters given any number of noisy or sparse radial-velocity
-measurements~-- even when the likelihood function is poorly behaved.
+measurements, even when the likelihood function is poorly behaved.
 % Methods
 The six standard orbital parameters for a binary system can be split into the four non-linear
 parameters (period, eccentricity, argument of pericenter, phase) and two linear
@@ -162,15 +162,15 @@ construction, we expect to have good quality spectra for millions
 of stars in the next few years.
 Most of these surveys have at least some targets---and many have many
 targets---that are observed multiple times (e.g., \citealt{Majewski:2015}).
-Whether as primary or secondary goal of their observing
+Whether as a primary or secondary goal of their observing
 strategies, these surveys can generate discoveries of planetary,
 substellar, and stellar companions.
 These discoveries, in turn, will feed population inferences, follow-up
 programs, and projects to refine precise stellar models.
 
 However, when radial-velocity observations are not designed with
-unambiguous detection and discovery in mind, usually there are
-multiple possible binary-star (orbit) models that are consistent with any
+unambiguous detection and discovery in mind, there are usually
+multiple possible star-companion (orbit) models that are consistent with any
 modest number of radial-velocity measurements that show stellar
 acceleration.
 That is, a small number of radial velocity measurements---even when the
@@ -179,10 +179,10 @@ orbits and masses that put substantial plausibility onto multiple
 qualitatively different solutions.
 This is then reflected in a likelihood function that is highly multi-modal in
 the relevant parameter spaces (e.g., Keplerian orbital parameters).
-While multi-modal orbit likelihoods may be frustrating when studing individual
+While multi-modal orbit likelihoods may be frustrating when studying individual
 systems of particular interest, extensive sets of such likelihoods can
-be powerful constraints for hierarchical modelling, inferring e.g. the
-charateristics of the binary star, or exoplanet population.
+be powerful constraints for hierarchical modeling, inferring, e.g., the
+characteristics of the binary star, or exoplanet population.
 
 While the problem has of course been recognized for a long time, there
 are currently no methods that explore these highly multimodal
@@ -194,9 +194,9 @@ delivering correct posterior samplings and reliable probabilistic statements
 about detection and characterization.
 
 Here we present a path to address this problem.
-Our approach is to build custom posterior sampling methods that capitalize on
-the structure of the binary-star (or star--exoplanet) kinematics to generate
-robust samplings also of multiple solutions at manageable computational cost.
+Our approach is to build a custom posterior sampling method that capitalizes on
+the structure of the binary-star (or star-exoplanet) kinematics to generate
+robust samplings of multiple solutions at manageable computational cost.
 In what follows, we use the term ``binary'' for any system with an observed
 source (the primary, e.g., a star), whose radial velocity variations are
 explained through gravitational two-body interactions with another object (the
@@ -222,12 +222,13 @@ and observations thereof.
 Ultimately, we assume that the radial velocity curve of a single-line
 spectroscopic binary system can be specified by six parameters
 (\citealt{Kepler:1609}).
-Here we adopt a parameterization similar to \citealt{Murray:2010}:
+Here we adopt a parameterization for this problem that is similar to
+\citealt{Murray:2010}:
 $P$, $e$, $\phi_0$, $\omega$, $K$, and $v_0$, which are the period,
 eccentricity, pericenter phase and argument, velocity semi-amplitude, and the
 barycenter velocity.
 As is well-known, this does not fully specify the binary system itself, because
-of the $\sin{i}$ and mass function degeneracies.
+of the inclination ($\sin{i}$) and mass function degeneracies.
 To proceed, we assume the following:
 \begin{itemize}\itemsep0ex  % <- #yourefired
 \item We have measurements of the radial velocity of a
@@ -238,10 +239,10 @@ To proceed, we assume the following:
   example, Solar-System barycentric Julian date).
   We only consider the case of a single-line spectroscopic binary system,
   where we do not have measurements of the (fainter) companion's projected orbit.
-\item  Each star has exactly one companion, and that the
-  radial-velocity measurements are not contaminated by nor affected by
-  any other bodies. Our analysis allows the effective mass of the
-  exactly-one companion to go to zero; this encompasses the case of no companion .
+\item  Each star has exactly one companion, and that the radial-velocity
+  measurements are not contaminated by nor affected by any other bodies. Our
+  analysis allows the effective mass of the exactly-one companion to go to zero;
+  this encompasses the case of no companion.
 \item The noise contributions to individual radial-velocity measurements are
   well described as draws from zero-mean normal (Gaussian) distributions with
   correctly known variances convolved with a zero-mean normal distribution with
@@ -276,7 +277,7 @@ anomaly, $M$,
 Of these parameters, four ($P$, $e$, $\omega$, $\phi_0$) are non-linearly
 related to the radial-velocity expectation, and two ($K$, $v_0$) are
 linearly related.
-We additionally allow the the radial velocity curve of any star has an overall
+We additionally allow that the radial velocity curve of any star has an overall
 jitter, $s^2$, to vary to partially account for
 imperfect knowledge of the radial velocity uncertainties and any intrinsic
 radial-velocity scatter; the jitter must also be treated as a non-linear
@@ -363,7 +364,7 @@ assumptions, given above.
 
 We rejection-sample, however, using a marginalized likelihood, where we
 analytically marginalize out the linear parameters ($K$, $v_0$).
-We construct a $N \times 2$ design matrix consisting of a column of unit-$[K]$
+We construct an $N \times 2$ design matrix consisting of a column of unit-$[K]$
 predictions (given the non-linear parameters) and a column of ones.
 We perform standard linear least-square fitting with this design
 matrix to obtain the best-fit values for the two linear parameters,
@@ -372,7 +373,7 @@ uncertainties.
 With these, we can construct---for each prior sample---the marginalized
 likelihood $Q_j$
 \begin{equation}
-\ln Q_j = -\frac{1}{2}\,\sum_{n=1}^N \left[\frac{[v_n - v(t_n;\bs{\theta})]^2}{\sigma_n^2 + s^2}
+\ln Q_j = -\frac{1}{2}\,\sum_{n=1}^N \left[\frac{[v_n - v(t_n;\bs{\theta}_j)]^2}{\sigma_n^2 + s^2}
  +\ln \left(2\pi\,[\sigma_n^2 + s^2]\right) \right] -\frac{1}{2}\,\ln ||2\pi\,C_j||
 \end{equation}
 where the prediction $v(t_n;\bs{\theta}_j)$ is taken at the best-fit values of
@@ -395,15 +396,15 @@ as Simple Monte Carlo.
 There are three possible outcomes of this rejection sampling, based on two
 thresholds:
 We set a minimum number of samples $M_{\rm min}=128$.
-We also set a period resolution $\Delta = [4\,P^2] / [2\pi\,T]$, (with
+We also set a period resolution $\Delta = [4\,P^2] / [2\pi\,T]$, with
 $P$ set to the median period across the surviving samples and $T$ set to
-the epoch span of the data).
+the epoch span of the data.
 This $\Delta$ is an expansion of the period resolution expected from an
 information-theory (sampling theorems) perspective:
 for a periodic signal with frequency $\omega$ observed over a window with size
 $T$, the smallest resolvable frequency differences will be $\Delta\omega \approx
-XX$ (sometimes referred to as the Rayleigh frequency) corresponding to period
-differences of $\Delta P \approx XX$ APW TODO.
+T^{-1}$, corresponding to period differences of $\Delta P \approx
+\frac{P^2}{2\pi\,T}$.
 The three possible outcomes are:
 \begin{itemize}\itemsep0ex
 \item $M\geq M_{\rm min}$ samples survive the rejection.
@@ -435,7 +436,7 @@ This procedure ensures that no matter what path we take, we end up with
 at least $M_{\rm min}$ samples from the posterior for any input data.
 
 Within the initial assumptions, this procedure almost inevitably results in a
-correct sampling of the parameter {\it pdf}. This is ensured by the density of the
+correct sampling of the parameter pdf. This is ensured by the density of the
 prior sampling in the nonlinear parameters, and also borne out in the numerical experiments
 in the following \sectionname.
 
@@ -443,7 +444,7 @@ in the following \sectionname.
 
 In what follows, we use (1) simulated data with known properties and (2) actual
 spectroscopic data from Data Release 13 (DR13;
-\citealt{SDSS-Collaboration:2016}) of the Apache Point Obsevatory Galactic
+\citealt{SDSS-Collaboration:2016}) of the Apache Point Observatory Galactic
 Evolution Experiment (\apogee; \citealt{Majewski:2015}) in a series of
 experiments that demonstrate the reliability and utility of \samplername.
 \apogee\ is one of the four sub-surveys of the Sloan Digital Sky Survey-III
@@ -527,11 +528,11 @@ survive.
 
 \figname~\ref{fig:validation-rv} shows the simulated data (black points) along with
 the true orbit (dashed, green line) and orbits computed from samples from the
-posterior pdf (grey lines) for the sampling with fixed jitter (top panel) and
+posterior pdf (gray lines) for the sampling with fixed jitter (top panel) and
 the sampling including jitter as a non-linear parameter (bottom panel).
 Because we use the same prior samples in each, these look almost identical.
 \figname s~\ref{fig:validation-corner-a}--\ref{fig:validation-corner-b} show all
-projections of the posterior samples (grey points) and the true, input
+projections of the posterior samples (gray points) and the true, input
 parameters (green lines and markers) for the case with fixed jitter and the case
 where jitter is treated as a free parameter.
 The surviving samples in each case look very similar, as expected.
@@ -544,9 +545,10 @@ as constructed, the uncertainties are purely Gaussian and known.
 In both cases, the modes in period-space are narrow with a variety of
 separations, as can be seen in the radial-velocity curves plotted in the top
 panel.
-For small numbers of observations with poor phase-coverage, the posterior pdf
-over orbital parameters is extremely complex and structured, but we are still
-able to generate samples using \samplername\ that capture the complexity.
+For small numbers of precise observations with poor phase-coverage, the
+posterior pdf over orbital parameters is extremely complex and structured, but
+we are still able to generate samples using \samplername\ that capture the
+complexity.
 It is obvious that these multimodal samples are essentially useless when
 trying to understand one particular system at hand. Yet, they rule out almost
 all of the parameter space encompassed by the prior distribution:
@@ -562,7 +564,7 @@ against Barycentric Modified Julian Date (BMJD) of the observations. The dashed
 green line shows the true, input orbit from which the radial velocity measurements
 were drawn.
 Uncertainties on the data points are much smaller than the marker size.
-Grey curves show orbits computed from 128 samples from, in the top panel, the
+Gray curves show orbits computed from 128 samples from, in the top panel, the
 posterior pdf with the jitter held fixed at $s^2 = 0$ and, in the bottom panel,
 the posterior pdf including jitter as a free parameter.
 Using \samplername\ several qualitatively different orbital solutions are found over a range of
@@ -577,7 +579,7 @@ This is simply a validation of the method.
 \end{center}
 \caption{%
 Projections of the 678 surviving posterior samples when considering the five velocity measurements from
-Fig.\ref{fig:validation-rv} with fixed jitter (grey
+Fig.\ref{fig:validation-rv} with fixed jitter (gray
 points).
 The values used to generate the input orbit are shown as green cross-hairs.
 \label{fig:validation-corner-a}}
@@ -602,9 +604,9 @@ Less precise data, compared to the radial velocity amplitude,
 will admit more qualitatively different orbital solutions.
 The structure and complexity of the posterior pdf (at fixed jitter) will
 therefore depend strongly on knowing the measurement uncertainties and
-the instrinsic velocity variability of the system.
+the intrinsic velocity variability of the system.
 We illustrate this using another simulated radial velocity curve with
-lower signal-to-noise. And we show that for underestimated uncertainties,
+lower signal-to-noise. We show that for underestimated uncertainties,
 the posterior pdf over orbital parameters can look well-constrained, but may be
 discrepant with the true orbital parameters.
 Finally, we show that by simultaneously sampling over an unknown extra variance in
@@ -632,20 +634,21 @@ about the true magnitude of the uncertainties.
 
 \figname~\ref{fig:undunc-rv} shows the simulated data and presumed uncertainties (black
 points), the true orbit (dashed, green line), and orbits computed from samples
-from the posterior pdf (grey lines) for the three different samplings.
-In all cases, a wide variety of orbit solutions is permitted by the data. But
-note that far fewer modes are present in the middle panel (case (b)), when the
+from the posterior pdf (gray lines) for the three different samplings.
+In all cases, a wide variety of orbit solutions is permitted by the data.
+Note that far fewer modes are present in the middle panel (case (b)), when the
 uncertainties are underestimated.
 \figname s~\ref{fig:undunc-corner-a}--\ref{fig:undunc-corner-c} show the
 corresponding corner plots of the parameter pdf's for these three cases.
-For this data set, when the uncertainties are correctly known, the posterior pdf is highly
-multi-modal (case (a)).
+For this data set, when the uncertainties are correctly known, the posterior pdf
+is highly multi-modal (case (a)).
 When the uncertainties are underestimated, the posterior pdf has fewer modes,
 but the true orbital parameters do not appear consistent with any of the
 strongest modes (case (b)).
-When the uncertainties are (severely) underestimated but the jitter is allowed to vary
-(case (c)), the model prefers solutions with a finite jitter comparable to the
-input true uncertainties ($\ln \left(\frac{\sigma_v}{\mps}\right) \approx 5$).
+When the uncertainties are (severely) underestimated but the jitter is allowed
+to vary (case (c)), the model prefers solutions with a finite jitter comparable
+to the input true uncertainties ($\ln \left(\frac{\sigma_v}{\mps}\right) \approx
+5$).
 We have therefore shown that \samplername\ is useful even when uncertainties are
 underestimated or the intrinsic velocity variability of a system is unknown.
 
@@ -703,15 +706,19 @@ a non-linear parameter.
 \stepcounter{expcounter}
 
 When the phase coverage of the radial velocity observations is good and the
-number of observation epochs is large, the posterior pdf over orbital parameters effectively
-become unimodal.
+number of observation epochs is large, the posterior pdf over orbital parameters
+effectively becomes unimodal.
 Under these conditions, \samplername\ is of course a very inefficient sampler for this
 problem and will return very few samples (as few as one).
 As we have seen in the previous experiments, when the number of data points is
 small or the uncertainties are large, the posterior pdf is generally
 multi-modal.
-In this experiment we explore the dependence of the poterior pdf's complexity on the number
-of observation epochs by generating radial velocity curves with initially 11 epochs.
+In this experiment we explore the dependence of the posterior pdf's complexity
+on the number of observation epochs by generating radial velocity curves with
+initially 11 epochs.
+We use the following parameter values to generate the simulated data: $P =
+103.71~{\rm day}$, $e = 0.313$, $\omega = 134.83^\circ$, $\phi_0 =
+342.26^\circ$, $K = 4.227~\kms$, $v_0 = 19.431~\kms$.
 After running \samplername\ with the full 11 observations, we successively
 remove 2 data points and re-run the sampling until we are left with three
 observations epochs as input data (a total of five consecutive runs).
@@ -720,7 +727,7 @@ Specifically, we again generate $2^{28}$ prior samples over the nonlinear
 parameters with a period domain of $(P_{\rm min}, P_{\rm max}) = (16, 8192)~{\rm
 day}$ and re-use these prior samples for each sub-sampling of the data.
 We fix the jitter to $s^2 = 0$ and assume that the uncertainties are known.
-\figname s~\ref{fig:numpts-rv} shows the simulated data and orbits computed from
+\figname~\ref{fig:numpts-rv} shows the simulated data and orbits computed from
 posterior samplings.
 Starting from the top of \figname~\ref{fig:numpts-rv} with the full set of 11
 data points, each panel below has two epochs fewer than the previous.
@@ -734,10 +741,10 @@ samples until we have at least $M_{\rm min}$ samples from the posterior pdf.
 In all panels, 128 orbits computed from the posterior samples are shown.
 
 The structure in the posterior samples in one projection of the posterior pdf
-(period and excentricity) is
+(period and eccentricity) is
 shown in the right panels of \figname~\ref{fig:numpts-rv}.
 For the cases with nine and 11 data points, the posterior pdf appears to be
-uni-modal.
+unimodal.
 Multiple modes first appear when $N=7$ and the posterior pdf become more
 structured in further sub-samplings of the data until ultimately forming a
 harmonic series of modes in the final case of $N=3$.
@@ -750,20 +757,17 @@ even 3 radial velocity observations are informative!
 \includegraphics[width=\textwidth]{figures/numpts-rv-curves.pdf}
 \end{center}
 \caption{%
-{\sl Left panels}: Analogous to the top panel of \figname~\ref{fig:validation-rv}, black
-points show \apogee\ radial velocity measurements used to generate samples from
-the posterior pdf over orbital parameters sub-sampled from the full set of
-simulated data.
-Grey curves show orbits corresponding to 128 samples from the posterior pdf, either
-from using \samplername, or, if \samplername\ returns few samples in a small
-range, from switching to \emcee\ to continue sampling until 128 samples are
-returned.
+{\sl Left panels}: Analogous to the top panel of
+\figname~\ref{fig:validation-rv}, black points show simulated radial velocity
+measurements used to generate samples from the posterior pdf over orbital
+parameters sub-sampled from the full set of simulated data.
+Gray curves show 128 orbits computed from posterior samples, either from
+\samplername or from switching to \emcee\ to continue sampling until 128 samples
+are returned (as occurs for the top two panels).
 The number of data points, $N$, and the number of samples that pass the
-rejection sampling in the first step of \samplername, $M$, are shown on each
-panel.
+rejection sampling step of \samplername, $M$, are shown on each panel.
 Note that two of the (randomly chosen) observation times are so close that the
-markers overlap, so counting the number of data points appears inconsistent with
-the reported number.
+markers overlap.
 {\sl Right panels}: A single projection of the posterior samples in each case
 showing the log-period, $\ln P$, and eccentricity, $e$.
 The structure of the posterior pdf when the number of data points is small is
@@ -790,7 +794,7 @@ We again generate $2^{28}$ prior samples over the nonlinear parameters with a
 period domain of $(P_{\rm min}, P_{\rm max}) = (16, 8192)~{\rm day}$ and with
 $(\mu_s,\sigma^2_s) = (10.5,1)$, of which 22,313 samples pass our rejection
 sampling step.
-Over-plotted as grey lines on \figname~\ref{fig:apogee-rv} are 256 orbits
+Over-plotted as gray lines on \figname~\ref{fig:apogee-rv} are 256 orbits
 computed from these samples.
 Already from visualizing these orbits, it becomes clear that there are at least a few
 distinct period modes, and a wide variety of eccentricities, represented in the
@@ -813,7 +817,7 @@ uncertainties might be underestimated by a factor of $\approx 2$.
 \caption{%
 Black points and uncertainties show \apogee\ radial velocity measurements for
 the target 2M00110648+6609349.
-Grey curves show orbits computed from 256 samples from the posterior pdf
+Gray curves show orbits computed from 256 samples from the posterior pdf
 generated with \samplername\ with jitter as a free parameter.
 Several qualitatively different orbital solutions are found for this source.
 \label{fig:apogee-rv}}
@@ -824,7 +828,7 @@ Several qualitatively different orbital solutions are found for this source.
 \includegraphics[width=\textwidth]{figures/apogee-corner.pdf}
 \end{center}
 \caption{%
-All projections of the 22,313 surviving posterior samples (grey points)
+All projections of the 22,313 surviving posterior samples (gray points)
 for 2M00110648+6609349 with
 previously found orbital parameter values shown as the blue cross-hairs
 (\citealt{Troup:2016}).
@@ -835,7 +839,7 @@ previously found orbital parameter values shown as the blue cross-hairs
 \label{sec:obsplan}
 \stepcounter{expcounter}
 
-A noticable difference between the $N=5$ and $N=7$ panels in
+A noticeable difference between the $N=5$ and $N=7$ panels in
 \figname~\ref{fig:numpts-rv} is that the posterior pdf collapses significantly
 between these cases (from $\gtrsim$20 period modes to 3):
 This implies that the two added observations are extremely informative.
@@ -894,8 +898,10 @@ pdf) is highly multi-modal; (2) the method is based on Simple Monte Carlo,  in
 some sense a pure brute-force method, which parallelizes trivially; and (3) the
 samplings are guaranteed to be correct under the sensible assumptions presented here,
 without the need for convergence or other diagnostic checks.
-If the pdf is monomodal, \samplername\ tells us that the solution is unique.
-If the pdf is multi-modal, \samplername\ captures all relevant different solutions.
+If the pdf is effectively unimodal, \samplername\ tells us that the solution is
+unique.
+If the pdf is multi-modal, \samplername\ captures all relevant different
+solutions.
 
 Our experiments show that \samplername\ can be used for discovery and
 characterization of stellar binaries or exoplanets, even with the presence of
@@ -904,7 +910,7 @@ unrecognized or unaccounted noise contributions.
 
 Perhaps the primary innovation \samplername\ brings is a separation of the parameters into linear
 and nonlinear subsets. The brute force sampling is only required in the
-nonlinear subspace, aiding computational feasability.
+nonlinear subspace, aiding computational feasibility.
 We further capitalize on the problem structure by identifying effectively
 unimodal and effectively multi-modal posterior pdfs using the minimum possible
 width of a likelihood peak in the period direction, given the time sampling.
@@ -913,7 +919,7 @@ Interestingly, as we show in \sectionname~\ref{sec:numpts}, even very sparse
 samplings of the radial-velocity history of a star provide highly
 informative posterior pdfs.  The bottom-right panel in
 \figname~\ref{fig:numpts-rv} shows a highly multi-modal posterior pdf.
-But nonetheless the vast majority of prior pdf samples have been eliminated, and
+Nonetheless, the vast majority of prior pdf samples have been eliminated, and
 only a tiny subset of periods, eccentricities, and amplitudes are consistent
 with the data.
 These posterior pdfs may look bewilderingly complex, but they can contribute
@@ -938,17 +944,17 @@ If the goal is to learn about an individual system and the data are poor, many
 fewer prior samples can be used to initialize \samplername.
 The same is true when the data are high-quality and the samples that pass the
 rejection step will be used to initialize an MCMC sampling.
-Many prior samples are needed when (a) many posterior pdf samples are needed for
-hierarchical inference, or (b) the data are of intermediate quality (the
-definition of which is left intentionally vague).
+A large prior sampling is needed when (a) many posterior pdf samples are needed
+for hierarchical inference, or (b) the data are of intermediate quality (the
+exact definition of which is problem-specific).
 
-Consequently,  \samplername\ should also be valuable in
-observation planning, or cadence evaluation, or survey strategy:
-As \sectionname~\ref{sec:obsplan} shows, \samplername\ could be used to plan the
-times of next observations to maximize their expected information content.
-That is beyond the scope of this \documentname, but it is not beyond the scope
-of our ambitions.
-
+\samplername\ should also be valuable in observation planning, or cadence
+evaluation, or survey strategy:
+As \sectionname~\ref{sec:obsplan} shows,
+\samplername\ could be used to plan the times of next observations to maximize
+their expected information content.
+That is beyond the scope of this \documentname\ and will be explored in future
+work.
 
 \samplername\ is based on a set of assumptions, itemized in
 \sectionname~\ref{sec:method}.
@@ -991,23 +997,23 @@ come in when, say, the data come from a set of different radial-velocity
 programs with different calibrations (as is the case for the recent, impressive
 Proxima b discovery; \citealt{Anglada-Escude:2016}).
 
-Although we have argued that our prior pdf sampling is dense enough,it might not
-be dense enough if we push to very short periods.
-The problem structure assumptions (in \sectionname~\ref{sec:method})
-includes the point that, given a finite time span for the data, there
-is a finite width to any period peak in the likelihood function.
-This finite width is proportional to the period squared, so at very short
-periods, it gets very narrow.
-Our prior sampling is uniform in the logarithm of period, or the
-density of samples in period is proportional to inverse period.
-% If we wanted to make sure a minimal prior sampling was always dense
-% enough at every period, we should weight it by an additional factor of
-% inverse period.
-% A change like this could improve the reliability of the method when the data
-% are informative, the observations span a long time, and the true
-% period is short.
-For now \samplername\ simply addresses the prior sampling density issues
-by using as many prior samples as it possibly can!
+% Although we have argued that our prior pdf sampling is dense enough,it might not
+% be dense enough if we push to very short periods.
+% The problem structure assumptions (in \sectionname~\ref{sec:method})
+% includes the point that, given a finite time span for the data, there
+% is a finite width to any period peak in the likelihood function.
+% This finite width is proportional to the period squared, so at very short
+% periods, it gets very narrow.
+% Our prior sampling is uniform in the logarithm of period, or the
+% density of samples in period is proportional to inverse period.
+% % If we wanted to make sure a minimal prior sampling was always dense
+% % enough at every period, we should weight it by an additional factor of
+% % inverse period.
+% % A change like this could improve the reliability of the method when the data
+% % are informative, the observations span a long time, and the true
+% % period is short.
+% For now \samplername\ simply addresses the prior sampling density issues
+% by using as many prior samples as it possibly can!
 
 
 At a crucial practical level, there are no data sets (to our knowledge) with
@@ -1026,7 +1032,7 @@ ratio of the mixture of leave-one-out Gaussian likelihoods to some more
 realistic likelihood that involves an outlier model (as, for example, we suggest
 in \citealt{Hogg:2010a}).
 Such a modification to the method is beyond the scope of this
-\documentname\, but (once again) not beyond the scope of our ambitions.
+\documentname\, but not beyond the scope of our ambitions.
 
 \acknowledgements
 This project was started at AstroHackWeek 2016, organized by Kyle
