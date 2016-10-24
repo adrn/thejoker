@@ -101,36 +101,33 @@ Given sparse or low-quality radial-velocity measurements of a star, there are
 often many qualitatively different stellar or exoplanet companion orbit models
 that are consistent with the data.
 The consequent multimodality of the likelihood function leads to extremely
-challenging search, optimization, and MCMC posterior sampling in the space of
-orbital parameters.
+challenging search, optimization, and MCMC posterior sampling over the orbital
+parameters.
 % Aims
 Here we create a custom-built Monte Carlo sampler that can produce a posterior
-sampling for orbital parameters given any number of noisy or sparse radial-velocity
+sampling for orbital parameters given sparse or noisy radial-velocity
 measurements, even when the likelihood function is poorly behaved.
 % Methods
-The six standard orbital parameters for a binary system can be split into the four non-linear
-parameters (period, eccentricity, argument of pericenter, phase) and two linear
-parameters (velocity amplitude and barycenter velocity).
-We capitalize on this by building a variant of Simple Monte Carlo sampling
-in which we densely sample the prior pdf in the non-linear parameters, and
-perform rejection sampling using a marginalized likelihood, marginalizing out
-the linear parameters.
-In the case of sparse or uninformative data, the sampling obtained by the Simple
-Monte Carlo is generally multimodal and dense.
-As the data become more informative, the sampling becomes effectively unimodal but too sparse.
-In the unimodal case, we therefore follow the Simple Monte Carlo with standard MCMC to
-make the sampling denser.
+The six standard orbital parameters for a binary system can be split into four
+non-linear parameters (period, eccentricity, argument of pericenter, phase)
+and two linear parameters (velocity amplitude, barycenter velocity).
+We capitalize on this by building a sampling method in which we densely sample
+the prior pdf in the non-linear parameters, and perform rejection sampling using
+a likelihood marginalized over the linear parameters.
+With sparse or uninformative data, the sampling obtained by the rejection
+sampling is generally multimodal and dense.
+With very informative data, the sampling becomes effectively unimodal but too
+sparse; in this case, we therefore follow the rejection sampling with standard
+MCMC.
 % Results
-The method produces correct samplings in orbital parameters for data sets
-that include as few as three noisy velocity epochs.
-\samplername\ can therefore be used to (1) verify whether the pdf of the orbit parameters
-is effectively unimodal for a given set of data, and (2)
-produce proper samplings of multimodal pdfs; these are still highly informative
-and can be used in hierarchical modeling
-(e.g., population modeling).
-We give some examples that show how the posterior probability depends extremely
-strongly on the number and time coverage of the observations and their
-uncertainties.
+The method produces correct samplings in orbital parameters for data that
+include as few as three epochs.
+\samplername\ can therefore be used to produce proper samplings of multimodal
+pdfs, which are still highly informative and can be used in hierarchical
+(population) modeling.
+We give some examples that show how the posterior probability distribution
+depends sensitively on the number and time coverage of the observations and
+their uncertainties.
 \end{abstract}
 
 \keywords{
