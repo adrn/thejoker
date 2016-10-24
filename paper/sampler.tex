@@ -841,7 +841,7 @@ A noticeable difference between the $N=5$ and $N=7$ panels in
 between these cases (from $\gtrsim$20 period modes to 3):
 This implies that the two added observations are extremely informative.
 % However, there is nothing inherently special about these particular choices for
-% the number of observations. TODO: respond to Rix's note about Troup
+% the number of observations. TODO: respond to Rix's note about Troup?
 Inverting this idea, it also suggests that we can use \samplername\ to (1)
 predict the observation time that maximally collapses the posterior pdf for a
 previously measured source, and (2) for an expected population of sources, we
@@ -906,11 +906,15 @@ solutions.
 Our experiments show that \samplername\ can be used for discovery and
 characterization of stellar binaries or exoplanets, even with the presence of
 unrecognized or unaccounted noise contributions.
+However, we emphasize that while \samplername\ could in principle be used for
+any exoplanet system, the simplicity of our noise model and single-companion
+assumption strongly suggest that it will be most useful in the study of massive
+exoplanets.
 
-
-Perhaps the primary innovation \samplername\ brings is a separation of the parameters into linear
-and nonlinear subsets. The brute force sampling is only required in the
-nonlinear subspace, aiding computational feasibility.
+Perhaps the primary innovation \samplername\ brings is a separation of the
+parameters into linear and nonlinear subsets.
+The brute force sampling is only required in the nonlinear subspace, aiding
+computational feasibility.
 We further capitalize on the problem structure by identifying effectively
 unimodal and effectively multi-modal posterior pdfs using the minimum possible
 width of a likelihood peak in the period direction, given the time sampling.
