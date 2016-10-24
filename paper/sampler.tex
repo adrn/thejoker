@@ -113,12 +113,11 @@ non-linear parameters (period, eccentricity, argument of pericenter, phase)
 and two linear parameters (velocity amplitude, barycenter velocity).
 We capitalize on this by building a sampling method in which we densely sample
 the prior pdf in the non-linear parameters, and perform rejection sampling using
-a likelihood marginalized over the linear parameters.
-With sparse or uninformative data, the sampling obtained by the rejection
+a likelihood function marginalized over the linear parameters.
+With sparse or uninformative data, the sampling obtained by this rejection
 sampling is generally multimodal and dense.
 With very informative data, the sampling becomes effectively unimodal but too
-sparse; in this case, we therefore follow the rejection sampling with standard
-MCMC.
+sparse and we therefore follow the rejection sampling with standard MCMC.
 % Results
 The method produces correct samplings in orbital parameters for data that
 include as few as three epochs.
