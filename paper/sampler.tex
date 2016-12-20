@@ -310,8 +310,9 @@ use the likelihood evaluated at these samples as the rejection scalar.
 In detail, the rejection step works as follows:
 \begin{enumerate}\itemsep0ex
 \item For each sample $j$ in the prior pdf sampling of the four non-linear
-  parameters, there is a (linear, not logarithmic) likelihood value $L_j$ (a
-  probability for the data given the parameters).
+  parameters, there is a (linear, not logarithmic) \resp{marginal} likelihood
+  value $L_j$ (a probability for the data given the \resp{non-linear}
+  parameters).
 \item There is a maximum value $L_{\rm max}$ that is the largest value of
   $L_j$ found across all of the samples in the prior sampling.
 \item For each sample $j$, choose a random number $r_j$ between 0 and
@@ -332,7 +333,7 @@ Our prior pdf in the non-linear parameters is very straightforward:
     p(e) &= {\rm Beta}(a, b) = \frac{\Gamma(a+b)}{\Gamma(a) \, \Gamma(b)} \, e^{a-1} \, [1 - e]^{b-1}\\
     p(\omega) &= \mathcal{U}(0, 2\pi) ~ [{\rm rad}]\\
     p(\phi_0) &= \mathcal{U}(0, 2\pi) ~ [{\rm rad}]\\
-    p(\ln s^2) &= \mathcal{N}(\mu_s, \sigma^2_s)
+    p(\resp{\ln s}) &= \mathcal{N}(\mu_s, \sigma^2_s)
 \end{align}
 where $\mathcal{U}(x_1, x_2)$ is the uniform distribution over the domain $(x_1,
 x_2)$, $\mathcal{N}(\mu, \sigma^2)$ is the normal distribution with mean $\mu$
@@ -425,13 +426,15 @@ The three possible outcomes are:
   is larger than $M_{\rm min}$.
   This is expensive.
 \end{itemize}
-When we trigger the intialization and operation of \emcee, we do the following:
+When we trigger the \resp{initialization} and operation of \emcee, we do the
+following:
 \begin{enumerate}\itemsep0ex
 \item Randomly generate $M_{\rm min}$ sets of parameters $\bs{\theta}_m$
   (linear and nonlinear parameters) in a small, Gaussian ball around
   the highest-$Q_j$ sample from the Simple Monte Carlo.
 \item Run \emcee\ on this ensemble (with $M_{\rm min}$ walkers) for $2^{16}$
-  steps.
+  steps \resp{(this number is arbitrary and can be tuned if the walkers converge
+  much faster or slower)}.
 \item Take the final state of the $M_{\rm min}$-element ensemble as a
   fair sampling of the posterior pdf.
 \end{enumerate}
@@ -508,7 +511,7 @@ consistent with the typical sub-stellar companion found in recent analysis of
 the \apogee\ data (\citealt{Troup:2016}), the angle parameters ($\omega$,
 $\phi_0$) are sampled from a uniform distribution, and the barycenter velocity
 is drawn from a zero-mean Gaussian with variance $\sigma^2 = (30~\kms)^2$.
-The values of the parameters used for the simulated data (e.g., the truth) are:
+The values of the parameters used for the simulated data (i.e. the truth) are:
 $P = 103.71~{\rm day}$, $e = 0.313$, $\omega = 68.95^\circ$,
 $\phi_0 = 223.96^\circ$, $K = 8.134~\kms$, $v_0 = 42.98~\kms$.
 We randomly sample five observation epochs uniformly over the interval $(0,1095)~{\rm day}$
@@ -728,7 +731,7 @@ observations epochs as input data (a total of five consecutive runs).
 
 Specifically, we again generate $2^{28}$ prior samples over the nonlinear
 parameters with a period domain of $(P_{\rm min}, P_{\rm max}) = (16, 8192)~{\rm
-day}$ and re-use these prior samples for each sub-sampling of the data.
+days}$ and re-use these prior samples for each sub-sampling of the data.
 We fix the jitter to $s^2 = 0$ and assume that the uncertainties are known.
 \figname~\ref{fig:numpts-rv} shows the simulated data and orbits computed from
 posterior samplings.
@@ -1028,9 +1031,11 @@ Proxima b discovery; \citealt{Anglada-Escude:2016}).
 
 At a crucial practical level, there are no data sets (to our knowledge) with
 perfectly Gaussian noise, and even if there were, the noise variances
-could never be perfectly known. Here, introducing the jitter as an explicit fitting parameter
-should mitigate. Nonetheless, presuming we understand the noise properties,
-may still be the most problematic  assumption made by
+could never be perfectly known.
+\resp{Here, introducing the jitter as an explicit fitting parameter should help
+to mitigate \samplername's sensitivity to unknown noise sources.}
+Nonetheless, presuming we understand the noise properties, may still be the most
+problematic  assumption made by
 \samplername :
 Essentially all data sets show occasional outliers (catastrophic errors).
 There is nothing we can do simply here, if we want to capitalize on treating the
