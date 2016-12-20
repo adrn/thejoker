@@ -1,0 +1,113 @@
+Note: The authors will probably be able to infer my identity from these remarks. I am fine with that.
+
+This was an interesting and entertaining read. Price-Whelan et al have developed an innovative (and rather crazy, or, more charitably, ambitious) approach to sampling the posterior distribution for orbital parameters given radial velocity measurements. The goal is to use this to "measure the undetectable" (a recurring theme in some of the authors' work) - to use hierarchical inference to make statements about the population when each object in that population has it properties only poorly constrained.
+
+Overall, I am impressed that this works, and I would like to see the paper published eventually. The plots are beautiful and help reinforce the ideas very well (they illustrate generic features of this data analysis problem very clearly). But I have a few criticisms, listed below.
+
+- What is the origin and significance of the title "The Joker"? Forgive me for being dense, but I don't get it.
+
+It's short for JOhannes KeplER.
+
+- Regarding the above point about measuring the undetectable, it might be worth referring to one or two papers outside of exoplanets where that kind of thing has been done.
+
+TODO:
+
+- Some important previous work has not been cited, which might give some readers an inaccurate impression that this problem hadn't been solved before. Particularly, the work of Phil Gregory comes to mind here. He has been paying attention to multimodality in the posterior distribution for exoplanet parameters since 2005 and while I don't agree with a few aspects of his work, it is very canonical in this area and should be referenced. In the section on scheduling follow-up observations, I suggest Loredo (2004) [https://arxiv.org/abs/astro-ph/0409386].
+
+TODO:
+
+- There is no clear indication of how fast this method is or how it might to compare to competing ones. At some points, mentions of huge numbers of Monte Carlo samples appear. How many likelihood evaluations are needed in total to analyse one time series? How might this compare to other approaches? The main advantage of "The Joker" is probably its usability (given the authors' reputations in the realm of software). Its speed might be another, but the paper doesn't make that clear one way or the other.
+
+TODO:
+
+- In the abstract, you should explicitly state that you condition on one planet (or stellar companion), rather than expecting the reader to infer it from your sentences about the number of orbital parameters.
+
+TODO:
+
+- Introduction, paragraph four. "explore these highly multimodal functions". Change functions -> distributions.
+
+TODO:
+
+- Introduction, paragraph four. "guarantees of correctness" - this is an awkward thing to claim. MCMC has guarantees of correctness in the limit t -> infinity. The Brewer and Donovan method is an example of MCMC so inherits this "guarantee" but does it better in finite time (in a multimodal situation) than Metropolis sampling of the posterior would. I don't see how your rejection sampling method would have more guarantees. Could you please clarify this.
+
+TODO:
+
+- Section 1, final paragraph: I like the structure of the article very much.
+
+TODO: ??
+
+- Section 2, second bullet point: "Our analysis allows the effective mass ... to go to zero". With finite probability? If so, say so. If not, remove the statement (or reword to "to be close to zero").
+
+TODO:
+
+- Related to the above point - I just tried to find the prior for K but could not. Where is it specified?
+
+TODO:
+
+- Section 2, third bullet point: I am vehemently opposed to the language of quantities as "having been drawn from" probability distributions, except when talking about computer code that calls an RNG. I am fighting a losing battle on this, I suppose.
+
+TODO:
+
+- Page 4. In my opinion "Simple Monte Carlo" and Rejection Sampling are different things. Maybe I'm wrong on this, but I feel like the former is estimating an expectation E_f(g(x)) by sampling from f and averaging g (no rejection or filtering of samples takes place), whereas the latter is what you're actually using. Please correct either me or the article.
+
+TODO:
+
+- What does it mean to "densely" sample? Do you just mean you generate a lot of points?
+
+TODO:
+
+- End of page four, inside step 1: likelihood value -> marginal likelihood value (and perhaps also add "given the NONLINEAR parameters" inside the parentheses)
+
+TODO:
+
+- Page 5, the paragraph after the steps. The article states "If the original sampling...is dense enough that many samples survive the rejection step, the surviving samples constitute a fair sampling". I believe this is false. I assume a 'fair sampling' means that the prior probability distribution for where points will be generated, conditional on the target density, is equal to the target density. The given procedure does not have this property except in the limit N -> infinity. Counterexample: uniform prior in high dimensions, likelihood function a mixture of two isolated gaussians with very different widths but comparable posterior masses. Most generated points will fall into the wide gaussian. You will get lots of points with likelihood comparable to the maximum seen. But if you waited 100 more years, you'd eventually see a point in the narrow gaussian which would render all of your other points rejected. That said, I think you are *reasonably* safe in practice.
+
+TODO:
+
+- Equation 9. The notation p(ln s^2) = something with subscript s is confusing. How should I read this? The prior for ln(s) is normal? If so, why square the s on the left hand side?
+
+TODO:
+
+- Page 6, middle paragraph "expected from information-theory (sampling theorems) perspective" I had always thought these were separate subjects (information theory is about entropies and so on, sampling theorems are about signal processing and discrete FFTs etc). I'm sure there are connections between them though.
+
+TODO:
+
+- Page 6 final sentence typo: intialization -> initialization
+
+TODO:
+
+- Page 7, step 2. Why 2^16 steps? Are these steps loops over the walkers? Be explicit so we can estimate the number of likelihood evaluations occurring.
+
+TODO:
+
+- The demonstration sections on different datasets, and the discussion around them, was quite good.
+
+TODO: great!
+
+- Section 3.1, first paragraph. (e.g., the truth): e.g., -> i.e.,
+
+TODO:
+
+- Section 3.2, final paragraph: Most of what happened here would have been predicted by anyone familiar with Bayesian inference, and is not specific to The Joker. It is still useful to state these things, but can you try to moderate the wording here?
+
+TODO:
+
+- Section 3.3, final paragraph: "day and re-use these ...": day -> days
+
+TODO:
+
+- Page 25: "If lots of samples survive the rejection step, the posterior ha been sampled" - See above. I think this is false.
+
+TODO:
+
+- Final paragraph: "There are no data sets with perfectly gaussian noise". This sentence propagates a misunderstanding. Using p(data | params) ~ gaussian is an assumption about the prior information, not about the data. It is an assumption that often *doesn't take into account relevant information* and needs to be questioned on that basis. But the problems that gaussian assumptions cause have nothing to do with "the data sets having non-gaussian noise".
+
+TODO:
+
+- Final paragraph: sentence ending "should mitigate" is awkward. I agree it mitigates. Can you tidy up the sentence?
+
+TODO:
+
+- Final paragraph: "There is nothing we can do simply here". I haven't written down the maths to see if this works out, but replacing your s parameter with something that puts a mixture of scales into p(data | params) (e.g. making it a scale mixture of two gaussians) might be tractable.
+
+TODO:
