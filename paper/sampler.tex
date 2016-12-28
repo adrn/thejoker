@@ -955,11 +955,17 @@ When the data are sparse or have a low signal-to-noise (e.g., bottom panels in
 step:
 If the goal is to learn about an individual system and the data are poor, many
 fewer prior samples can be used to initialize \samplername.
+\resp{In this limit, generating a set number of posterior samples is very fast
+because of the easy parallelization of the likelihood calls.}
 The same is true when the data are high-quality and the samples that pass the
 rejection step will be used to initialize an MCMC sampling.
 A large prior sampling is needed when (a) many posterior pdf samples are needed
 for hierarchical inference, or (b) the data are of intermediate quality (the
 exact definition of which is problem-specific).
+\resp{\samplername\ is most valuable in the low-to-intermediate quality range,
+especially when the samples will be used for hierarchical inference, when a
+small but converged sampling is needed for many (thousands to millions) of
+sources.}
 
 \samplername\ should also be valuable in observation planning, or cadence
 evaluation, or survey strategy:

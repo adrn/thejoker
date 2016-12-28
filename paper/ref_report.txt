@@ -50,7 +50,8 @@ in the section discussing observation planning.
 >   (given the authors' reputations in the realm of software). Its speed might
 >   be another, but the paper doesn't make that clear one way or the other.
 
-APW TODO
+We can't comment on speed relative to competing methods, but we have added some
+text to the discussion to address these comments.
 
 > - In the abstract, you should explicitly state that you condition on one
 >   planet (or stellar companion), rather than expecting the reader to infer it
