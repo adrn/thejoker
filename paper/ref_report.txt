@@ -38,7 +38,9 @@ HOGG TODO
 >   the section on scheduling follow-up observations, I suggest Loredo (2004)
 >   [https://arxiv.org/abs/astro-ph/0409386].
 
-APW TODO
+We have added citations to Phil Gregory's 2005 paper on the topic of multi-modal
+posterior distributions and have added citations to Loredo 2004 and Ford 2004
+in the section discussing observation planning.
 
 > - There is no clear indication of how fast this method is or how it might to
 >   compare to competing ones. At some points, mentions of huge numbers of
