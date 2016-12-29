@@ -185,14 +185,19 @@ systems of particular interest, extensive sets of such likelihoods can
 be powerful constraints for hierarchical modeling, inferring, e.g., the
 characteristics of the binary star, or exoplanet population.
 
-While the problem has of course been recognized for a long time, there
-are currently no methods that explore these highly multimodal
-\resp{distributions} with good guarantees of correctness (that is, converged
-samplings that fairly sample the full posterior; but see
+While the problem has of course been recognized for a long time, there are
+currently no methods that explore these highly multimodal
+\resp{distributions} with good guarantees of \resp{converged samplings} (but see
 \citealt{Gregory:2005,Brewer:2015}).
-Good samplings are essential to the jobs of
-delivering correct posterior samplings and reliable probabilistic statements
-about detection and characterization.
+\resp{Converged, indepdendent samplings are essential to the jobs of delivering
+correct posterior samplings and reliable probabilistic statements about
+detection and characterization.
+With general Markov Chain Monte Carlo (MCMC) methods, the returned samplings are
+inherently correlated and must therefore be run longer than the autocorrelation
+time.
+However, computing the autocorrelation time (a two-point statistic of a chain)
+is not simple to compute and can be misleading, especially when the target
+distribution is highly multimodal with widely separated modes.}
 
 Here we present a path to address this problem.
 Our approach is to build a custom posterior sampling method that capitalizes on
@@ -287,8 +292,8 @@ parameter.
 With such a parameterization, the problem is then to construct the posterior pdf
 for these seven parameters, accounting for the fact that this pdf
 may have very complex, multi-modal structure.
-Fundamentally, the method we describe and demonstrate here is
-\emph{Simple Monte Carlo} in the non-linear parameters, but with analytic
+Fundamentally, the method we describe and demonstrate here is to perform
+rejection sampling in the non-linear parameters, but with analytic
 marginalization over the two linear parameters.
 The method capitalizes on the unique problem structure:
 \begin{itemize}\itemsep0ex
@@ -302,8 +307,8 @@ The method capitalizes on the unique problem structure:
   modes in the multimodal posterior pdf.
 \end{itemize}
 
-The method we refer to as Simple Monte Carlo is a specific case of
-rejection-sampling (\citealt{VonNeumann:1951}) in which we densely sample
+\resp{The method described above is a specific case of} rejection-sampling
+(\citealt{VonNeumann:1951}) in which we densely sample
 (\resp{generate many samples with typical spacing smaller than the time-sampling
 imposed resolution}) from the prior probability density function (prior pdf) and
 use the likelihood evaluated at these samples as the rejection scalar.
@@ -394,8 +399,7 @@ where the prediction $v(t_n;\bs{\theta}_j)$ is taken at the best-fit values of
 the linear parameters given sample $j$ of the non-linear parameters, and the
 log-determinant term ($\ln ||C_j||$) accounts for the volume in the
 marginalization integral.
-These $Q_j$ are used in the rejection sampling algorithm described above
-as Simple Monte Carlo.
+These $Q_j$ are used in the rejection sampling algorithm described above.
 
 There are three possible outcomes of this rejection sampling, based on two
 thresholds:
@@ -421,9 +425,9 @@ The three possible outcomes are:
   \emcee\ package (\citealt{Foreman-Mackey:2013}).
 \item $M<M_{\rm min}$ samples survive the rejection, and these samples
   span a period range larger than $\Delta$.
-  In this case, we iterate the Simple Monte Carlo procedure: We generate new
-  prior-pdf samplings and rejection sample until the number of surviving samples
-  is larger than $M_{\rm min}$.
+  In this case, we iterate the \resp{rejection-sampling} procedure: We generate
+  new prior-pdf samplings and rejection sample until the number of surviving
+  samples is larger than $M_{\rm min}$.
   This is expensive.
 \end{itemize}
 When we trigger the \resp{initialization} and operation of \emcee, we do the
@@ -431,12 +435,12 @@ following:
 \begin{enumerate}\itemsep0ex
 \item Randomly generate $M_{\rm min}$ sets of parameters $\bs{\theta}_m$
   (linear and nonlinear parameters) in a small, Gaussian ball around
-  the highest-$Q_j$ sample from the Simple Monte Carlo.
+  the highest-$Q_j$ sample from the \resp{rejection sampling}.
 \item Run \emcee\ on this ensemble (with $M_{\rm min}$ walkers) for $2^{16}$
   steps \resp{(this number is arbitrary and can be tuned if the walkers converge
   much faster or slower)}.
-\item Take the final state of the $M_{\rm min}$-element ensemble as a
-  fair sampling of the posterior pdf.
+\item Take the final state of the $M_{\rm min}$-element ensemble as an
+  independent sampling of the posterior pdf.
 \end{enumerate}
 This procedure ensures that no matter what path we take, we end up with
 at least $M_{\rm min}$ samples from the posterior for any input data.
@@ -902,11 +906,12 @@ We have built a Monte Carlo sampler---\samplername---to draw samples from the
 full posterior pdf over orbital parameters for single-companion systems,
 given a set of multi-epoch, single-line radial velocity measurements.
 \samplername\ has important properties that differ from other sampling methods:
-(1) It produces fair samplings even when the likelihood (and hence posterior
-pdf) is highly multi-modal; (2) the method is based on Simple Monte Carlo,  in
-some sense a pure brute-force method, which parallelizes trivially; and (3) the
-samplings are guaranteed to be correct under the sensible assumptions presented here,
-without the need for convergence or other diagnostic checks.
+(1) It produces \resp{independent} samplings even when the likelihood (and hence
+posterior pdf) is highly multi-modal; (2) the method is based on Simple Monte
+Carlo,  in some sense a pure brute-force method, which parallelizes trivially;
+and (3) the samplings are guaranteed to be correct under the sensible
+assumptions presented here, without the need for convergence or other diagnostic
+checks.
 If the pdf is effectively unimodal, \samplername\ tells us that the solution is
 unique.
 If the pdf is multi-modal, \samplername\ captures all relevant different
@@ -999,9 +1004,9 @@ Monte Carlo; our advice would be to switch to some kind of Markov
 Chain method that deals as well as possible with multi-modal
 posteriors, such as nested sampling (\citealt{Skilling:2004, Brewer:2009}).
 This change would be associated with the loss of the simple
-convergence criterion that Simple Monte Carlo provides: If lots of
-samples survive the rejection step, the posterior has been sampled
-fairly!
+convergence criterion that the \resp{rejection sampling} provides:
+If lots of samples survive the rejection step, the posterior has been sampled
+\resp{independently}!
 There is no comparably simple way of determining that any nested
 sampling is converged.
 
@@ -1036,9 +1041,8 @@ Proxima b discovery; \citealt{Anglada-Escude:2016}).
 % by using as many prior samples as it possibly can!
 
 
-At a crucial practical level, there are no data sets (to our knowledge) with
-perfectly Gaussian noise, and even if there were, the noise variances
-could never be perfectly known.
+At a crucial practical level, \resp{the assumption of Gaussian noise and
+perfectly known noise variances is often violated.}
 \resp{Here, introducing the jitter as an explicit fitting parameter should help
 to mitigate \samplername's sensitivity to unknown noise sources.}
 Nonetheless, presuming we understand the noise properties, may still be the most
