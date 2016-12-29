@@ -1,6 +1,9 @@
 > Note: The authors will probably be able to infer my identity from these
 > remarks. I am fine with that.
 
+If you are willing to reveal your identity, we will happily thank you in the
+paper!
+
 > This was an interesting and entertaining read. Price-Whelan et al have
 > developed an innovative (and rather crazy, or, more charitably, ambitious)
 > approach to sampling the posterior distribution for orbital parameters given
@@ -72,7 +75,9 @@ Changed.
 >   don't see how your rejection sampling method would have more guarantees.
 >   Could you please clarify this.
 
-HOGG TODO
+We have removed the language about correctness from this paragraph and rephrased
+to emphasize the point that we naturally return a converged sampling, without
+the need to compute second-order statistics.
 
 > - Section 1, final paragraph: I like the structure of the article very much.
 
@@ -104,8 +109,11 @@ We changed "draws" to "samples".
 >   rejection or filtering of samples takes place), whereas the latter is what
 >   you're actually using. Please correct either me or the article.
 
-HOGG TODO: (What the ref says is my understanding too, but you love the phrase
-Simple Monte Carlo! - APW)
+We've replaced instances of "Simple Monte Carlo" with "rejection sampling". We
+note however that the phrase "Monte Carlo" is sometimes used to refer to
+"performing the integral" (as you comment), but sometimes also used to mean
+"generate the samples to be used to do the integral". To avoid confusion, we'll
+stick to the more explicit term "rejection sampling".
 
 > - What does it mean to "densely" sample? Do you just mean you generate a lot
 >   of points?
@@ -134,9 +142,7 @@ Changed.
 >   render all of your other points rejected. That said, I think you are
 >   *reasonably* safe in practice.
 
-HOGG TODO: (I think he's just confused by the terminology? Don't all samplings
-converge to the target distribution as N->infinity, and not when N is finite? -
-APW)
+We have changed "fair" to "independent".
 
 > - Equation 9. The notation p(ln s^2) = something with subscript s is
 >   confusing. How should I read this? The prior for ln(s) is normal? If so,
@@ -152,7 +158,9 @@ of notation, we have updated the equation.
 >   about signal processing and discrete FFTs etc). I'm sure there are
 >   connections between them though.
 
-HOGG TODO
+We do see these topics as connected. We are interested in the information
+about the frequency structure of a signal given a finite, noisy sampling of the
+signal.
 
 > - Page 6 final sentence typo: intialization -> initialization
 
@@ -188,7 +196,7 @@ Fixed.
 > - Page 25: "If lots of samples survive the rejection step, the posterior ha
 >   been sampled" - See above. I think this is false.
 
-HOGG TODO: (related to point above)
+Changed to "independently".
 
 > - Final paragraph: "There are no data sets with perfectly gaussian noise".
 >   This sentence propagates a misunderstanding. Using p(data | params) ~
@@ -198,7 +206,9 @@ HOGG TODO: (related to point above)
 >   that gaussian assumptions cause have nothing to do with "the data sets
 >   having non-gaussian noise".
 
-HOGG TODO: (isn't this saying the same thing, but from a different angle? - APW)
+We've changed this statement to read "At a crucial practical level, the
+assumption of Gaussian noise and perfectly known noise variances is often
+violated."
 
 > - Final paragraph: sentence ending "should mitigate" is awkward. I agree it
 >   mitigates. Can you tidy up the sentence?
@@ -210,6 +220,3 @@ We have rephrased this sentence.
 >   parameter with something that puts a mixture of scales into p(data |
 >   params) (e.g. making it a scale mixture of two gaussians) might be
 >   tractable.
-
-HOGG TODO: (I guess this would be possible...but worth mentioning in the paper?
-IDK - APW)
