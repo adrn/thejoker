@@ -79,7 +79,7 @@ class OrbitalParams(object):
     def get_labels(cls, units=None):
         _u = dict()
         if units is None:
-            units = cls._name_to_unit
+            _u = cls._name_to_unit
 
         else:
             for k,unit in cls._name_to_unit.items():
