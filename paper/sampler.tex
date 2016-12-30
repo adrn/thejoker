@@ -48,6 +48,10 @@
 \newcommand{\mps}{\mathrm{m}~\mathrm{s}^{-1}}
 \newcommand{\bs}[1]{\boldsymbol{#1}}
 
+% response to referee
+\definecolor{mahogany}{RGB}{165,15,21}
+\newcommand{\resp}[1]{{\color{mahogany}#1}}
+
 % For experiments
 \newcounter{expcounter}
 \stepcounter{expcounter}
@@ -104,9 +108,10 @@ The consequent multimodality of the likelihood function leads to extremely
 challenging search, optimization, and MCMC posterior sampling over the orbital
 parameters.
 % Aims
-Here we create a custom-built Monte Carlo sampler that can produce a posterior
-sampling for orbital parameters given sparse or noisy radial-velocity
-measurements, even when the likelihood function is poorly behaved.
+\resp{Here we create a custom Monte Carlo sampler for sparse or noisy
+radial-velocity measurements of two-body systems that can produce a posterior
+sampling for orbital parameters even when the likelihood function is poorly
+behaved.}
 % Methods
 The six standard orbital parameters for a binary system can be split into four
 non-linear parameters (period, eccentricity, argument of pericenter, phase)
@@ -180,14 +185,19 @@ systems of particular interest, extensive sets of such likelihoods can
 be powerful constraints for hierarchical modeling, inferring, e.g., the
 characteristics of the binary star, or exoplanet population.
 
-While the problem has of course been recognized for a long time, there
-are currently no methods that explore these highly multimodal
-functions with good guarantees of correctness (that is, converged
-samplings that fairly sample the full posterior; but see
-\citealt{Brewer:2015}).
-Good samplings are essential to the jobs of
-delivering correct posterior samplings and reliable probabilistic statements
-about detection and characterization.
+While the problem has of course been recognized for a long time, there are
+currently no methods that explore these highly multimodal
+\resp{distributions} with good guarantees of \resp{converged samplings} (but see
+\citealt{Gregory:2005,Brewer:2015}).
+\resp{Converged, indepdendent samplings are essential to the jobs of delivering
+correct posterior samplings and reliable probabilistic statements about
+detection and characterization.
+With general Markov Chain Monte Carlo (MCMC) methods, the returned samplings are
+inherently correlated and must therefore be run longer than the autocorrelation
+time.
+However, computing the autocorrelation time (a two-point statistic of a chain)
+is not simple to compute and can be misleading, especially when the target
+distribution is highly multimodal with widely separated modes.}
 
 Here we present a path to address this problem.
 Our approach is to build a custom posterior sampling method that capitalizes on
@@ -237,13 +247,13 @@ To proceed, we assume the following:
   where we do not have measurements of the (fainter) companion's projected orbit.
 \item  Each star has exactly one companion, and that the radial-velocity
   measurements are not contaminated by nor affected by any other bodies. Our
-  analysis allows the effective mass of the exactly-one companion to go to zero;
-  this encompasses the case of no companion.
+  analysis allows the effective mass of the exactly-one companion to go to zero
+  \resp{with finite probability}; this encompasses the case of no companion.
 \item The noise contributions to individual radial-velocity measurements are
-  well described as draws from zero-mean normal (Gaussian) distributions with
-  correctly known variances convolved with a zero-mean normal distribution with
-  an additional ``jitter'' variance, $s^2$. We assume that there are no outliers
-  beyond this flexible noise model.
+  well described as \resp{samples} from zero-mean normal (Gaussian)
+  distributions with correctly known variances convolved with a zero-mean normal
+  distribution with an additional ``jitter'' variance, $s^2$. We assume that
+  there are no outliers beyond this flexible noise model.
 \item We can put particular, fairly sensible but not highly restrictive,
   prior pdfs on all the orbital parameters, as we
   describe below.
@@ -282,8 +292,8 @@ parameter.
 With such a parameterization, the problem is then to construct the posterior pdf
 for these seven parameters, accounting for the fact that this pdf
 may have very complex, multi-modal structure.
-Fundamentally, the method we describe and demonstrate here is
-\emph{Simple Monte Carlo} in the non-linear parameters, but with analytic
+Fundamentally, the method we describe and demonstrate here is to perform
+rejection sampling in the non-linear parameters, but with analytic
 marginalization over the two linear parameters.
 The method capitalizes on the unique problem structure:
 \begin{itemize}\itemsep0ex
@@ -297,15 +307,17 @@ The method capitalizes on the unique problem structure:
   modes in the multimodal posterior pdf.
 \end{itemize}
 
-The method we refer to as Simple Monte Carlo is a specific case of
-rejection-sampling (\citealt{VonNeumann:1951}) in which we densely sample from
-the prior probability density function (prior pdf) and use the likelihood
-evaluated at these samples as the rejection scalar.
+\resp{The method described above is a specific case of} rejection-sampling
+(\citealt{VonNeumann:1951}) in which we densely sample
+(\resp{generate many samples with typical spacing smaller than the time-sampling
+imposed resolution}) from the prior probability density function (prior pdf) and
+use the likelihood evaluated at these samples as the rejection scalar.
 In detail, the rejection step works as follows:
 \begin{enumerate}\itemsep0ex
 \item For each sample $j$ in the prior pdf sampling of the four non-linear
-  parameters, there is a (linear, not logarithmic) likelihood value $L_j$ (a
-  probability for the data given the parameters).
+  parameters, there is a (linear, not logarithmic) \resp{marginal} likelihood
+  value $L_j$ (a probability for the data given the \resp{non-linear}
+  parameters).
 \item There is a maximum value $L_{\rm max}$ that is the largest value of
   $L_j$ found across all of the samples in the prior sampling.
 \item For each sample $j$, choose a random number $r_j$ between 0 and
@@ -326,12 +338,23 @@ Our prior pdf in the non-linear parameters is very straightforward:
     p(e) &= {\rm Beta}(a, b) = \frac{\Gamma(a+b)}{\Gamma(a) \, \Gamma(b)} \, e^{a-1} \, [1 - e]^{b-1}\\
     p(\omega) &= \mathcal{U}(0, 2\pi) ~ [{\rm rad}]\\
     p(\phi_0) &= \mathcal{U}(0, 2\pi) ~ [{\rm rad}]\\
-    p(\ln s^2) &= \mathcal{N}(\mu_s, \sigma^2_s)
+    p(\resp{\ln s}) &= \mathcal{N}(\mu_s, \sigma^2_s)
 \end{align}
 where $\mathcal{U}(x_1, x_2)$ is the uniform distribution over the domain $(x_1,
 x_2)$, $\mathcal{N}(\mu, \sigma^2)$ is the normal distribution with mean $\mu$
 and variance $\sigma^2$, and the prior pdf over eccentricity is the Beta
 distribution with $a=0.867$, $b=3.03$ \citep{Kipping:2013}.
+\resp{To simplify the marginalization integrals below, we assume that the priors
+over the linear parameters ($K$, $v_0$) are very broad and Gaussian---or at
+least very flat over the range of relevance---and that they do not depend on the
+nonlinear parameters in any way (which is a substantial restriction; see
+\sectionname~\ref{sec:discussion}).
+Of course, we may actually have stronger prior beliefs about the systemic
+velocity of the binary, $v_0$ (i.e. we may want to impose that it belong to the
+Galactic disk, or use a mixture model for the different kinematic components of
+the Galaxy).
+Using a more informative prior would require only a minimal change to the
+method.}
 
 In \sectionname~\ref{sec:experiments} or in the subsections specific to the
 different experiments we specify the values for hyperparameters $P_{\rm min}$,
@@ -376,18 +399,7 @@ where the prediction $v(t_n;\bs{\theta}_j)$ is taken at the best-fit values of
 the linear parameters given sample $j$ of the non-linear parameters, and the
 log-determinant term ($\ln ||C_j||$) accounts for the volume in the
 marginalization integral.
-The marginalization assumes that the prior pdfs on the linear parameters
-are very broad and Gaussian---or
-at least very flat over the range of relevance---and that they do not depend
-on the nonlinear parameters in any way (which is a substantial restriction;
-see \sectionname~\ref{sec:discussion}).
-Of course, we may have stronger prior beliefs about the systemic velocity of the
-binary, $v_0$ (i.e. we may want to impose that it belong to the Galactic disk,
-or use a mixture model for the different kinematic components of the Galaxy).
-Using a more informative prior would require only a minimal change to the
-method.
-These $Q_j$ are used in the rejection sampling algorithm described above
-as Simple Monte Carlo.
+These $Q_j$ are used in the rejection sampling algorithm described above.
 
 There are three possible outcomes of this rejection sampling, based on two
 thresholds:
@@ -413,20 +425,22 @@ The three possible outcomes are:
   \emcee\ package (\citealt{Foreman-Mackey:2013}).
 \item $M<M_{\rm min}$ samples survive the rejection, and these samples
   span a period range larger than $\Delta$.
-  In this case, we iterate the Simple Monte Carlo procedure: We generate new
-  prior-pdf samplings and rejection sample until the number of surviving samples
-  is larger than $M_{\rm min}$.
+  In this case, we iterate the \resp{rejection-sampling} procedure: We generate
+  new prior-pdf samplings and rejection sample until the number of surviving
+  samples is larger than $M_{\rm min}$.
   This is expensive.
 \end{itemize}
-When we trigger the intialization and operation of \emcee, we do the following:
+When we trigger the \resp{initialization} and operation of \emcee, we do the
+following:
 \begin{enumerate}\itemsep0ex
 \item Randomly generate $M_{\rm min}$ sets of parameters $\bs{\theta}_m$
   (linear and nonlinear parameters) in a small, Gaussian ball around
-  the highest-$Q_j$ sample from the Simple Monte Carlo.
+  the highest-$Q_j$ sample from the \resp{rejection sampling}.
 \item Run \emcee\ on this ensemble (with $M_{\rm min}$ walkers) for $2^{16}$
-  steps.
-\item Take the final state of the $M_{\rm min}$-element ensemble as a
-  fair sampling of the posterior pdf.
+  steps \resp{(this number is arbitrary and can be tuned if the walkers converge
+  much faster or slower)}.
+\item Take the final state of the $M_{\rm min}$-element ensemble as an
+  independent sampling of the posterior pdf.
 \end{enumerate}
 This procedure ensures that no matter what path we take, we end up with
 at least $M_{\rm min}$ samples from the posterior for any input data.
@@ -501,7 +515,7 @@ consistent with the typical sub-stellar companion found in recent analysis of
 the \apogee\ data (\citealt{Troup:2016}), the angle parameters ($\omega$,
 $\phi_0$) are sampled from a uniform distribution, and the barycenter velocity
 is drawn from a zero-mean Gaussian with variance $\sigma^2 = (30~\kms)^2$.
-The values of the parameters used for the simulated data (e.g., the truth) are:
+The values of the parameters used for the simulated data (i.e. the truth) are:
 $P = 103.71~{\rm day}$, $e = 0.313$, $\omega = 68.95^\circ$,
 $\phi_0 = 223.96^\circ$, $K = 8.134~\kms$, $v_0 = 42.98~\kms$.
 We randomly sample five observation epochs uniformly over the interval $(0,1095)~{\rm day}$
@@ -721,7 +735,7 @@ observations epochs as input data (a total of five consecutive runs).
 
 Specifically, we again generate $2^{28}$ prior samples over the nonlinear
 parameters with a period domain of $(P_{\rm min}, P_{\rm max}) = (16, 8192)~{\rm
-day}$ and re-use these prior samples for each sub-sampling of the data.
+days}$ and re-use these prior samples for each sub-sampling of the data.
 We fix the jitter to $s^2 = 0$ and assume that the uncertainties are known.
 \figname~\ref{fig:numpts-rv} shows the simulated data and orbits computed from
 posterior samplings.
@@ -892,11 +906,12 @@ We have built a Monte Carlo sampler---\samplername---to draw samples from the
 full posterior pdf over orbital parameters for single-companion systems,
 given a set of multi-epoch, single-line radial velocity measurements.
 \samplername\ has important properties that differ from other sampling methods:
-(1) It produces fair samplings even when the likelihood (and hence posterior
-pdf) is highly multi-modal; (2) the method is based on Simple Monte Carlo,  in
-some sense a pure brute-force method, which parallelizes trivially; and (3) the
-samplings are guaranteed to be correct under the sensible assumptions presented here,
-without the need for convergence or other diagnostic checks.
+(1) It produces \resp{independent} samplings even when the likelihood (and hence
+posterior pdf) is highly multi-modal; (2) the method is based on Simple Monte
+Carlo,  in some sense a pure brute-force method, which parallelizes trivially;
+and (3) the samplings are guaranteed to be correct under the sensible
+assumptions presented here, without the need for convergence or other diagnostic
+checks.
 If the pdf is effectively unimodal, \samplername\ tells us that the solution is
 unique.
 If the pdf is multi-modal, \samplername\ captures all relevant different
@@ -945,17 +960,24 @@ When the data are sparse or have a low signal-to-noise (e.g., bottom panels in
 step:
 If the goal is to learn about an individual system and the data are poor, many
 fewer prior samples can be used to initialize \samplername.
+\resp{In this limit, generating a set number of posterior samples is very fast
+because of the easy parallelization of the likelihood calls.}
 The same is true when the data are high-quality and the samples that pass the
 rejection step will be used to initialize an MCMC sampling.
 A large prior sampling is needed when (a) many posterior pdf samples are needed
 for hierarchical inference, or (b) the data are of intermediate quality (the
 exact definition of which is problem-specific).
+\resp{\samplername\ is most valuable in the low-to-intermediate quality range,
+especially when the samples will be used for hierarchical inference, when a
+small but converged sampling is needed for many (thousands to millions) of
+sources.}
 
 \samplername\ should also be valuable in observation planning, or cadence
 evaluation, or survey strategy:
 As \sectionname~\ref{sec:obsplan} shows,
 \samplername\ could be used to plan the times of next observations to maximize
-their expected information content.
+their expected information content \resp{(see also
+\citealt{Loredo:2004,Ford:2004})}.
 That is beyond the scope of this \documentname\ and will be explored in future
 work.
 
@@ -982,9 +1004,9 @@ Monte Carlo; our advice would be to switch to some kind of Markov
 Chain method that deals as well as possible with multi-modal
 posteriors, such as nested sampling (\citealt{Skilling:2004, Brewer:2009}).
 This change would be associated with the loss of the simple
-convergence criterion that Simple Monte Carlo provides: If lots of
-samples survive the rejection step, the posterior has been sampled
-fairly!
+convergence criterion that the \resp{rejection sampling} provides:
+If lots of samples survive the rejection step, the posterior has been sampled
+\resp{independently}!
 There is no comparably simple way of determining that any nested
 sampling is converged.
 
@@ -1019,11 +1041,12 @@ Proxima b discovery; \citealt{Anglada-Escude:2016}).
 % by using as many prior samples as it possibly can!
 
 
-At a crucial practical level, there are no data sets (to our knowledge) with
-perfectly Gaussian noise, and even if there were, the noise variances
-could never be perfectly known. Here, introducing the jitter as an explicit fitting parameter
-should mitigate. Nonetheless, presuming we understand the noise properties,
-may still be the most problematic  assumption made by
+At a crucial practical level, \resp{the assumption of Gaussian noise and
+perfectly known noise variances is often violated.}
+\resp{Here, introducing the jitter as an explicit fitting parameter should help
+to mitigate \samplername's sensitivity to unknown noise sources.}
+Nonetheless, presuming we understand the noise properties, may still be the most
+problematic  assumption made by
 \samplername :
 Essentially all data sets show occasional outliers (catastrophic errors).
 There is nothing we can do simply here, if we want to capitalize on treating the
