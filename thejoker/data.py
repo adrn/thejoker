@@ -22,14 +22,21 @@ __all__ = ['RVData']
 
 class RVData(object):
     """
+    Time-domain radial velocity measurements for a single target.
+
     Parameters
     ----------
     t : array_like, `~astropy.time.Time`
         Array of times. Either in BMJD or as an Astropy time.
     rv : `~astropy.units.Quantity` [speed]
-        Radial velocity measurements.
-    ivar : `~astropy.units.Quantity` [1/speed^2]
-        Inverse variance.
+        Radial velocity (RV) measurements.
+    ivar : `~astropy.units.Quantity` [1/speed^2] (optional)
+        Inverse variance for each RV measurement. Specify this or ``stddev``.
+    stddev : `~astropy.units.Quantity` [1/speed^2] (optional)
+        Standard deviation for each RV measurement. Specify this or ``ivar``.
+    metadata : (optional)
+        Any metadata to associate with the object.
+    t_offset : numeric
     """
     @u.quantity_input(rv=u.km/u.s)
     def __init__(self, t, rv, ivar=None, stddev=None, metadata=None, t_offset=None):
