@@ -30,7 +30,7 @@ It's short for Johannes Kepler.
 >   worth referring to one or two papers outside of exoplanets where that kind
 >   of thing has been done.
 
-HOGG TODO
+We added two new references, Brewer et al. 2013 and Brewer et al. 2014.
 
 > - Some important previous work has not been cited, which might give some
 >   readers an inaccurate impression that this problem hadn't been solved
