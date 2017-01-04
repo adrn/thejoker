@@ -4,7 +4,8 @@ import h5py
 import numpy as np
 
 # Project
-from thejoker.sampler import design_matrix, tensor_vector_scalar, marginal_ln_likelihood
+from .utils import get_ivar
+from .sampler import design_matrix, tensor_vector_scalar, marginal_ln_likelihood
 
 __all__ = ['get_good_samples', 'samples_to_orbital_params']
 
@@ -120,7 +121,7 @@ def _orbital_params_worker(task):
             nonlinear_p = f['samples'][i]
             P, phi0, ecc, omega, s2 = nonlinear_p
 
-            ivar = data.get_ivar(s2)
+            ivar = get_ivar(data, s2)
             A = design_matrix(nonlinear_p, data._t, data.t_offset)
             ATA,p,_ = tensor_vector_scalar(A, ivar, data._rv)
 

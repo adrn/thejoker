@@ -5,6 +5,7 @@ import numpy as np
 
 from ..config import defaults
 from ..celestialmechanics import rv_from_elements
+from .utils import get_ivar
 
 __all__ = ['design_matrix', 'tensor_vector_scalar', 'marginal_ln_likelihood',
            'sample_prior', 'period_grid']
@@ -90,7 +91,7 @@ def marginal_ln_likelihood(nonlinear_p, data):
     A = design_matrix(nonlinear_p, data._t, data.t_offset)
 
     s2 = nonlinear_p[4]
-    ivar = data.get_ivar(s2)
+    ivar = get_ivar(data, s2)
 
     ATCinvA,_,chi2 = tensor_vector_scalar(A, ivar, data._rv)
 

@@ -6,7 +6,6 @@ __author__ = "adrn <adrn@astro.columbia.edu>"
 import os
 
 # Third-party
-from astropy import log as logger
 from astropy.io import fits
 import astropy.time as at
 import astropy.units as u
@@ -16,6 +15,7 @@ import six
 
 # Project
 from .units import default_units
+from .log import log
 
 __all__ = ['RVData']
 
@@ -25,28 +25,39 @@ class RVData(object):
 
     Parameters
     ----------
-    t : array_like, `~astropy.time.Time`
-        Array of times. Either in BMJD or as an Astropy time.
+    t : `~astropy.time.Time`, array_like
+        Array of measurement times. Either as an array of BMJD values
+        or as an Astropy time object.
     rv : `~astropy.units.Quantity` [speed]
         Radial velocity (RV) measurements.
+    stddev : `~astropy.units.Quantity` [speed] (optional)
+        Standard deviation for each RV measurement. Specify this or ``ivar``.
     ivar : `~astropy.units.Quantity` [1/speed^2] (optional)
         Inverse variance for each RV measurement. Specify this or ``stddev``.
-    stddev : `~astropy.units.Quantity` [1/speed^2] (optional)
-        Standard deviation for each RV measurement. Specify this or ``ivar``.
     metadata : (optional)
-        Any metadata to associate with the object.
-    t_offset : numeric
+        Any metadata associated with the object.
+    t_offset : numeric (optional) [day]
+        A time offset to apply before processing. Default is to subtract off
+        the median time in BMJD days.
+
     """
     @u.quantity_input(rv=u.km/u.s)
     def __init__(self, t, rv, ivar=None, stddev=None, metadata=None, t_offset=None):
+
+        # For speed, many of the attributes are saved without units and only
+        #   returned with units if asked for.
         if isinstance(t, at.Time):
-            _t = t.tcb.mjd
+            _t_bmjd = t.tcb.mjd
         else:
-            _t = t
-        self._t = _t
+            _t_bmjd = np.asarray(t)
+        self._t_bmjd = _t_bmjd
 
-        self._rv = rv.to(default_units['v0']).value
+        if not hasattr(rv, 'unit') or rv.unit.physical_type != 'speed':
+            raise ValueError("Input radial velocities must be passed in as an "
+                             "Astropy Quantity with speed (velocity) units.")
+        self.rv = rv
 
+        # parse input specification of errors
         if ivar is None and stddev is None:
             self._ivar = 1.
 
@@ -56,60 +67,52 @@ class RVData(object):
         elif ivar is not None:
             if not hasattr(ivar, 'unit'):
                 raise TypeError("ivar must be an Astropy Quantity object!")
-            self._ivar = ivar.to(1/default_units['v0']**2).value
+            self.ivar = ivar.to(1/self.rv.unit**2)
 
         elif stddev is not None:
             if not hasattr(stddev, 'unit'):
                 raise TypeError("stddev must be an Astropy Quantity object!")
-            self._ivar = 1 / stddev.to(default_units['v0']).value**2
+            self.ivar = 1 / stddev.to(self.rv.unit)**2
 
-        idx = (np.isfinite(self._t) & np.isfinite(self._rv) & np.isfinite(self._ivar) &
-               (self._ivar > 0))
+        # filter out NAN or INF data points
+        idx = (np.isfinite(self._t_bmjd) & np.isfinite(self.rv) &
+               np.isfinite(self.ivar) & (self.ivar.value > 0))
         if idx.sum() < len(self._rv):
-            logger.warning("Rejecting {} NaN data points".format(len(self._rv)-idx.sum()))
-        self._t = self._t[idx]
-        self._rv = self._rv[idx]
-        self._ivar = self._ivar[idx]
+            log.info("Filtering {} NaN/Inf data points".format(len(self.rv) - idx.sum()))
+
+        self._t_bmjd = self._t_bmjd[idx]
+        self.rv = self.rv[idx]
+        self.ivar = self.ivar[idx]
 
         # sort on times
-        idx = self._t.argsort()
-        self._t = self._t[idx]
-        self._rv = self._rv[idx]
-        self._ivar = self._ivar[idx]
+        idx = self._t_bmjd.argsort()
+        self._t_bmjd = self._t_bmjd[idx]
+        self.rv = self.rv[idx]
+        self.ivar = self.ivar[idx]
 
+        # metadata can be anything
         self.metadata = metadata
 
+        # if no offset is provided, subtract the median time
         if t_offset is None:
-            t_offset = np.median(self._t)
-            self._t = self._t - t_offset
+            t_offset = np.median(self._t_bmjd)
+            self._t_bmjd = self._t_bmjd - t_offset
         self.t_offset = t_offset
-
-    @u.quantity_input(jitter=u.km/u.s)
-    def add_jitter(self, jitter):
-        self._ivar = (1 / (self.stddev**2 + jitter**2)).to(1/default_units['v0']**2).value
 
     @property
     def t(self):
-        return at.Time(self._t + self.t_offset, scale='tcb', format='mjd')
+        return at.Time(self._t_bmjd + self.t_offset, scale='tcb', format='mjd')
 
     @property
     def phase(self, t0, P):
         return ((self.t - t0) / P) % 1.
 
     @property
-    def rv(self):
-        return self._rv * default_units['v0']
-
-    @property
-    def ivar(self):
-        return self._ivar / default_units['v0']**2
-
-    @property
     def stddev(self):
         return 1 / np.sqrt(self.ivar)
 
-    def get_ivar(self, jitter_squared):
-        return self._ivar / (1 + jitter_squared * self._ivar)
+    def get_ivar(self, jitter):
+        return self.ivar / (1 + jitter**2 * self.ivar)
 
     # ---
 
