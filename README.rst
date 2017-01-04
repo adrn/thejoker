@@ -20,28 +20,9 @@ Authors
 - David W. Hogg (NYU, MPIA)
 - Dan Foreman-Mackey (UW)
 
-Installation
-------------
+Documentation
+-------------
 
-The project is installable with
-
-.. code-block:: bash
-
-    python setup.py install
-
-We recommend installing into a new [Anaconda
-environment](http://conda.pydata.org/docs/using/envs.html). You can use the `environment.yml` file
-to create a new environment for The Joker with all dependencies installed: In the top-level
-directory of the cloned repository, do
-
-.. code-block:: bash
-
-    conda env create
-
-When this finishes, activate the environment as usual and then install
-
-.. code-block:: bash
-
-    source activate thejoker
-    python setup.py install
+See `the documentation <http://thejoker.readthedocs.io>`_ for information on how
+to install and use The Joker.
 
