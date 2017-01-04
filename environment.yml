@@ -7,7 +7,6 @@ dependencies:
   - python=3
   - astropy
   - numpy
-  - cython
   - matplotlib
   - scipy
   - h5py
