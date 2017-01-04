@@ -9,3 +9,12 @@ div.topbar ul li a.homelink {
     background: none;
     background-image: none;
 }
+
+div.topbar a.brand #logotext1{
+    font-weight: 200;
+    padding-right: 4px;
+}
+
+div.topbar a.brand #logotext2{
+    font-weight: 600;
+}
