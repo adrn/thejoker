@@ -1,8 +1,4 @@
-# Standard library
-from collections import OrderedDict
-
 # Third-party
-from astropy import log as logger
 from astropy.constants import G
 import astropy.units as u
 import h5py
@@ -11,23 +7,35 @@ import six
 
 # Project
 from ..util import quantity_from_hdf5, quantity_to_hdf5
-from ..units import default_units
 
-class OrbitalParams(object):
-    # mapping from parameter name to default unit. the order here is the order in
-    #   which parameters are `pack()`ed and `unpack()`ed.
-    _name_to_unit = OrderedDict()
-    _name_to_unit['P'] = default_units['P']
-    _name_to_unit['ecc'] = default_units['ecc']
-    _name_to_unit['omega'] = default_units['omega']
-    _name_to_unit['phi0'] = default_units['phi0']
-    _name_to_unit['jitter'] = default_units['jitter']
-    _name_to_unit['K'] = default_units['K']
-    _name_to_unit['v0'] = default_units['v0']
+__all__ = ['JokerParams']
 
-    def __init__(self, P, K, ecc, omega, phi0, v0, jitter=0.*u.m/u.s):
-        """
-        """
+class JokerParams(object):
+    """
+
+    Parameters
+    ----------
+    P : `~astropy.units.Quantity` [time]
+        Period.
+    K : `~astropy.units.Quantity` [speed]
+        Velocity semi-amplitude.
+    ecc : numeric, array_like
+        Eccentricity.
+    omega : `~astropy.units.Quantity` [angle]
+        Argument of pericenter.
+    phi0 : `~astropy.units.Quantity` [angle]
+        TODO:
+    v0 : `~astropy.units.Quantity` [speed]
+        Systemic (Barycenter) velocity of the system.
+    jitter : `~astropy.units.Quantity` [time] (optional)
+        Additional noise in the RV signal.
+    """
+    @u.quantity_input(P=u.day,
+                      K=u.km/u.s,
+                      omega=u.radian,
+                      phi0=u.radian,
+                      v0=u.km/u.s)
+    def __init__(self, P, K, ecc, omega, phi0, v0, jitter=None):
 
         # parameters are stored internally without units (for speed) but can
         #   be accessed with units without the underscore prefix (e.g., .P vs ._P)
