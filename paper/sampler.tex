@@ -110,29 +110,28 @@ challenging search, optimization, and MCMC posterior sampling over the orbital
 parameters.
 % Aims
 \resp{Here we create a custom Monte Carlo sampler for sparse or noisy
-radial-velocity measurements of two-body systems that can produce a posterior
-sampling for orbital parameters even when the likelihood function is poorly
+radial-velocity measurements of two-body systems that can produce posterior
+samples for orbital parameters even when the likelihood function is poorly
 behaved.}
 % Methods
 The six standard orbital parameters for a binary system can be split into four
 non-linear parameters (period, eccentricity, argument of pericenter, phase)
 and two linear parameters (velocity amplitude, barycenter velocity).
 We capitalize on this by building a sampling method in which we densely sample
-the prior pdf in the non-linear parameters, and perform rejection sampling using
+the prior pdf in the non-linear parameters and perform rejection sampling using
 a likelihood function marginalized over the linear parameters.
 With sparse or uninformative data, the sampling obtained by this rejection
 sampling is generally multimodal and dense.
-With very informative data, the sampling becomes effectively unimodal but too
-sparse and we therefore follow the rejection sampling with standard MCMC.
+With informative data, the sampling becomes effectively unimodal but too
+sparse: in these cases we follow the rejection sampling with standard MCMC.
 % Results
 The method produces correct samplings in orbital parameters for data that
 include as few as three epochs.
 \samplername\ can therefore be used to produce proper samplings of multimodal
-pdfs, which are still highly informative and can be used in hierarchical
+pdfs, which are still informative and can be used in hierarchical
 (population) modeling.
-We give some examples that show how the posterior probability distribution
-depends sensitively on the number and time coverage of the observations and
-their uncertainties.
+We give some examples that show how the posterior pdf depends sensitively on the
+number and time coverage of the observations and their uncertainties.
 \end{abstract}
 
 \keywords{
