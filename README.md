@@ -1,6 +1,7 @@
 # The Joker [YO-ker] /'joʊkər/
 
 ![badge-img](https://img.shields.io/badge/Made%20at-%23AstroHackWeek-8063d5.svg?style=flat)
+[![badge-img](https://img.shields.io/badge/http://img.shields.io/badge/arXiv-1610.07602-orange.svg?style=flat)](https://arxiv.org/abs/1610.07602)
 
 A custom Monte Carlo sampler for the two-body problem.
 
