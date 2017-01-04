@@ -11,3 +11,5 @@ dependencies:
   - scipy
   - h5py
   - emcee
+  - pip:
+    - schwimmbad
