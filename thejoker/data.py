@@ -1,17 +1,10 @@
 from __future__ import division, print_function
 
-__author__ = "adrn <adrn@astro.columbia.edu>"
-
-# Standard library
-import os
-
 # Third-party
-from astropy.io import fits
+from astropy.extern import six
 import astropy.time as at
 import astropy.units as u
-import h5py
 import numpy as np
-import six
 
 # Project
 from .units import default_units
@@ -195,6 +188,7 @@ class RVData(object):
         file_or_path : str, `h5py.File`, `h5py.Group`
         """
 
+        import h5py
         if isinstance(file_or_path, six.string_types):
             f = h5py.File(file_or_path, 'w')
             close = True
@@ -226,6 +220,7 @@ class RVData(object):
         file_or_path : str, `h5py.File`, `h5py.Group`
         """
 
+        import h5py
         if isinstance(file_or_path, six.string_types):
             f = h5py.File(file_or_path, 'r')
             close = True
