@@ -51,7 +51,5 @@ distribute-*.tar.gz
 .DS_Store
 
 # Custom
-cache
-plots
-data
+docs/_static/logo*
 notebooks
