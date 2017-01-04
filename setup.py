@@ -8,7 +8,7 @@ import sys
 import ah_bootstrap
 from setuptools import setup
 
-#A dirty hack to get around some early import/configurations ambiguities
+# A dirty hack to get around some early import/configurations ambiguities
 if sys.version_info[0] >= 3:
     import builtins
 else:
@@ -37,14 +37,9 @@ AUTHOR_EMAIL = metadata.get('author_email', '')
 LICENSE = metadata.get('license', 'unknown')
 URL = metadata.get('url', 'http://astropy.org')
 
-# Get the long description from the package's docstring
-__import__(PACKAGENAME)
-package = sys.modules[PACKAGENAME]
-LONG_DESCRIPTION = package.__doc__
-
 # HACK: overwrite
 with open('README.rst') as f:
-    long_description = f.read()
+    LONG_DESCRIPTION = f.read()
 
 # Store the package name in a built-in variable so it's easy
 # to get from other parts of the setup infrastructure
