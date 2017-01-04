@@ -1,0 +1,14 @@
+name: thejoker
+
+channels:
+  - astropy
+
+dependencies:
+  - astropy
+  - astropy-helpers
+  - numpy
+  - matplotlib
+  - scipy
+  - pyyaml
+  - emcee
+  - h5py
