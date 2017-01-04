@@ -58,8 +58,10 @@ class RVData(object):
         self.rv = rv
 
         # parse input specification of errors
+        self._has_err = True
         if ivar is None and stddev is None:
             self._ivar = 1.
+            self._has_err = False
 
         elif ivar is not None and stddev is not None:
             raise ValueError("You must pass in 'ivar' or 'stddev', not both.")
@@ -113,16 +115,38 @@ class RVData(object):
 
     # ---
 
-    def plot(self, ax=None, rv_unit=None, **kwargs):
+    def plot(self, ax=None, rv_unit=None, time_format='mjd', **kwargs):
         """
+        Plot the data points.
+
+        Parameters
+        ----------
+        ax : `~matplotlib.axes.Axes` (optional)
+            The matplotlib axes object to draw on (default is to grab
+            the current axes object using `~matplotlib.pyplot.gca`).
+        rv_unit : `~astropy.units.UnitBase` (optional)
+            Display the radial velocities with a different unit
+            (default uses whatever unit was passed on creation).
+        time_format : str, callable (optional)
+            The time format to use for the x-axis. This can either be
+            a string, in which case it is assumed to be an attribute of
+            the `~astropy.time.Time` object, or it can be a callable (e.g.,
+            function) that does more complex things (for example:
+            ``time_format=lambda t: t.datetime.day``).
+        **kwargs
+            All other keyword arguments are passed to the
+            `~matplotlib.pyplot.errorbar` (if errors were provided) or
+            `~matplotlib.pyplot.plot` (if no errors provided) call.
+
         """
         if ax is None:
             import matplotlib.pyplot as plt
-            fig,ax = plt.subplots(1,1)
+            ax = plt.gca()
 
         if rv_unit is None:
             rv_unit = self.rv.unit
 
+        # some default stylings
         style = kwargs.copy()
         style.setdefault('linestyle', 'none')
         style.setdefault('alpha', 1.)
@@ -130,8 +154,18 @@ class RVData(object):
         style.setdefault('color', 'k')
         style.setdefault('ecolor', '#666666')
 
-        ax.errorbar(self.t.value, self.rv.to(rv_unit).value,
-                    self.stddev.to(rv_unit).value, **style)
+        if callable(time_format):
+            t = time_format(self.t)
+        else:
+            t = getattr(self.t, time_format)
+
+        if self._has_err:
+            ax.errorbar(t, self.rv.to(rv_unit).value,
+                        self.stddev.to(rv_unit).value,
+                        **style)
+        else:
+            style.pop('ecolor')
+            ax.plot(t, self.rv.to(rv_unit).value, **style)
 
         return ax
 
@@ -150,7 +184,7 @@ class RVData(object):
                               ivar=self.ivar.copy()[slc])
 
     def __len__(self):
-        return len(self._t)
+        return len(self.t)
 
     def to_hdf5(self, file_or_path):
         """
@@ -209,45 +243,3 @@ class RVData(object):
 
         return cls(t=t, rv=rv, stddev=stddev)
 
-    @classmethod
-    def from_apogee(cls, path_or_data, apogee_id=None):
-        """
-        Parameters
-        ----------
-        path_or_data : str, numpy.ndarray
-            Either a string path to the location of an APOGEE allVisit
-            file, or a selection of rows from the allVisit file.
-        apogee_id : str
-            The APOGEE ID of the desired target, e.g., 2M03080601+7950502.
-        """
-
-        if isinstance(path_or_data, six.string_types):
-            if apogee_id is None:
-                raise ValueError("If path is supplied, you must also supply an APOGEE_ID.")
-
-            if os.path.splitext(path_or_data)[1].lower() == '.fits':
-                _allvisit = fits.getdata(path_or_data, 1)
-                data = _allvisit[_allvisit['APOGEE_ID'].astype(str) == apogee_id]
-
-                rv = np.array(data['VHELIO']) * u.km/u.s
-                ivar = 1 / (np.array(data['VRELERR'])**2 * (u.km/u.s)**2)
-                t = at.Time(np.array(data['JD']), format='jd', scale='tcb')
-                bmjd = t.mjd
-
-            elif os.path.splitext(path_or_data)[1].lower() in ['.hdf5', '.h5']:
-                with h5py.File(path_or_data, 'r') as f:
-                    data = f[apogee_id][:]
-
-                rv = np.array(data['rv']) * u.km/u.s
-                ivar = 1 / (np.array(data['rv_err'])**2 * (u.km/u.s)**2)
-                t = at.Time(np.array(data['MJD']), format='mjd', scale='utc')
-                bmjd = t.tcb.mjd
-
-            else:
-                raise ValueError("Unrecognized file type.")
-
-        else:
-            data = path_or_data
-
-        idx = np.isfinite(rv.value) & np.isfinite(t.value) & np.isfinite(ivar.value)
-        return cls(bmjd[idx], rv[idx], ivar[idx])
