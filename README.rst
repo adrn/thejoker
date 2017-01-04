@@ -1,6 +1,8 @@
 The Joker [YO-ker] /'joʊkər/
 ============================
 
+.. image:: https://readthedocs.org/projects/thejoker/badge/?version=latest
+        :target: http://thejoker.readthedocs.io/
 .. image:: http://img.shields.io/travis/adrn/thejoker/master.svg?style=flat
         :target: http://travis-ci.org/adrn/thejoker
 .. image:: http://img.shields.io/badge/license-MIT-blue.svg?style=flat
