@@ -7,7 +7,6 @@ import astropy.units as u
 import numpy as np
 
 # Project
-from .units import default_units
 from .log import log
 
 __all__ = ['RVData']
