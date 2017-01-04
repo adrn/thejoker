@@ -1,14 +1,8 @@
-""" ...explain... """
-
 from __future__ import division, print_function
 
-__author__ = "adrn <adrn@astro.columbia.edu>"
-
 # Third-party
-from astropy.constants import G
 import astropy.time as at
 import astropy.units as u
-import matplotlib.pyplot as plt
 import numpy as np
 
 # Project
@@ -95,6 +89,7 @@ class SimulatedRVOrbit(object):
                              "instance (ax)")
 
         if ax is None:
+            import matplotlib.pyplot as plt
             fig,ax = plt.subplots(1,1)
 
         if t is None:
