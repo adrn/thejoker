@@ -102,10 +102,10 @@ release = package.__version__
 
 # Please update these texts to match the name of your package.
 html_theme_options = {
-    'logotext1': 'package',  # white,  semi-bold
-    'logotext2': '-template',  # orange, light
+    'logotext1': 'The',  # white,  semi-bold
+    'logotext2': 'Joker',  # orange, light
     'logotext3': ':docs'   # white,  light
-    }
+}
 
 # Add any paths that contain custom themes here, relative to this directory.
 # To use a different custom theme, add the directory containing the theme.
@@ -135,6 +135,9 @@ html_title = '{0} v{1}'.format(project, release)
 # Output file base name for HTML help builder.
 htmlhelp_basename = project + 'doc'
 
+# Static files to copy after template files
+html_static_path = ['_static']
+html_style = 'thejoker.css'
 
 # -- Options for LaTeX output -------------------------------------------------
 
