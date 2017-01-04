@@ -11,7 +11,6 @@ from astropy.io import fits
 import astropy.time as at
 import astropy.units as u
 import h5py
-import matplotlib.pyplot as plt
 import numpy as np
 import six
 
@@ -118,6 +117,7 @@ class RVData(object):
         """
         """
         if ax is None:
+            import matplotlib.pyplot as plt
             fig,ax = plt.subplots(1,1)
 
         if rv_unit is None:
