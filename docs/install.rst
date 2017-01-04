@@ -37,6 +37,7 @@ Dependencies
 - scipy
 - astropy
 - emcee
+- schwimmbad
 
 Optional Dependencies
 ---------------------

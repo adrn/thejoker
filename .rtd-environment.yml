@@ -12,3 +12,5 @@ dependencies:
   - pyyaml
   - emcee
   - h5py
+  - pip:
+    - schwimmbad
