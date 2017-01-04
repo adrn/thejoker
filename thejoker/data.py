@@ -27,7 +27,7 @@ class RVData(object):
         Standard deviation for each RV measurement. Specify this or ``ivar``.
     ivar : `~astropy.units.Quantity` [1/speed^2] (optional)
         Inverse variance for each RV measurement. Specify this or ``stddev``.
-    metadata : (optional)
+    metadata : any (optional)
         Any metadata associated with the object.
     t_offset : numeric (optional) [day]
         A time offset to apply before processing. Default is to subtract off
@@ -96,14 +96,46 @@ class RVData(object):
 
     @property
     def t(self):
+        """
+        The times of each observation.
+
+        Returns
+        -------
+        t : `~astropy.time.Time`
+            An Astropy Time object for all times.
+        """
         return at.Time(self._t_bmjd + self.t_offset, scale='tcb', format='mjd')
 
-    @property
     def phase(self, t0, P):
+        """
+        Convert time to a phase relative to the input epoch ``t0``
+        and period ``P``.
+
+        Parameters
+        ----------
+        t0 : `~astropy.time.Time`
+            The reference epoch.
+        P : `~astropy.units.Quantity` [time]
+            The period.
+
+        Returns
+        -------
+        phase : `~numpy.ndarray`
+            The dimensionless phase of each observation.
+
+        """
         return ((self.t - t0) / P) % 1.
 
     @property
     def stddev(self):
+        """
+        The Gaussian error for each radial velocity measurement.
+
+        Returns
+        -------
+        stddev : `~astropy.units.Quantity` [speed]
+            An Astropy Quantity with velocity (speed) units.
+        """
         return 1 / np.sqrt(self.ivar)
 
     # ---

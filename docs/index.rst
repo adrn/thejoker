@@ -8,4 +8,6 @@ TODO: description
    :maxdepth: 1
 
    install
+   data
 ..   getting_started
+

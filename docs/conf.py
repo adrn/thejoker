@@ -69,6 +69,9 @@ exclude_patterns.append('_templates')
 rst_epilog += """
 """
 
+# Add h5py to intersphinx mapping
+intersphinx_mapping['h5py'] = ('http://docs.h5py.org/en/latest/', None)
+
 # -- Project information ------------------------------------------------------
 
 # This does not *have* to match the package name, but typically does
