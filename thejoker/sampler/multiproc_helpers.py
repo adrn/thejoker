@@ -7,7 +7,7 @@ from ..log import log
 from .utils import get_ivar
 from .likelihood import design_matrix, tensor_vector_scalar, marginal_ln_likelihood
 
-__all__ = ['get_good_sample_indices', 'samples_to_orbital_params']
+__all__ = ['get_good_sample_indices', 'sample_indices_to_full_samples']
 
 def _marginal_ll_worker(task):
     """
