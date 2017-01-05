@@ -7,7 +7,6 @@ import numpy as np
 
 # Project
 from .celestialmechanics import rv_from_elements
-from .orbitalparams import OrbitalParams
 from ..util import find_t0
 
 __all__ = ['SimulatedRVOrbit', 'EPOCH']
@@ -23,9 +22,6 @@ class SimulatedRVOrbit(object):
 
     """
     def __init__(self, pars):
-        if not isinstance(pars, OrbitalParams):
-            raise TypeError("pars must be an OrbitalParams instance.")
-
         self.pars = pars
 
     @property
@@ -59,8 +55,8 @@ class SimulatedRVOrbit(object):
                               K=self.pars.K.to(u.m/u.s).value,
                               e=self.pars.ecc.value,
                               omega=self.pars.omega.to(u.radian).value,
-                              phi0=self.pars.phi0.to(u.radian).value,
-                              rv0=self.pars.v0.to(u.m/u.s).value)
+                              phi0=self.pars.phi0.to(u.radian).value)
+        rv += self.pars.v0.to(u.m/u.s).value
         return rv
 
     def generate_rv_curve(self, t):

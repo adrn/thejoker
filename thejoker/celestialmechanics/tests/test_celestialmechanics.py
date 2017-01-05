@@ -42,7 +42,7 @@ def test_everything():
             assert False
 
         Z, Z1, Z2 = Z_from_elements(threetimes, P, K, e, omega, time0) # AU
-        rv = rv_from_elements(time, P, K, e, omega, phi0, 0.) # m/s
+        rv = rv_from_elements(time, P, K, e, omega, phi0) # m/s
         rv2 = (Z2 - Z1) / dt # au/day
         rv2 = (rv2 * u.au/u.day).to(u.m/u.s).value
 

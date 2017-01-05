@@ -206,7 +206,7 @@ def Z_from_elements(times, P, K, e, omega, time0):
 
     return rs * np.sin(omega + fs)
 
-def rv_from_elements(times, P, K, e, omega, phi0, rv0):
+def rv_from_elements(times, P, K, e, omega, phi0):
     """
     Parameters
     ----------
@@ -222,13 +222,11 @@ def rv_from_elements(times, P, K, e, omega, phi0, rv0):
         Argument of periapse.
     phi0 : numeric [radian]
         Phase at pericenter.
-    rv0 : numeric [m/s]
-        Systemic velocity.
 
     Returns
     -------
     rv : numeric [m/s]
-        Radial velocity.
+        Relative radial velocity - does not include systemtic velocity!
 
     Issues
     ------
@@ -243,4 +241,4 @@ def rv_from_elements(times, P, K, e, omega, phi0, rv0):
     fs = true_anomaly_from_eccentric_anomaly(Es, e)
     vz = K * (np.cos(omega + fs) + e*np.cos(omega))
 
-    return vz + rv0
+    return vz
