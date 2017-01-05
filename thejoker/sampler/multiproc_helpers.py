@@ -28,10 +28,10 @@ def _marginal_ll_worker(task):
         Array of log-likelihood values.
 
     """
-    start_stop, filename, data = task
+    start_stop, prior_cache_file, data, jparams = task
 
     # read a chunk of the prior samples
-    with h5py.File(filename, 'r') as f:
+    with h5py.File(prior_cache_file, 'r') as f:
         chunk = np.array(f['samples'][start_stop[0]:start_stop[1]])
 
     n_chunk = len(chunk)
@@ -39,14 +39,14 @@ def _marginal_ll_worker(task):
     ll = np.zeros(n_chunk)
     for i in range(n_chunk):
         try:
-            ll[i] = marginal_ln_likelihood(chunk[i], data)
+            ll[i] = marginal_ln_likelihood(chunk[i], data, jparams)
         except Exception as e:
             log.error(e)
             ll[i] = np.nan
 
     return ll
 
-def get_good_sample_indices(n_prior_samples, filename, data, pool):
+def get_good_sample_indices(n_prior_samples, prior_cache_file, data, joker_params, pool):
     """
     Return the indices of 'good' samples by computing the log-likelihood
     for ``n_prior_samples`` prior samples and doing rejection sampling.
@@ -61,10 +61,12 @@ def get_good_sample_indices(n_prior_samples, filename, data, pool):
     ----------
     n_prior_samples : int
         The number of prior samples to use.
-    filename : str
+    prior_cache_file : str
         Path to an HDF5 file containing the prior samples.
-    data : `thejoker.data.RVData`
+    data : `~thejoker.data.RVData`
         An instance of ``RVData`` with the data we're modeling.
+    joker_params : `~thejoker.sampler.params.JokerParams`
+        A specification of the parameters to use.
     pool : `~schwimmbad.pool.BasePool` or subclass
         An instance of a processing pool - must have a ``.map()`` method.
 
@@ -90,7 +92,7 @@ def get_good_sample_indices(n_prior_samples, filename, data, pool):
     else:
         chunk_size = 1
 
-    tasks = [[(i*chunk_size, (i+1)*chunk_size), filename, data]
+    tasks = [[(i*chunk_size, (i+1)*chunk_size), prior_cache_file, data, joker_params]
              for i in range(n_prior_samples//chunk_size+1)]
 
     results = [r for r in pool.map(_marginal_ll_worker, tasks)]
@@ -105,14 +107,16 @@ def get_good_sample_indices(n_prior_samples, filename, data, pool):
 
     return good_samples_idx
 
-def _orbital_params_worker(task):
+# ----------------------------------------------------------------------------
+
+def _sample_vector_worker(task):
     """
     This is meant to be
         ``map``ped using one of the ``Pool`` classes by the functions below and
         is not supposed to be in the public API.
     """
 
-    idx, filename, data, global_seed, chunk_index = task
+    idx, prior_cache_file, data, global_seed, chunk_index = task
     n_chunk = len(idx)
 
     if global_seed is not None:
@@ -123,14 +127,14 @@ def _orbital_params_worker(task):
     log.debug("worker with chunk {} has seed {}".format(idx[0], seed))
 
     pars = np.zeros((n_chunk, 7))
-    with h5py.File(filename, 'r') as f:
+    with h5py.File(prior_cache_file, 'r') as f:
         for j,i in enumerate(idx): # these are the integer locations of the 'good' samples!
             nonlinear_p = f['samples'][i]
             P, phi0, ecc, omega, s = nonlinear_p
 
             ivar = get_ivar(data, s)
-            A = design_matrix(nonlinear_p, data._t, data.t_offset)
-            ATA,p,_ = tensor_vector_scalar(A, ivar, data._rv)
+            A = design_matrix(nonlinear_p, data._t_bmjd, data.t_offset)
+            ATA,p,_ = tensor_vector_scalar(A, ivar, data.rv.value)
 
             cov = np.linalg.inv(ATA)
             K, *v_terms = np.random.multivariate_normal(p, cov)
@@ -145,9 +149,9 @@ def _orbital_params_worker(task):
 
     return pars
 
-def samples_to_orbital_params(good_samples_idx, filename, data, pool, global_seed=None):
+def sample_indices_to_full_samples(good_samples_idx, prior_cache_file, data, pool,
+                                   global_seed=None):
     """
-
     TODO: needs overhaul
 
     Generate the full set of orbital parameters for the 'good'
@@ -163,8 +167,8 @@ def samples_to_orbital_params(good_samples_idx, filename, data, pool, global_see
     good_samples_idx : array_like
         The array of indices for the 'good' samples in the prior
         samples cache file.
-    filename : str
-        Path to an HDF5 file comtaining the prior samples.
+    prior_cache_file : str
+        Path to an HDF5 file containing the prior samples.
     data : `thejoker.data.RVData`
         An instance of ``RVData`` with the data we're modeling.
     pool : `thejoker.pool.GenericPool` or subclass
@@ -185,15 +189,15 @@ def samples_to_orbital_params(good_samples_idx, filename, data, pool, global_see
         chunk_size = 1
 
     # if chunk doesn't divide evenly into pool, the last chunk will be the remainder
-    if n_samples%chunk_size:
+    if n_samples % chunk_size:
         plus = 1
     else:
         plus = 0
 
-    tasks = [[good_samples_idx[i*chunk_size:(i+1)*chunk_size], filename, data, global_seed, i]
+    tasks = [[good_samples_idx[i*chunk_size:(i+1)*chunk_size], prior_cache_file, data, global_seed, i]
              for i in range(n_samples//chunk_size+plus)]
 
-    orbit_pars = [r for r in pool.map(_orbital_params_worker, tasks)]
+    orbit_pars = [r for r in pool.map(_sample_vector_worker, tasks)]
     orbit_pars = np.concatenate(orbit_pars)
 
     return orbit_pars.reshape(-1, orbit_pars.shape[-1])

@@ -14,6 +14,7 @@ from ..log import log
 from ..data import RVData
 from .params import JokerParams
 from .multiproc_helpers import get_good_sample_indices
+from .io import save_prior_samples
 
 class TheJoker(object):
     """
@@ -123,8 +124,6 @@ class TheJoker(object):
         # orbital_params = samples_to_orbital_params(good_samples_idx, tmp_prior_filename,
         #                                            data, pool, seed)
 
-        pass
-
     def rejection_sample(self, data, n_prior_samples=None, prior_cache_file=None):
         """
         Parameters
@@ -153,9 +152,7 @@ class TheJoker(object):
             with tempfile.NamedTemporaryFile(mode='r+') as f:
                 # first do prior sampling, cache to file
                 prior_samples = self.sample_prior(size=n_prior_samples)
-
-                # TODO: save samples to file
-
+                save_prior_samples(f.name, self.data, prior_samples)
                 return self._rejection_sample_from_cache(data, n_prior_samples, f.name)
 
     # def rejection_sample_adapt(self, data, min_n, prior_chunk_size=1024, max_prior_samples=2**24,
