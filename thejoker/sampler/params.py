@@ -18,88 +18,89 @@ Future:
 
 # Third-party
 from astropy.constants import G
+from astropy.utils.misc import isiterable
 import astropy.units as u
 import h5py
 import numpy as np
 import six
 
 # Project
-from ..util import quantity_from_hdf5, quantity_to_hdf5
+# from .trends import PolynomialVelocityTrend
+# from ..util import quantity_from_hdf5, quantity_to_hdf5
 
 __all__ = ['JokerParams']
+
+class VelocityTrend(object):
+    pass
+
+class PolynomialVelocityTrend(VelocityTrend):
+    """
+    Represents a long-term velocity trend to the radial velocity data.
+
+    This can represent different, independent sections of the data to
+    handle, e.g., calibration offsets between epochs. See the
+    ``data_mask`` argument documentation below for more info.
+
+    """
+    def __init__(self, n_terms, data_mask=None):
+        pass
+
 
 class JokerParams(object):
     """
 
     Parameters
     ----------
-    P : `~astropy.units.Quantity` [time]
-        Period.
-    K : `~astropy.units.Quantity` [speed]
-        Velocity semi-amplitude.
-    ecc : numeric, array_like
-        Eccentricity.
-    omega : `~astropy.units.Quantity` [angle]
-        Argument of pericenter.
-    phi0 : `~astropy.units.Quantity` [angle]
-        TODO:
-    v0 : `~astropy.units.Quantity` [speed]
-        Systemic (Barycenter) velocity of the system.
-    jitter : `~astropy.units.Quantity` [time] (optional)
-        Additional noise in the RV signal.
+    trends : iterable (optional)
+        A list of `~thejoker.TODO.PolynomialVelocityTrend` instances.
+    jitter : `~astropy.units.Quantity` [speed], tuple (optional)
+        Represents additional Gaussian noise in the RV signal. Default
+        is to fix the value of the jitter to 0. To fix the jitter to a
+        different value, pass in a single `~astropy.units.Quantity`
+        object. The Joker also supports inferring the jitter as an
+        additional non-linear parameter. Currently, the only prior
+        pdf supported for doing this is a Gaussian in natural-log of
+        the jitter squared--that is,
+        :math:`p(x) = \mathcal{N}(x|\mu,\sigma)` where
+        :math:`a = \log s^2`. The (dimensionless) mean and standard
+        deviation of this prior can also be passed in to this argument
+        by passing a length-2 tuple of numbers. If you do this, you must
+        also pass in a unit for the jitter using the ``jitter_unit`` arg.
+    jitter_unit : `~astropy.units.UnitBase`
+        If sampling over the jitter as an extra non-linear parameter,
+        you must also specify the units of the jitter prior. See note
+        above about the ``jitter`` argument.
+
+    Examples
+    --------
+
+        >>> import astropy.units as u
+        >>> pars = JokerPars(jitter=5.*u.m/u.s) # fix jitter to 5 m/s
+        >>> pars = JokerPars(jitter=(1., 2.), jitter_unit=u.m/u.s) # specify jitter prior
+
     """
-    @u.quantity_input(P=u.day,
-                      K=u.km/u.s,
-                      omega=u.radian,
-                      phi0=u.radian,
-                      v0=u.km/u.s)
-    def __init__(self, P, K, ecc, omega, phi0, v0, jitter=None):
+    def __init__(self, trends=None, jitter=None, jitter_unit=None):
 
-        # parameters are stored internally without units (for speed) but can
-        #   be accessed with units without the underscore prefix (e.g., .P vs ._P)
-        for name,unit in self._name_to_unit.items():
-            if unit is not None:
-                if unit is u.one:
-                    setattr(self, "_{}".format(name), np.array(np.atleast_1d(eval(name))))
-                else:
-                    setattr(self, "_{}".format(name), np.atleast_1d(eval(name)).to(unit).value)
-            else:
-                setattr(self, "_{}".format(name), np.atleast_1d(eval(name)))
+        # the names of the default parameters
+        default_params = ['P', 'K', 'ecc', 'omega', 'phi0']
 
-        # validate shape of inputs
-        if self._P.ndim > 1:
-            raise ValueError("Only ndim=1 arrays are supported!")
+        # validate the specified long-term velocity trends
+        if trends is None:
+            trends = []
+            trends.append(PolynomialVelocityTrend(n_terms=1))
 
-        for key in self._name_to_unit.keys():
-            if getattr(self, key).shape != self._P.shape:
-                raise ValueError("All inputs must have the same length!")
+        elif not isiterable(trends):
+            trends = [trends]
 
-    def __getattr__(self, name):
-        # this is a crazy hack to automatically apply units to attributes
-        #   named after each of the parameters
-        if name not in self._name_to_unit.keys():
-            raise AttributeError("Invalid attribute name '{}'".format(name))
+        for trend in trends:
+            # TODO: we may want to allow more general trends in the future, but for now...
+            if not isinstance(PolynomialVelocityTrend):
+                raise TypeError("Velocity trends must be PolynomialVelocityTrend "
+                                "instances, not '{}'".format(type(trend)))
 
-        # get unitless representation
-        val = getattr(self, '_{}'.format(name))
+        # validate the input jitter specification
+        # TODO
 
-        return val * self._name_to_unit[name]
-
-    def __len__(self):
-        return len(self._P)
-
-    def __copy__(self):
-        kw = dict()
-        for key in self._name_to_unit.keys():
-            kw[key] = getattr(self, key).copy()
-        return self.__class__(**kw)
-
-    def __getitem__(self, slicey):
-        cpy = self.copy()
-        for key in self._name_to_unit.keys():
-            slice_val = getattr(self, "_{}".format(key))[slicey]
-            setattr(cpy, "_{}".format(key), slice_val)
-        return cpy
 
     @classmethod
     def get_labels(cls, units=None):
