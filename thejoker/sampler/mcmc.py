@@ -39,7 +39,7 @@ def unpack_mcmc(p):
 
 def ln_likelihood(p, data):
     P, ecc, omega, phi0, s, K, v0 = unpack_mcmc(p)
-    model_rv = rv_from_elements(data._t, P, K, ecc, omega, phi0, v0)
+    model_rv = rv_from_elements(data._t, P, K, ecc, omega, phi0) + v0
     return -0.5 * (model_rv - data._rv)**2 / (1/data._ivar + s**2)
 
 def ln_prior(p, fixed_jitter=False):

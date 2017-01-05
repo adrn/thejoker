@@ -5,7 +5,7 @@ import numpy as np
 
 # Project
 from .utils import get_ivar
-from .sampler import design_matrix, tensor_vector_scalar, marginal_ln_likelihood
+from .likelihood import design_matrix, tensor_vector_scalar, marginal_ln_likelihood
 
 __all__ = ['get_good_samples', 'samples_to_orbital_params']
 
@@ -119,14 +119,14 @@ def _orbital_params_worker(task):
     with h5py.File(filename, 'r') as f:
         for j,i in enumerate(idx): # these are the integer locations of the 'good' samples!
             nonlinear_p = f['samples'][i]
-            P, phi0, ecc, omega, s2 = nonlinear_p
+            P, phi0, ecc, omega, s = nonlinear_p
 
-            ivar = get_ivar(data, s2)
+            ivar = get_ivar(data, s)
             A = design_matrix(nonlinear_p, data._t, data.t_offset)
             ATA,p,_ = tensor_vector_scalar(A, ivar, data._rv)
 
             cov = np.linalg.inv(ATA)
-            v0,K = np.random.multivariate_normal(p, cov)
+            K, *v_terms = np.random.multivariate_normal(p, cov)
 
             if K < 0:
                 # logger.warning("Swapping K")
@@ -134,12 +134,15 @@ def _orbital_params_worker(task):
                 omega += np.pi
                 omega = omega % (2*np.pi) # HACK: I think this is safe
 
-            pars[j] = [P, ecc, omega, phi0, np.sqrt(s2), K, v0]
+            pars[j] = [P, ecc, omega, phi0, s, K] + v_terms
 
     return pars
 
 def samples_to_orbital_params(good_samples_idx, filename, data, pool, global_seed=None):
     """
+
+    TODO: needs overhaul
+
     Generate the full set of orbital parameters for the 'good'
     samples that pass rejection sampling.
 
