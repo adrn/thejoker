@@ -280,19 +280,3 @@ class JokerParams(object):
 
     #     i = index
     #     return SimulatedRVOrbit(self[i])
-
-    # # Computed Quantities
-    # @property
-    # def asini(self):
-    #     return (self.K/(2*np.pi) * (self.P * np.sqrt(1-self.ecc**2))).to(default_units['asini'])
-
-    # @property
-    # def mf(self):
-    #     mf = self.P * self.K**3 / (2*np.pi*G) * (1 - self.ecc**2)**(3/2.)
-    #     return mf.to(default_units['mf'])
-
-    # @staticmethod
-    # def mf_asini_ecc_to_P_K(mf, asini, ecc):
-    #     P = 2*np.pi * asini**(3./2) / np.sqrt(G * mf)
-    #     K = 2*np.pi * asini / (P * np.sqrt(1-ecc**2))
-    #     return P.to(default_units['P']), K.to(default_units['K'])
