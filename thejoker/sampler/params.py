@@ -17,12 +17,8 @@ Future:
 """
 
 # Third-party
-from astropy.constants import G
 from astropy.utils.misc import isiterable
 import astropy.units as u
-import h5py
-import numpy as np
-import six
 
 # Project
 # from .trends import PolynomialVelocityTrend
@@ -92,161 +88,195 @@ class JokerParams(object):
         elif not isiterable(trends):
             trends = [trends]
 
+        if len(trends) > 1:
+            # TODO: need to implement having different velocity trends for parts of the
+            #       time series. Need to modify design_matrix() be a lot bigger, with zero'd
+            #       out rows for each trend.
+            raise NotImplementedError("Sorry, right now only global velocity trends "
+                                      "are implemented!")
+
+        # TODO: check somewhere (maybe in TheJoker.sample()) that the sum is equal to data length
+        # data_mask_tot = 0
+        # data_mask_tot += trend.mask.sum()
         for trend in trends:
             # TODO: we may want to allow more general trends in the future, but for now...
-            if not isinstance(PolynomialVelocityTrend):
+            if not isinstance(trend, PolynomialVelocityTrend):
                 raise TypeError("Velocity trends must be PolynomialVelocityTrend "
                                 "instances, not '{}'".format(type(trend)))
 
+        self.trends = trends
+
         # validate the input jitter specification
-        # TODO
+        if jitter is None:
+            jitter = 0*u.km/u.s
 
+        if isiterable(jitter):
+            if len(jitter) != 2:
+                raise ValueError("If specifying parameters for the jitter prior, you "
+                                 "must pass in a length-2 container containing the "
+                                 "mean and standard deviation of the Gaussian over "
+                                 "log(jitter^2)")
 
-    @classmethod
-    def get_labels(cls, units=None):
-        _u = dict()
-        if units is None:
-            _u = cls._name_to_unit
+            if jitter_unit is None or not isinstance(jitter_unit, u.UnitBase):
+                raise TypeError("If specifying parameters for the jitter prior, you "
+                                "must also specify the units of the jitter for "
+                                "evaluating the prior as an astropy.units.UnitBase "
+                                "instance.")
 
-        else:
-            for k,unit in cls._name_to_unit.items():
-                if k in units:
-                    _u[k] = units[k]
-                else:
-                    _u[k] = unit
-
-        _labels = [
-            r'$\ln (P/1\,${}$)$'.format(_u['P'].long_names[0]),
-            '$e$',
-            r'$\omega$ [{}]'.format(_u['omega']),
-            r'$\phi_0$ [{}]'.format(_u['omega']),
-            r'$\ln (s/1\,${}$)$'.format(_u['jitter'].to_string(format='latex_inline')),
-            r'$K$ [{}]'.format(_u['K'].to_string(format='latex_inline')),
-            '$v_0$ [{}]'.format(_u['v0'].to_string(format='latex_inline'))
-        ]
-
-        return _labels
-
-    @classmethod
-    def from_hdf5(cls, f):
-        kwargs = dict()
-        if isinstance(f, six.string_types):
-            with h5py.File(f, 'r') as g:
-                for key in cls._name_to_unit.keys():
-                    kwargs[key] = quantity_from_hdf5(g, key)
+            self._fixed_jitter = False
+            self.jitter = jitter
 
         else:
-            for key in cls._name_to_unit.keys():
-                kwargs[key] = quantity_from_hdf5(f, key)
+            self._fixed_jitter = True
+            self.jitter = jitter
 
-        return cls(**kwargs)
+    # --- All old shit below here that needs to be moved ---
 
-    def to_hdf5(self, f):
-        if isinstance(f, six.string_types):
-            with h5py.File(f, 'a') as g:
-                for key in self._name_to_unit.keys():
-                    quantity_to_hdf5(g, key, getattr(self, key))
+    # @classmethod
+    # def get_labels(cls, units=None):
+    #     _u = dict()
+    #     if units is None:
+    #         _u = cls._name_to_unit
 
-        else:
-            for key in self._name_to_unit.keys():
-                quantity_to_hdf5(f, key, getattr(self, key))
+    #     else:
+    #         for k,unit in cls._name_to_unit.items():
+    #             if k in units:
+    #                 _u[k] = units[k]
+    #             else:
+    #                 _u[k] = unit
 
-    def pack(self, units=None, plot_transform=False):
-        """
-        Pack the orbital parameters into a single array structure
-        without associated units. The components will have units taken
-        from the unit system defined in `thejoker.units.usys`.
+    #     _labels = [
+    #         r'$\ln (P/1\,${}$)$'.format(_u['P'].long_names[0]),
+    #         '$e$',
+    #         r'$\omega$ [{}]'.format(_u['omega']),
+    #         r'$\phi_0$ [{}]'.format(_u['omega']),
+    #         r'$\ln (s/1\,${}$)$'.format(_u['jitter'].to_string(format='latex_inline')),
+    #         r'$K$ [{}]'.format(_u['K'].to_string(format='latex_inline')),
+    #         '$v_0$ [{}]'.format(_u['v0'].to_string(format='latex_inline'))
+    #     ]
 
-        Parameters
-        ----------
-        units : dict (optional)
-        plot_transform : bool (optional)
+    #     return _labels
 
-        Returns
-        -------
-        pars : `numpy.ndarray`
-            A single 2D array containing the parameter values with no
-            units. Will have shape ``(n,6)``.
+    # @classmethod
+    # def from_hdf5(cls, f):
+    #     kwargs = dict()
+    #     if isinstance(f, six.string_types):
+    #         with h5py.File(f, 'r') as g:
+    #             for key in cls._name_to_unit.keys():
+    #                 kwargs[key] = quantity_from_hdf5(g, key)
 
-        """
-        if units is None:
-            all_samples = np.vstack([getattr(self, "_{}".format(key))
-                                     for key in self._name_to_unit.keys()]).T
+    #     else:
+    #         for key in cls._name_to_unit.keys():
+    #             kwargs[key] = quantity_from_hdf5(f, key)
 
-        else:
-            all_samples = np.vstack([getattr(self, format(key)).to(units[key]).value
-                                     for key in self._name_to_unit.keys()]).T
+    #     return cls(**kwargs)
 
-        if plot_transform:
-            # ln P in plots:
-            idx = list(self._name_to_unit.keys()).index('P')
-            all_samples[:,idx] = np.log(all_samples[:,idx])
+    # def to_hdf5(self, f):
+    #     if isinstance(f, six.string_types):
+    #         with h5py.File(f, 'a') as g:
+    #             for key in self._name_to_unit.keys():
+    #                 quantity_to_hdf5(g, key, getattr(self, key))
 
-            # ln s in plots:
-            idx = list(self._name_to_unit.keys()).index('jitter')
-            all_samples[:,idx] = np.log(all_samples[:,idx])
+    #     else:
+    #         for key in self._name_to_unit.keys():
+    #             quantity_to_hdf5(f, key, getattr(self, key))
 
-        return all_samples
+    # def pack(self, units=None, plot_transform=False):
+    #     """
+    #     Pack the orbital parameters into a single array structure
+    #     without associated units. The components will have units taken
+    #     from the unit system defined in `thejoker.units.usys`.
 
-    @classmethod
-    def unpack(cls, pars):
-        """
-        Unpack a 2D array structure containing the orbital parameters
-        without associated units. Should have shape ``(n,6)`` where ``n``
-        is the number of parameters.
+    #     Parameters
+    #     ----------
+    #     units : dict (optional)
+    #     plot_transform : bool (optional)
 
-        Returns
-        -------
-        p : `~thejoker.celestialmechanics.OrbitalParams`
+    #     Returns
+    #     -------
+    #     pars : `numpy.ndarray`
+    #         A single 2D array containing the parameter values with no
+    #         units. Will have shape ``(n,6)``.
 
-        """
-        kw = dict()
-        par_arr = np.atleast_2d(pars).T
-        for i,key in enumerate(cls._name_to_unit.keys()):
-            kw[key] = par_arr[i] * cls._name_to_unit[key]
+    #     """
+    #     if units is None:
+    #         all_samples = np.vstack([getattr(self, "_{}".format(key))
+    #                                  for key in self._name_to_unit.keys()]).T
 
-        return cls(**kw)
+    #     else:
+    #         all_samples = np.vstack([getattr(self, format(key)).to(units[key]).value
+    #                                  for key in self._name_to_unit.keys()]).T
 
-    def copy(self):
-        return self.__copy__()
+    #     if plot_transform:
+    #         # ln P in plots:
+    #         idx = list(self._name_to_unit.keys()).index('P')
+    #         all_samples[:,idx] = np.log(all_samples[:,idx])
 
-    def rv_orbit(self, index=None):
-        """
-        Get a `~thejoker.celestialmechanics.SimulatedRVOrbit` instance
-        for the orbital parameters with index ``i``.
+    #         # ln s in plots:
+    #         idx = list(self._name_to_unit.keys()).index('jitter')
+    #         all_samples[:,idx] = np.log(all_samples[:,idx])
 
-        Parameters
-        ----------
-        index : int (optional)
+    #     return all_samples
 
-        Returns
-        -------
-        orbit : `~thejoker.celestialmechanics.SimulatedRVOrbit`
-        """
-        from .celestialmechanics_class import SimulatedRVOrbit
+    # @classmethod
+    # def unpack(cls, pars):
+    #     """
+    #     Unpack a 2D array structure containing the orbital parameters
+    #     without associated units. Should have shape ``(n,6)`` where ``n``
+    #     is the number of parameters.
 
-        if index is None and len(self._P) == 1: # OK
-            index = 0
+    #     Returns
+    #     -------
+    #     p : `~thejoker.celestialmechanics.OrbitalParams`
 
-        elif index is None and len(self._P) > 1:
-            raise IndexError("You must specify the index of the set of paramters to get an "
-                             "orbit for!")
+    #     """
+    #     kw = dict()
+    #     par_arr = np.atleast_2d(pars).T
+    #     for i,key in enumerate(cls._name_to_unit.keys()):
+    #         kw[key] = par_arr[i] * cls._name_to_unit[key]
 
-        i = index
-        return SimulatedRVOrbit(self[i])
+    #     return cls(**kw)
 
-    # Computed Quantities
-    @property
-    def asini(self):
-        return (self.K/(2*np.pi) * (self.P * np.sqrt(1-self.ecc**2))).to(default_units['asini'])
+    # def copy(self):
+    #     return self.__copy__()
 
-    @property
-    def mf(self):
-        mf = self.P * self.K**3 / (2*np.pi*G) * (1 - self.ecc**2)**(3/2.)
-        return mf.to(default_units['mf'])
+    # def rv_orbit(self, index=None):
+    #     """
+    #     Get a `~thejoker.celestialmechanics.SimulatedRVOrbit` instance
+    #     for the orbital parameters with index ``i``.
 
-    @staticmethod
-    def mf_asini_ecc_to_P_K(mf, asini, ecc):
-        P = 2*np.pi * asini**(3./2) / np.sqrt(G * mf)
-        K = 2*np.pi * asini / (P * np.sqrt(1-ecc**2))
-        return P.to(default_units['P']), K.to(default_units['K'])
+    #     Parameters
+    #     ----------
+    #     index : int (optional)
+
+    #     Returns
+    #     -------
+    #     orbit : `~thejoker.celestialmechanics.SimulatedRVOrbit`
+    #     """
+    #     from .celestialmechanics_class import SimulatedRVOrbit
+
+    #     if index is None and len(self._P) == 1: # OK
+    #         index = 0
+
+    #     elif index is None and len(self._P) > 1:
+    #         raise IndexError("You must specify the index of the set of paramters to get an "
+    #                          "orbit for!")
+
+    #     i = index
+    #     return SimulatedRVOrbit(self[i])
+
+    # # Computed Quantities
+    # @property
+    # def asini(self):
+    #     return (self.K/(2*np.pi) * (self.P * np.sqrt(1-self.ecc**2))).to(default_units['asini'])
+
+    # @property
+    # def mf(self):
+    #     mf = self.P * self.K**3 / (2*np.pi*G) * (1 - self.ecc**2)**(3/2.)
+    #     return mf.to(default_units['mf'])
+
+    # @staticmethod
+    # def mf_asini_ecc_to_P_K(mf, asini, ecc):
+    #     P = 2*np.pi * asini**(3./2) / np.sqrt(G * mf)
+    #     K = 2*np.pi * asini / (P * np.sqrt(1-ecc**2))
+    #     return P.to(default_units['P']), K.to(default_units['K'])
