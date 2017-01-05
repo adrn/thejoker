@@ -76,3 +76,5 @@ class TheJoker(object):
         self.random_state = random_state
 
         # TODO: validate hyper-parameters
+
+        # TODO: initialize linear parameter v0 -- this should somehow happen in JokerParams
