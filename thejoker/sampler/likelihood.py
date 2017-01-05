@@ -18,12 +18,15 @@ def design_matrix(nonlinear_p, data, jparams):
         these are P (period, day), phi0 (phase at pericenter, rad),
         ecc (eccentricity), omega (argument of perihelion, rad).
         May also contain log(jitter^2) as the last index.
-    data :
-    jparams :
+    data : `~thejoker.data.RVData`
+        The observations.
+    jparams : `~thejoker.sampler.params.JokerParams`
+        The specificationof parameters to infer with The Joker.
 
     Returns
     -------
     A : `numpy.ndarray`
+        The design matrix.
 
     """
     t = data._t_bmjd
@@ -41,16 +44,17 @@ def design_matrix(nonlinear_p, data, jparams):
 
 def tensor_vector_scalar(A, ivar, y):
     """
+    Internal function used to construct linear algebra objects
+    used to compute the marginal log-likelihood.
 
     Parameters
     ----------
-    nonlinear_p : array_like
-        Array of non-linear parameter values. For the default case,
-        these are P (period, day), phi0 (phase at pericenter, rad),
-        ecc (eccentricity), omega (argument of perihelion, rad).
-        May also contain log(jitter^2) as the last index.
-    data : `thejoker.sampler.RVData`
-        Instance of `RVData` containing the data to fit.
+    A : `~numpy.ndarray`
+        Design matrix.
+    ivar : `~numpy.ndarray`
+        Inverse-variance matrix.
+    y : `~numpy.ndarray`
+        Data (in this case, radial velocities).
 
     Returns
     -------
@@ -75,16 +79,20 @@ def tensor_vector_scalar(A, ivar, y):
 
     return ATCinvA, p, chi2
 
-def marginal_ln_likelihood(nonlinear_p, data):
+def marginal_ln_likelihood(nonlinear_p, data, jparams):
     """
 
     Parameters
     ----------
-    ATCinvA : array_like
-        Should have shape `(N, M, M)` or `(M, M)` where `M`
-        is the number of linear parameters in the model.
-    chi2 : numeric, array_like
-        Chi-squared value(s).
+    nonlinear_p : array_like
+        Array of non-linear parameter values. For the default case,
+        these are P (period, day), phi0 (phase at pericenter, rad),
+        ecc (eccentricity), omega (argument of perihelion, rad).
+        May also contain log(jitter^2) as the last index.
+    data : `~thejoker.data.RVData`
+        The observations.
+    jparams : `~thejoker.sampler.params.JokerParams`
+        The specificationof parameters to infer with The Joker.
 
     Returns
     -------
@@ -92,7 +100,7 @@ def marginal_ln_likelihood(nonlinear_p, data):
         Marginal log-likelihood values.
 
     """
-    A = design_matrix(nonlinear_p, data)
+    A = design_matrix(nonlinear_p, data, jparams)
 
     # TODO: jitter must be in same units as the data RV's / ivar!
     s = nonlinear_p[4]
