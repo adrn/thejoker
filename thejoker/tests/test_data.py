@@ -31,6 +31,16 @@ def test_rvdata():
     with pytest.raises(TypeError):
         RVData(t=t, rv=rv, ivar=ivar.value)
 
+    # shapes must be consistent
+    with pytest.raises(ValueError):
+        RVData(t=t[:-1], rv=rv, ivar=ivar)
+
+    with pytest.raises(ValueError):
+        RVData(t=t, rv=rv[:-1], ivar=ivar)
+
+    with pytest.raises(ValueError):
+        RVData(t=t, rv=rv, ivar=ivar[:-1])
+
     # check that copy works
     t = atime.Time(t, format='mjd', scale='utc')
     data1 = RVData(t=t, rv=rv, ivar=ivar)

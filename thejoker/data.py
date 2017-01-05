@@ -41,13 +41,13 @@ class RVData(object):
         if isinstance(t, at.Time):
             _t_bmjd = t.tcb.mjd
         else:
-            _t_bmjd = np.asarray(t)
+            _t_bmjd = np.atleast_1d(t)
         self._t_bmjd = _t_bmjd
 
         if not hasattr(rv, 'unit') or rv.unit.physical_type != 'speed':
             raise ValueError("Input radial velocities must be passed in as an "
                              "Astropy Quantity with speed (velocity) units.")
-        self.rv = rv
+        self.rv = np.atleast_1d(rv)
 
         # parse input specification of errors
         self._has_err = True
@@ -67,6 +67,14 @@ class RVData(object):
             if not hasattr(stddev, 'unit'):
                 raise TypeError("stddev must be an Astropy Quantity object!")
             self.ivar = 1 / stddev.to(self.rv.unit)**2
+        self.ivar = np.atleast_1d(self.ivar)
+
+        # make sure shapes are consistent
+        if self._t_bmjd.shape != self.rv.shape or self.rv.shape != self.ivar.shape:
+            raise ValueError("Shape of input time, RV, and errors must be consistent! "
+                             "({} vs {} vs {})".format(self._t_bmjd.shape,
+                                                       self.rv.shape,
+                                                       self.ivar.shape))
 
         # filter out NAN or INF data points
         idx = (np.isfinite(self._t_bmjd) & np.isfinite(self.rv) &
