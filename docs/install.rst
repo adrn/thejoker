@@ -36,6 +36,7 @@ Dependencies
 - numpy
 - scipy
 - astropy
+- h5py
 - emcee
 - schwimmbad
 
@@ -43,4 +44,3 @@ Optional Dependencies
 ---------------------
 
 - matplotlib
-- h5py

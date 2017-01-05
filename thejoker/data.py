@@ -79,7 +79,7 @@ class RVData(object):
         # filter out NAN or INF data points
         idx = (np.isfinite(self._t_bmjd) & np.isfinite(self.rv) &
                np.isfinite(self.ivar) & (self.ivar.value > 0))
-        if idx.sum() < len(self._rv):
+        if idx.sum() < len(self.rv):
             log.info("Filtering {} NaN/Inf data points".format(len(self.rv) - idx.sum()))
 
         self._t_bmjd = self._t_bmjd[idx]
@@ -216,7 +216,7 @@ class RVData(object):
                               ivar=self.ivar.copy()[slc])
 
     def __len__(self):
-        return len(self.t)
+        return len(self.rv.value)
 
     def to_hdf5(self, file_or_path):
         """
