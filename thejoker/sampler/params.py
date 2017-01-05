@@ -47,6 +47,10 @@ class JokerParams(object):
 
     Parameters
     ----------
+    P_min : `astropy.units.Quantity` [time]
+        Lower bound on prior over period, the smallest period considered.
+    P_max : `astropy.units.Quantity` [time]
+        Upper bound on prior over period, the largest period considered.
     trends : iterable (optional)
         A list of `~thejoker.TODO.PolynomialVelocityTrend` instances.
     jitter : `~astropy.units.Quantity` [speed], tuple (optional)
@@ -75,10 +79,14 @@ class JokerParams(object):
         >>> pars = JokerPars(jitter=(1., 2.), jitter_unit=u.m/u.s) # specify jitter prior
 
     """
-    def __init__(self, trends=None, jitter=None, jitter_unit=None):
+    @u.quantity_input(P_min=u.day, P_max=u.day)
+    def __init__(self, P_min, P_max, trends=None, jitter=None, jitter_unit=None):
 
         # the names of the default parameters
         default_params = ['P', 'K', 'ecc', 'omega', 'phi0']
+
+        self.P_min = P_min
+        self.P_max = P_max
 
         # validate the specified long-term velocity trends
         if trends is None:
@@ -124,6 +132,7 @@ class JokerParams(object):
                                 "instance.")
 
             self._fixed_jitter = False
+            self._jitter_unit = jitter_unit
             self.jitter = jitter
 
         else:
