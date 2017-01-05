@@ -1,6 +1,6 @@
 from __future__ import division, print_function
 
-def get_ivar(data, s2):
+def get_ivar(data, s):
     """
     Return a copy of the inverse variance array with jitter included.
 
@@ -9,8 +9,8 @@ def get_ivar(data, s2):
     Parameters
     ----------
     data : `~thejoker.data.RVData`
-    s2 : numeric
-        Jitter squared in the same units as the RV data.
+    s : numeric
+        Jitter in the same units as the RV data.
 
     """
-    return data.ivar.value / (1 + s2 * data.ivar.value)
+    return data.ivar.value / (1 + s**2 * data.ivar.value)
