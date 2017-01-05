@@ -1,7 +1,6 @@
 language: python
 
 python:
-    - 2.7
     - 3.4
     - 3.5
     - 3.6
@@ -52,23 +51,20 @@ matrix:
 
     include:
 
-        # Do a coverage test in Python 2.
-        - python: 2.7
+        - python: 3.5
           env: SETUP_CMD='test --coverage'
 
         # Check for sphinx doc build warnings - we do this first because it
         # may run for a long time
-        - python: 2.7
+        - python: 3.5
           env: SETUP_CMD='build_sphinx -w'
 
         # Try Astropy development version
-        - python: 2.7
-          env: ASTROPY_VERSION=development
         - python: 3.5
           env: ASTROPY_VERSION=development
 
         # Try older numpy versions
-        - python: 2.7
+        - python: 3.5
           env: NUMPY_VERSION=1.10
 
         # Try numpy pre-release
