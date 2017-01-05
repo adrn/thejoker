@@ -21,6 +21,8 @@ class TheJoker(object):
     ----------
     data : `~thejoker.data.RVData`
         The radial velocity data.
+    params : `~thejoker.sampler.params.JokerParams`
+        TODO
     pool : ``schwimmbad.BasePool`` (optional)
         A processing pool (default is a ``schwimmbad.SerialPool`` instance).
     random_state : `numpy.random.RandomState` (optional)
@@ -35,18 +37,9 @@ class TheJoker(object):
                 Lower bound on prior over period (smallest period considered).
             - ``P_max`` : `astropy.units.Quantity`
                 Upper bound on prior over period (largest period considered).
-            - ``jitter`` : `astropy.units.Quantity` (optional)
-                Fixed value of jitter. Set to ``None`` or don't specify to
-                infer the jitter, but see next two parameters.
-            - ``log_jitter2_prior_mean`` : numeric (option)
-            - ``log_jitter2_prior_stddev`` : numeric (option)
-
-    TODO
-    ----
-    - Delete data when pickling / serializing?
 
     """
-    def __init__(self, data, pool=None, random_state=None, **hyper_pars):
+    def __init__(self, data, params=None, pool=None, random_state=None, **hyper_pars):
 
         # validate input data
         if not isinstance(data, RVData):
@@ -77,4 +70,7 @@ class TheJoker(object):
 
         # TODO: validate hyper-parameters
 
-        # TODO: initialize linear parameter v0 -- this should somehow happen in JokerParams
+        # check if a JokerParams instance was passed in to specify the state
+        if params is None:
+            # accept defaults - global velocity trend with constant offset v0
+            params = JokerParams()
