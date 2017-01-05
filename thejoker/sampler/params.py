@@ -37,9 +37,12 @@ class PolynomialVelocityTrend(VelocityTrend):
     handle, e.g., calibration offsets between epochs. See the
     ``data_mask`` argument documentation below for more info.
 
+    TODO: right now does nothing
+
     """
     def __init__(self, n_terms, data_mask=None):
-        pass
+        self.n_terms = int(n_terms)
+        self.data_mask = data_mask
 
 
 class JokerParams(object):

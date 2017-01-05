@@ -88,7 +88,7 @@ def marginal_ln_likelihood(nonlinear_p, data, jparams):
         Array of non-linear parameter values. For the default case,
         these are P (period, day), phi0 (phase at pericenter, rad),
         ecc (eccentricity), omega (argument of perihelion, rad).
-        May also contain log(jitter^2) as the last index.
+        May also contain jitter as the last index.
     data : `~thejoker.data.RVData`
         The observations.
     jparams : `~thejoker.sampler.params.JokerParams`
