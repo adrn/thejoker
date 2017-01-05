@@ -116,28 +116,30 @@ def _sample_vector_worker(task):
         is not supposed to be in the public API.
     """
 
-    idx, prior_cache_file, data, global_seed, chunk_index = task
+    idx, prior_cache_file, data, joker_params, global_seed, chunk_index = task
     n_chunk = len(idx)
 
     if global_seed is not None:
         seed = int("{}{}".format(global_seed, chunk_index))
+
     else:
         seed = idx[0]
-    np.random.seed(seed) # TODO: is this good enough?
+
+    rnd = np.random.RandomState(seed)
     log.debug("worker with chunk {} has seed {}".format(idx[0], seed))
 
-    pars = np.zeros((n_chunk, 7))
+    pars = np.zeros((n_chunk, joker_params.num_params))
     with h5py.File(prior_cache_file, 'r') as f:
         for j,i in enumerate(idx): # these are the integer locations of the 'good' samples!
             nonlinear_p = f['samples'][i]
             P, phi0, ecc, omega, s = nonlinear_p
 
             ivar = get_ivar(data, s)
-            A = design_matrix(nonlinear_p, data._t_bmjd, data.t_offset)
+            A = design_matrix(nonlinear_p, data, joker_params)
             ATA,p,_ = tensor_vector_scalar(A, ivar, data.rv.value)
 
             cov = np.linalg.inv(ATA)
-            K, *v_terms = np.random.multivariate_normal(p, cov)
+            K, *v_terms = rnd.multivariate_normal(p, cov)
 
             if K < 0:
                 # log.warning("Swapping K")
@@ -149,13 +151,11 @@ def _sample_vector_worker(task):
 
     return pars
 
-def sample_indices_to_full_samples(good_samples_idx, prior_cache_file, data, pool,
-                                   global_seed=None):
+def sample_indices_to_full_samples(good_samples_idx, prior_cache_file, data, joker_params,
+                                   pool, global_seed=None):
     """
-    TODO: needs overhaul
-
-    Generate the full set of orbital parameters for the 'good'
-    samples that pass rejection sampling.
+    Generate the full set of parameter values (linear + non-linear) for
+    the nonlinear parameter prior samples that pass the rejection sampling.
 
     For speed when parallelizing, this accepts a filename for an HDF5
     that contains the prior samples, splits up the samples based on the
@@ -171,7 +171,9 @@ def sample_indices_to_full_samples(good_samples_idx, prior_cache_file, data, poo
         Path to an HDF5 file containing the prior samples.
     data : `thejoker.data.RVData`
         An instance of ``RVData`` with the data we're modeling.
-    pool : `thejoker.pool.GenericPool` or subclass
+    joker_params : `~thejoker.sampler.params.JokerParams`
+        A specification of the parameters to use.
+    pool : `~schwimmbad.pool.BasePool` or subclass
         An instance of a processing pool - must have a ``.map()`` method.
     global_seed : int (optional)
         The global level random number seed.
@@ -194,10 +196,11 @@ def sample_indices_to_full_samples(good_samples_idx, prior_cache_file, data, poo
     else:
         plus = 0
 
-    tasks = [[good_samples_idx[i*chunk_size:(i+1)*chunk_size], prior_cache_file, data, global_seed, i]
+    tasks = [[good_samples_idx[i*chunk_size:(i+1)*chunk_size], prior_cache_file,
+              data, joker_params, global_seed, i]
              for i in range(n_samples//chunk_size+plus)]
 
-    orbit_pars = [r for r in pool.map(_sample_vector_worker, tasks)]
-    orbit_pars = np.concatenate(orbit_pars)
+    samples = [r for r in pool.map(_sample_vector_worker, tasks)]
+    samples = np.concatenate(samples)
 
-    return orbit_pars.reshape(-1, orbit_pars.shape[-1])
+    return samples.reshape(-1, samples.shape[-1])
