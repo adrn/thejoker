@@ -32,7 +32,7 @@ random numbers and MPI.
 To control the size of the prior batch, the number of prior samples generated
 or pulled from the cache file and send to the likelihood worker
 
-    samples = thejoker.sample(n_samples=1024, prior_batch_size=2**8)
+    samples = thejoker.sample(data, n_samples=1024, prior_batch_size=2**8)
 
 --
 
