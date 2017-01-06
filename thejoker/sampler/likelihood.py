@@ -8,7 +8,7 @@ from .utils import get_ivar
 
 __all__ = ['design_matrix', 'tensor_vector_scalar', 'marginal_ln_likelihood']
 
-def design_matrix(nonlinear_p, data, jparams):
+def design_matrix(nonlinear_p, data, joker_params):
     """
 
     Parameters
@@ -20,13 +20,13 @@ def design_matrix(nonlinear_p, data, jparams):
         May also contain log(jitter^2) as the last index.
     data : `~thejoker.data.RVData`
         The observations.
-    jparams : `~thejoker.sampler.params.JokerParams`
-        The specificationof parameters to infer with The Joker.
+    joker_params : `~thejoker.sampler.params.JokerParams`
+        The specification of parameters to infer with The Joker.
 
     Returns
     -------
     A : `numpy.ndarray`
-        The design matrix.
+        The design matrix with shape ``(n_times, n_params)``.
 
     """
     t = data._t_bmjd
@@ -37,8 +37,8 @@ def design_matrix(nonlinear_p, data, jparams):
                             phi0=phi0-2*np.pi*((t_offset/P) % 1.))
 
     # TODO: right now, we only support a single, global velocity trend!
-    A1 = np.vander(t, N=jparams.trends[0].n_terms, increasing=True)
-    A = np.hstack((zdot[:,None], A1)).T
+    A1 = np.vander(t, N=joker_params.trends[0].n_terms, increasing=True)
+    A = np.hstack((zdot[:,None], A1))
 
     return A
 
@@ -79,7 +79,7 @@ def tensor_vector_scalar(A, ivar, y):
 
     return ATCinvA, p, chi2
 
-def marginal_ln_likelihood(nonlinear_p, data, jparams):
+def marginal_ln_likelihood(nonlinear_p, data, joker_params):
     """
 
     Parameters
@@ -91,7 +91,7 @@ def marginal_ln_likelihood(nonlinear_p, data, jparams):
         May also contain jitter as the last index.
     data : `~thejoker.data.RVData`
         The observations.
-    jparams : `~thejoker.sampler.params.JokerParams`
+    joker_params : `~thejoker.sampler.params.JokerParams`
         The specificationof parameters to infer with The Joker.
 
     Returns
@@ -100,15 +100,15 @@ def marginal_ln_likelihood(nonlinear_p, data, jparams):
         Marginal log-likelihood values.
 
     """
-    A = design_matrix(nonlinear_p, data, jparams)
+    A = design_matrix(nonlinear_p, data, joker_params)
 
     # TODO: jitter must be in same units as the data RV's / ivar!
     s = nonlinear_p[4]
     ivar = get_ivar(data, s)
 
-    ATCinvA,_,chi2 = tensor_vector_scalar(A, ivar, data.rv.value)
+    ATCinvA, _, chi2 = tensor_vector_scalar(A, ivar, data.rv.value)
 
-    sign,logdet = np.linalg.slogdet(ATCinvA)
+    sign, logdet = np.linalg.slogdet(ATCinvA)
     if not np.all(sign == 1.):
         logger.debug('logdet sign < 0')
         return np.nan
