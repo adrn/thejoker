@@ -1,12 +1,10 @@
-from __future__ import division, print_function
-
 # Third-party
 import astropy.time as at
 import astropy.units as u
 
 # Project
 from .celestialmechanics import rv_from_elements
-from ..util import find_t0
+from .utils import find_t0, a1_sini, mf
 
 __all__ = ['SimulatedRVOrbit']
 
@@ -156,3 +154,13 @@ class SimulatedRVOrbit(object):
         ax.plot(_t, rv, **style)
 
         return ax
+
+    # computed attributes
+
+    @property
+    def a1_sini(self):
+        return a1_sini(self.P, self.K, self.ecc)
+
+    @property
+    def mf(self):
+        return mf(self.P, self.K, self.ecc)
