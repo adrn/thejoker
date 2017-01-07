@@ -13,7 +13,6 @@ except:
 
 # Package
 from ..celestialmechanics_class import SimulatedRVOrbit
-from ..trends import PolynomialVelocityTrend
 
 pars = dict(P=30.*u.day, K=100.*u.m/u.s, ecc=0.11239,
             omega=0.*u.radian, phi0=0.25524*u.radian)
@@ -28,15 +27,6 @@ def test_init_simulatedrvorbit():
     rv = orbit.generate_rv_curve(t)
     rv2 = orbit(t)
     assert quantity_allclose(rv, rv2)
-
-    # with a trend
-    trend = PolynomialVelocityTrend(coeffs=[100.*u.km/u.s]) # constant offset
-    orbit = SimulatedRVOrbit(**pars, trends=trend)
-
-    # un-instantiated trend
-    trend = PolynomialVelocityTrend(n_terms=2)
-    with pytest.raises(ValueError):
-        orbit = SimulatedRVOrbit(**pars, trends=trend)
 
     # get pericenter time - check something?!
     orbit = SimulatedRVOrbit(**pars)

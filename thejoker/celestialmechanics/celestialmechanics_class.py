@@ -21,24 +21,12 @@ class SimulatedRVOrbit(object):
     """
     @u.quantity_input(P=u.day, K=u.km/u.s,
                       phi0=u.radian, omega=u.radian)
-    def __init__(self, P, K, ecc, phi0, omega, trends=None):
+    def __init__(self, P, K, ecc, phi0, omega):
         self.P = P
         self.K = K
         self.ecc = float(ecc)
         self.phi0 = phi0
         self.omega = omega
-
-        if trends is None:
-            trends = []
-        elif trends is not None and not isiterable(trends):
-            trends = [trends]
-
-        for trend in trends:
-            if trend.coeffs is None:
-                raise ValueError("Velocity trends must be instantiated with "
-                                 "coefficients to be evaluated!")
-
-        self.trends = trends # TODO: make sure coeffs is not None
 
     def _t0(self, epoch_day):
         return find_t0(self.phi0.to(u.radian).value,
@@ -87,9 +75,6 @@ class SimulatedRVOrbit(object):
                               e=self.ecc,
                               omega=self.omega.to(u.radian).value,
                               phi0=self.phi0.to(u.radian).value)
-
-        for trend in self.trends:
-            rv += trend(t*u.day).to(u.m/u.s).value
 
         return rv
 

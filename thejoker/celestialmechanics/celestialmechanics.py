@@ -233,7 +233,7 @@ def rv_from_elements(times, P, K, e, omega, phi0):
     - could be made more efficient (there are lots of re-dos of trig calls)
     """
     times = np.array(times)
-    phase = 2 * np.pi * times / P
+    phase = (2 * np.pi * times / P) % (2*np.pi)
 
     Ms = phase - phi0
 
