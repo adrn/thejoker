@@ -3,15 +3,14 @@ from __future__ import division, print_function
 # Third-party
 import astropy.time as at
 import astropy.units as u
+from astropy.utils.misc import isiterable
 import numpy as np
 
 # Project
 from .celestialmechanics import rv_from_elements
 from ..util import find_t0
 
-__all__ = ['SimulatedRVOrbit', 'EPOCH']
-
-EPOCH = 55555. # Magic Number: used for un-modding phi0
+__all__ = ['SimulatedRVOrbit']
 
 class SimulatedRVOrbit(object):
     """
@@ -21,17 +20,50 @@ class SimulatedRVOrbit(object):
     pars : `thejoker.OrbitalParams`
 
     """
-    def __init__(self, pars):
-        self.pars = pars
+    @u.quantity_input(P=u.day, K=u.km/u.s,
+                      phi0=u.radian, omega=u.radian)
+    def __init__(self, P, K, ecc, phi0, omega, trends=None):
+        self.P = P
+        self.K = K
+        self.ecc = float(ecc)
+        self.phi0 = phi0
+        self.omega = omega
 
-    @property
-    def _t0(self):
-        return find_t0(self.pars.phi0.to(u.radian).value,
-                       self.P.to(u.day).value, EPOCH)
+        if trends is None:
+            trends = []
+        elif trends is not None and not isiterable(trends):
+            trends = [trends]
 
-    @property
-    def t0(self):
-        return at.Time(self._t0, scale='tcb', format='mjd')
+        for trend in trends:
+            if trend.coeffs is None:
+                raise ValueError("Velocity trends must be instantiated with "
+                                 "coefficients to be evaluated!")
+
+        self.trends = trends # TODO: make sure coeffs is not None
+
+    def _t0(self, epoch_day):
+        return find_t0(self.phi0.to(u.radian).value,
+                       self.P.to(u.day).value,
+                       epoch_day)
+
+    def t0(self, epoch):
+        """
+        Un-mod the phase at pericenter ``phi0`` to a time closest to the
+        specified epoch.
+
+        Parameters
+        ----------
+        epoch : `~astropy.time.Time`
+            Reference time to get the pericenter time ``t0`` relative to.
+
+        Returns
+        -------
+        t0 : `~astropy.time.Time`
+            Pericenter time closest to input epoch.
+
+        """
+        epoch_mjd = epoch.tcb.mjd
+        return at.Time(self._t0(epoch_mjd), scale='tcb', format='mjd')
 
     def _generate_rv_curve(self, t):
         """
@@ -51,12 +83,15 @@ class SimulatedRVOrbit(object):
             _t = t
 
         rv = rv_from_elements(times=_t,
-                              P=self.pars.P.to(u.day).value,
-                              K=self.pars.K.to(u.m/u.s).value,
-                              e=self.pars.ecc.value,
-                              omega=self.pars.omega.to(u.radian).value,
-                              phi0=self.pars.phi0.to(u.radian).value)
-        rv += self.pars.v0.to(u.m/u.s).value
+                              P=self.P.to(u.day).value,
+                              K=self.K.to(u.m/u.s).value,
+                              e=self.ecc,
+                              omega=self.omega.to(u.radian).value,
+                              phi0=self.phi0.to(u.radian).value)
+
+        for trend in self.trends:
+            rv += trend(t*u.day).to(u.m/u.s).value
+
         return rv
 
     def generate_rv_curve(self, t):
@@ -64,11 +99,11 @@ class SimulatedRVOrbit(object):
         Parameters
         ----------
         t : array_like, `~astropy.time.Time`
-            Array of times. Either in BJD or as an Astropy time.
+            Time array. Either in BMJD or as an Astropy time.
 
         Returns
         -------
-        rv : astropy.units.Quantity [km/s]
+        rv : astropy.units.Quantity [speed]
         """
         rv = self._generate_rv_curve(t)
         return (rv*u.m/u.s).to(u.km/u.s)
@@ -76,20 +111,40 @@ class SimulatedRVOrbit(object):
     def __call__(self, t):
         return self.generate_rv_curve(t)
 
-    def plot(self, t=None, ax=None, **kwargs):
+    def plot(self, t, ax=None, rv_unit=None,
+             t_format='mjd', t_scale='tcb', **kwargs):
         """
-        needs t or ax
+        Plot the RV curve at the specified times.
+
+        Parameters
+        ----------
+        t : array_like, `~astropy.time.Time`
+            Time array. Either in BMJD or as an Astropy time.
+        ax : `~matplotlib.axes.Axes` (optional)
+            The axis to draw on (default is to grab the current
+            axes using `~matplotlib.pyplot.gca`).
+        rv_unit : `~astropy.units.UnitBase` (optional)
+            Units to plot the radial velocities in (default is km/s).
+        t_format : str (optional)
+            Used to convert the `~astropy.time.Time` object to a numeric
+            value for plotting (default is 'mjd').
+        t_scale : str (optional)
+            Used to convert the `~astropy.time.Time` object to a numeric
+            value for plotting (default is 'tcb', barycentric).
+
+        Returns
+        -------
+        ax : `~matplotlib.axes.Axes`
+            The matplotlib axes object that the RV curve was drawn on.
+
         """
-        if t is None and ax is None:
-            raise ValueError("You must pass a time array (t) or axes "
-                             "instance (ax)")
 
         if ax is None:
             import matplotlib.pyplot as plt
-            fig,ax = plt.subplots(1,1)
+            ax = plt.gca()
 
-        if t is None:
-            t = np.linspace(*ax.get_xlim(), num=1024)
+        if rv_unit is None:
+            rv_unit = u.km/u.s
 
         style = kwargs.copy()
         style.setdefault('linestyle', '-')
@@ -97,7 +152,11 @@ class SimulatedRVOrbit(object):
         style.setdefault('marker', None)
         style.setdefault('color', '#de2d26')
 
-        rv = self.generate_rv_curve(t).to(u.km/u.s).value
-        ax.plot(t, rv, **style)
+        if not isinstance(t, at.Time):
+            t = at.Time(t, format=t_format, scale=t_scale)
+        rv = self.generate_rv_curve(t).to(rv_unit).value
+
+        _t = getattr(getattr(t, t_scale), t_format)
+        ax.plot(_t, rv, **style)
 
         return ax
