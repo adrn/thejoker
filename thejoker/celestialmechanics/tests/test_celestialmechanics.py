@@ -47,3 +47,20 @@ def test_everything():
         rv2 = (rv2 * u.au/u.day).to(u.m/u.s).value
 
         assert np.allclose(rv, rv2, atol=1E-6) # TODO: this precision is not so good...
+
+def test_phi0_t_offset():
+
+    EPOCH = 55555.
+    t = np.linspace(0., 300., 256) + EPOCH
+
+    P = 78.45
+    ecc = 0.416
+    omega = 1.241
+    phi0 = 5.82462
+
+    t_offset = np.median(t)
+    dphi = (2*np.pi*t_offset / P) % (2*np.pi)
+    zdot1 = rv_from_elements(times=t, P=P, K=1., e=ecc, omega=omega, phi0=phi0)
+    zdot2 = rv_from_elements(times=t - t_offset, P=P, K=1., e=ecc, omega=omega,
+                             phi0=phi0 - dphi)
+    assert np.allclose(zdot1, zdot2)
