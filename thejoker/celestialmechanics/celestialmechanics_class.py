@@ -4,7 +4,6 @@ from __future__ import division, print_function
 import astropy.time as at
 import astropy.units as u
 from astropy.utils.misc import isiterable
-import numpy as np
 
 # Project
 from .celestialmechanics import rv_from_elements
