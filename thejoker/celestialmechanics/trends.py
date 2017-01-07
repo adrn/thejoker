@@ -1,5 +1,5 @@
 # Third-party
-from astropy.utils.misc import isiterable
+import astropy.units as u
 import numpy as np
 
 class VelocityTrend(object):
@@ -47,7 +47,15 @@ class PolynomialVelocityTrend(VelocityTrend):
                              "not both.")
 
         if coeffs is not None:
-            self.coeffs = np.atleast_1d(coeffs)
+            self.coeffs = list(coeffs)
+
+            _unit = u.km/u.s
+            for coeff in self.coeffs:
+                if not hasattr(coeff, 'unit') or not coeff.unit.is_equivalent(_unit):
+                    raise ValueError("Input coefficients must be a Quantity with "
+                                     "velocity per time^i units!")
+                _unit = _unit / u.day
+
         else:
             self.coeffs = None
 
@@ -75,5 +83,13 @@ class PolynomialVelocityTrend(VelocityTrend):
             raise ValueError("To evaluate the trend, you must have supplied coefficient "
                              "values at creation.")
         t = np.atleast_1d(t)
-        A = np.vander(t, N=self.n_terms, increasing=True)
-        return (A * self.coeffs[None]).sum(axis=-1)
+
+        if not hasattr(t, 'unit'): # assume bare array has units = day
+            t = t*u.day
+
+        if t.unit.physical_type != 'time':
+            raise TypeError("Input time(s) must be a Quantity with time units!")
+
+        # TODO: OMG WTF is this shit
+        A = np.vander(t.to(u.day).value, N=self.n_terms, increasing=True)
+        return sum([A[:,i]*u.day**i * self.coeffs[i] for i in range(A.shape[1])])
