@@ -21,29 +21,10 @@ from astropy.utils.misc import isiterable
 import astropy.units as u
 
 # Project
-# from .trends import PolynomialVelocityTrend
+from ..celestialmechanics.trends import PolynomialVelocityTrend
 # from ..util import quantity_from_hdf5, quantity_to_hdf5
 
 __all__ = ['JokerParams']
-
-class VelocityTrend(object):
-    pass
-
-class PolynomialVelocityTrend(VelocityTrend):
-    """
-    Represents a long-term velocity trend to the radial velocity data.
-
-    This can represent different, independent sections of the data to
-    handle, e.g., calibration offsets between epochs. See the
-    ``data_mask`` argument documentation below for more info.
-
-    TODO: right now does nothing
-
-    """
-    def __init__(self, n_terms, data_mask=None):
-        self.n_terms = int(n_terms)
-        self.data_mask = data_mask
-
 
 class JokerParams(object):
     """
