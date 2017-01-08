@@ -4,7 +4,7 @@ import astropy.units as u
 
 # Project
 from .celestialmechanics import rv_from_elements
-from .utils import find_t0, a1_sini, mf
+from .utils import get_t0, a1_sini, mf
 
 __all__ = ['SimulatedRVOrbit']
 
@@ -38,20 +38,16 @@ class SimulatedRVOrbit(object):
         self.phi0 = phi0
         self.omega = omega
 
-    def _t0(self, epoch_day):
-        return find_t0(self.phi0.to(u.radian).value,
-                       self.P.to(u.day).value,
-                       epoch_day)
-
-    def t0(self, epoch):
+    def t0(self, ref_mjd):
         """
         Un-mod the phase at pericenter ``phi0`` to a time closest to the
         specified epoch.
 
         Parameters
         ----------
-        epoch : `~astropy.time.Time`
-            Reference time to get the pericenter time ``t0`` relative to.
+        ref_mjd : numeric
+            Reference time in Barycentric MJD to get the pericenter time
+            ``t0`` relative to.
 
         Returns
         -------
@@ -59,8 +55,7 @@ class SimulatedRVOrbit(object):
             Pericenter time closest to input epoch.
 
         """
-        epoch_mjd = epoch.tcb.mjd
-        return at.Time(self._t0(epoch_mjd), scale='tcb', format='mjd')
+        return get_t0(self.phi0, self.P, ref_mjd)
 
     def _generate_rv_curve(self, t):
         """
