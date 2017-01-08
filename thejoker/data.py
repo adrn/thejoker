@@ -41,15 +41,12 @@ class RVData(object):
             _t_bmjd = np.atleast_1d(t)
         self._t_bmjd = _t_bmjd
 
-        if not hasattr(rv, 'unit') or rv.unit.physical_type != 'speed':
-            raise ValueError("Input radial velocities must be passed in as an "
-                             "Astropy Quantity with speed (velocity) units.")
         self.rv = np.atleast_1d(rv)
 
         # parse input specification of errors
         self._has_err = True
         if ivar is None and stddev is None:
-            self._ivar = 1.
+            self.ivar = np.full_like(self.rv.value, np.nan) * self.rv.unit
             self._has_err = False
 
         elif ivar is not None and stddev is not None:
@@ -57,12 +54,18 @@ class RVData(object):
 
         elif ivar is not None:
             if not hasattr(ivar, 'unit'):
-                raise TypeError("ivar must be an Astropy Quantity object!")
+                raise TypeError("ivar must be an Astropy Quantity object")
+            elif not ivar.unit.is_equivalent(1/self.rv.unit**2):
+                raise u.UnitsError("ivar must have same unit type as RV^-2")
+
             self.ivar = ivar.to(1/self.rv.unit**2)
 
         elif stddev is not None:
             if not hasattr(stddev, 'unit'):
                 raise TypeError("stddev must be an Astropy Quantity object!")
+            elif not stddev.unit.is_equivalent(self.rv.unit):
+                raise u.UnitsError("stddev must have same unit type as RV")
+
             self.ivar = 1 / stddev.to(self.rv.unit)**2
         self.ivar = np.atleast_1d(self.ivar)
 
@@ -72,10 +75,12 @@ class RVData(object):
                              "({} vs {} vs {})".format(self._t_bmjd.shape,
                                                        self.rv.shape,
                                                        self.ivar.shape))
-
         # filter out NAN or INF data points
-        idx = (np.isfinite(self._t_bmjd) & np.isfinite(self.rv) &
-               np.isfinite(self.ivar) & (self.ivar.value > 0))
+        idx = np.isfinite(self._t_bmjd) & np.isfinite(self.rv)
+
+        if self._has_err:
+            idx &= np.isfinite(self.ivar) & (self.ivar.value > 0)
+
         if idx.sum() < len(self.rv):
             log.info("Filtering {} NaN/Inf data points".format(len(self.rv) - idx.sum()))
 
