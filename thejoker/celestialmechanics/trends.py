@@ -51,9 +51,13 @@ class PolynomialVelocityTrend(VelocityTrend):
 
             _unit = u.km/u.s
             for coeff in self.coeffs:
-                if not hasattr(coeff, 'unit') or not coeff.unit.is_equivalent(_unit):
+                if not hasattr(coeff, 'unit'):
                     raise ValueError("Input coefficients must be a Quantity with "
                                      "velocity per time^i units!")
+                elif not coeff.unit.is_equivalent(_unit):
+                    raise u.UnitsError("Input coefficients must have velocity per "
+                                       "time^i units!")
+
                 _unit = _unit / u.day
 
         else:
@@ -88,7 +92,7 @@ class PolynomialVelocityTrend(VelocityTrend):
             t = t*u.day
 
         if t.unit.physical_type != 'time':
-            raise TypeError("Input time(s) must be a Quantity with time units!")
+            raise u.UnitsError("Input time(s) must be a Quantity with time units!")
 
         # TODO: OMG WTF is this shit
         A = np.vander(t.to(u.day).value, N=self.n_terms, increasing=True)
