@@ -95,7 +95,7 @@ class RVData(object):
         # if no offset is provided, subtract the median time
         if t_offset is None:
             t_offset = np.median(self._t_bmjd)
-            self._t_bmjd = self._t_bmjd - t_offset
+        self._t_bmjd = self._t_bmjd - t_offset
         self.t_offset = t_offset
 
     @property

@@ -30,27 +30,21 @@ class FakeData(object):
         truth['phi0'] = np.random.uniform(0., 2*np.pi) * u.radian
         truth['omega'] = np.random.uniform(0., 2*np.pi) * u.radian
         truth['ecc'] = np.random.uniform()
-        v0 = np.random.uniform(-100, 100) * u.km/u.s
-        truth['trends'] = PolynomialVelocityTrend(coeffs=[v0])
+        self.v0 = np.random.uniform(-100, 100) * u.km/u.s
 
         orbit = SimulatedRVOrbit(**truth)
-        rv = orbit.generate_rv_curve(mjd)
+        rv = orbit.generate_rv_curve(mjd) + self.v0
         err = np.full_like(rv.value, 0.01) * u.km/u.s
-        noise = np.random.normal(0, err.value) * u.km/u.s
-        rv += noise
-        self.data['binary'] = RVData(mjd, rv, stddev=err, t_offset=0.)
+        self.data['binary'] = RVData(mjd, rv, stddev=err)
         self.joker_params['binary'] = JokerParams(P_min=8*u.day, P_max=1024*u.day)
         self.truths['binary'] = truth.copy()
 
         # hierarchical triple - long term velocity trend
-        v1 = np.random.uniform(-1, 1) * u.km/u.s/u.day
-        truth['trends'] = PolynomialVelocityTrend(coeffs=[v0, v1])
+        self.v1 = np.random.uniform(-1, 1) * u.km/u.s/u.day
         orbit = SimulatedRVOrbit(**truth)
-        rv = orbit.generate_rv_curve(mjd)
+        rv = orbit.generate_rv_curve(mjd) + self.v0 + self.v1*(mjd-mjd.min())*u.day
         err = np.full_like(rv.value, 0.01) * u.km/u.s
-        noise = np.random.normal(0, err.value) * u.km/u.s
-        rv += noise
-        self.data['triple'] = RVData(mjd, rv, stddev=err, t_offset=0.)
+        self.data['triple'] = RVData(mjd, rv, stddev=err, t_offset=mjd.min())
         self.joker_params['triple'] = JokerParams(P_min=8*u.day, P_max=1024*u.day,
                                                   trends=PolynomialVelocityTrend(n_terms=2))
         self.truths['triple'] = truth.copy()

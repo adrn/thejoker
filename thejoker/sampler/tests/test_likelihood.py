@@ -3,10 +3,7 @@ import astropy.units as u
 import numpy as np
 
 # Package
-from ...data import RVData
-from ..params import JokerParams, PolynomialVelocityTrend
 from ..likelihood import design_matrix, tensor_vector_scalar, marginal_ln_likelihood
-from ...celestialmechanics import rv_from_elements
 
 from .helpers import FakeData
 
@@ -22,6 +19,7 @@ class TestLikelihood(object):
 
     def setup(self):
         d = FakeData()
+        self.fd = d
         self.data = d.data
         self.joker_params = d.joker_params
         self.truths = d.truths
@@ -47,11 +45,8 @@ class TestLikelihood(object):
         A = design_matrix(nlp, data, self.joker_params['binary'])
         ATCinvA, p, chi2 = tensor_vector_scalar(A, data.ivar.value,
                                                 data.rv.value)
-        print(p)
-        print(self.truths['binary']['K'])
-        print(self.truths['binary']['trends'].coeffs)
-        return
-        # assert np.allclose(p, self.truths['binary'], rtol=1e-2)
+        true_p = [self.truths['binary']['K'].value, self.fd.v0.value]
+        assert np.allclose(p, true_p, rtol=1e-2)
 
         # --
 
@@ -60,42 +55,7 @@ class TestLikelihood(object):
         A = design_matrix(nlp, data, self.joker_params['triple'])
         ATCinvA, p, chi2 = tensor_vector_scalar(A, data.ivar.value,
                                                 data.rv.value)
-        assert np.allclose(p, self.truths['triple'], rtol=1e-2)
 
-    def test_marginal_ln_likelihood_period(self):
-        # make a grid over periods with other pars fixed at truth and make sure
-        #   highest likelihood period is close to truth
-        # TODO: should grid over all of the parameters!
-
-        data = self.data['binary']
-        nlp = self.truths_to_nlp(self.truths['binary'])
-        true_P = nlp[0]
-        ll = marginal_ln_likelihood(nlp, data, self.joker_params['binary'])
-
-        vals = np.linspace(52, 54.5, 256)
-        lls = np.zeros_like(vals)
-        for i,val in enumerate(vals):
-            _nlp = nlp.copy()
-            _nlp[0] = val
-            lls[i] = marginal_ln_likelihood(_nlp, data,
-                                            self.joker_params['binary'])
-        best_P = vals[np.argmax(lls)]
-        assert abs(best_P - true_P) < abs(vals[1]-vals[0])
-
-        # --
-        data = self.data['triple']
-        nlp = self.truths_to_nlp(self.truths['triple'])
-        true_P = nlp[0]
-        ll = marginal_ln_likelihood(nlp, data, self.joker_params['triple'])
-
-        vals = np.linspace(52, 54.5, 256)
-        lls = np.zeros_like(vals)
-        for i,val in enumerate(vals):
-            _nlp = nlp.copy()
-            _nlp[0] = val
-            lls[i] = marginal_ln_likelihood(_nlp, data,
-                                            self.joker_params['triple'])
-        best_P = vals[np.argmax(lls)]
-        assert abs(best_P - true_P) < abs(vals[1]-vals[0])
-
+        true_p = [self.truths['binary']['K'].value, self.fd.v0.value, self.fd.v1.value]
+        assert np.allclose(p, true_p, rtol=1e-2)
 

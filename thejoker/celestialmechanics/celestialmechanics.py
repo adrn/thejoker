@@ -219,9 +219,9 @@ def rv_from_elements(times, P, K, e, omega, phi0):
     e : numeric
         Eccentricity.
     omega : numeric [radian]
-        Argument of periapse.
+        Argument of periastron.
     phi0 : numeric [radian]
-        Phase at pericenter.
+        Phase at periastron.
 
     Returns
     -------

@@ -29,12 +29,14 @@ def design_matrix(nonlinear_p, data, joker_params):
         The design matrix with shape ``(n_times, n_params)``.
 
     """
-    t = data._t_bmjd
-    t_offset = data.t_offset
     P, phi0, ecc, omega = nonlinear_p[:4] # we don't need the jitter here
 
-    zdot = rv_from_elements(times=t, P=P, K=1., e=ecc, omega=omega,
-                            phi0=phi0-2*np.pi*((t_offset/P) % 1.))
+    t = data._t_bmjd
+    t_offset = data.t_offset
+
+    print(t+t_offset)
+    zdot = rv_from_elements(times=t+t_offset, P=P, K=1., e=ecc,
+                            omega=omega, phi0=phi0)
 
     # TODO: right now, we only support a single, global velocity trend!
     A1 = np.vander(t, N=joker_params.trends[0].n_terms, increasing=True)
@@ -66,6 +68,16 @@ def tensor_vector_scalar(A, ivar, y):
     chi2 : float
         Chi-squared value.
 
+    Notes
+    -----
+    The linear parameter vector returned here (``p``) may have a negative
+    velocity semi-amplitude. I don't think there is anything we can do
+    about this if we want to preserve the simple linear algebra below and
+    it means that optimizing over the marginal likelihood below won't
+    work -- in the argument of periastron, there will be two peaks of
+    similar height, and so the highest marginal likelihood period might be
+    shifted from the truth.
+
     """
     ATCinv = (A.T * ivar[None])
     ATCinvA = ATCinv.dot(A)
@@ -81,6 +93,8 @@ def tensor_vector_scalar(A, ivar, y):
 
 def marginal_ln_likelihood(nonlinear_p, data, joker_params):
     """
+    Internal function used to compute the likelihood marginalized
+    over the linear parameters.
 
     Parameters
     ----------
@@ -106,7 +120,7 @@ def marginal_ln_likelihood(nonlinear_p, data, joker_params):
     s = nonlinear_p[4]
     ivar = get_ivar(data, s)
 
-    ATCinvA, _, chi2 = tensor_vector_scalar(A, ivar, data.rv.value)
+    ATCinvA, p, chi2 = tensor_vector_scalar(A, ivar, data.rv.value)
 
     sign, logdet = np.linalg.slogdet(ATCinvA)
     if not np.all(sign == 1.):
