@@ -1,10 +1,3 @@
-from __future__ import division, print_function
-
-__author__ = "adrn <adrn@astro.columbia.edu>"
-
-# Standard library
-from os.path import exists, join
-
 # Third-party
 import astropy.time as atime
 import astropy.units as u
@@ -12,7 +5,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
-from .data import RVData
+# Package
+from ..data import RVData
 
 def test_rvdata():
 
@@ -46,12 +40,12 @@ def test_rvdata():
     data1 = RVData(t=t, rv=rv, ivar=ivar)
     data2 = data1.copy()
 
-    data1._t *= 1.5
-    data1._rv *= 1.5
-    data1._ivar *= 1.5
-    assert np.all(data2._t != data1._t)
-    assert np.all(data2._rv != data1._rv)
-    assert np.all(data2._ivar != data1._ivar)
+    data1._t_bmjd *= 1.5
+    data1.rv *= 1.5
+    data1.ivar *= 1.5
+    assert np.all(data2._t_bmjd != data1._t_bmjd)
+    assert np.all(data2.rv != data1.rv)
+    assert np.all(data2.ivar != data1.ivar)
 
     # check that plotting at least succeeds (TODO: could be better)
     # data1.plot()
