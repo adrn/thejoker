@@ -30,7 +30,7 @@ def test_init_simulatedrvorbit():
 
     # get pericenter time - check something?!
     orbit = SimulatedRVOrbit(**pars)
-    orbit.t0(Time.now()).tcb.mjd
+    orbit.t0(Time.now().tcb.mjd).tcb.mjd
 
 @pytest.mark.skipif(not HAS_MPL, reason="matplotlib not installed")
 def test_plotting():
