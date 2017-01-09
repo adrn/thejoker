@@ -56,7 +56,7 @@ class TestLikelihood(object):
         ATCinvA, p, chi2 = tensor_vector_scalar(A, data.ivar.value,
                                                 data.rv.value)
 
-        true_p = [self.truths['binary']['K'].value, self.fd.v0.value, self.fd.v1.value]
+        true_p = [self.truths['triple']['K'].value, self.fd.v0.value, self.fd.v1.value]
         assert np.allclose(p, true_p, rtol=1e-2)
 
     def test_marginal_ln_likelihood_P(self):

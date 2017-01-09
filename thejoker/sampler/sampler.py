@@ -12,7 +12,7 @@ from ..log import log as logger
 from ..data import RVData
 from .params import JokerParams
 from .multiproc_helpers import get_good_sample_indices, sample_indices_to_full_samples
-from .io import save_prior_samples, unpack_full_samples
+from .io import save_prior_samples
 
 class TheJoker(object):
     """
@@ -175,7 +175,48 @@ class TheJoker(object):
                 prior_units = save_prior_samples(f.name, prior_samples, self.data.rv.unit)
                 samples = self._rejection_sample_from_cache(data, n_prior_samples, f.name)
 
-        return unpack_full_samples(samples, prior_units, self.params)
+        return self.unpack_full_samples(samples, prior_units)
+
+    def unpack_full_samples(self, samples, prior_units):
+        """
+        Unpack an array of Joker samples into a dictionary of Astropy
+        Quantity objects (with units). Note that the phase of pericenter
+        returned here is now relative to BMJD = 0.
+
+        Parameters
+        ----------
+        samples : `numpy.ndarray`
+            TODO
+        prior_units : list
+            List of units for the prior samples.
+
+        Returns
+        -------
+        samples_dict : dict
+            TODO
+
+        """
+        sample_dict = dict()
+
+        n,n_params = samples.shape
+
+        # TODO: need to keep track of this elsewhere...
+        nonlin_params = ['P', 'phi0', 'ecc', 'omega', 'jitter']
+        for k,key in enumerate(nonlin_params):
+            sample_dict[key] = samples[:,k] * prior_units[k]
+
+        k += 1
+        sample_dict['K'] = samples[:,k] * prior_units[-1] # jitter unit
+
+        for j in range(self.params.trend.n_terms):
+            k += j
+            sample_dict['v{}'.format(j)] = samples[:,k] * prior_units[-1] / u.day**j
+
+        # convert phi0 from relative to t=data.t_offset to relative to mjd=0
+        dphi = 2*np.pi*self.data.t_offset/sample_dict['P'].to(u.day).value * u.radian
+        sample_dict['phi0'] = sample_dict['phi0'] - dphi
+
+        return sample_dict
 
     # def rejection_sample_adapt(self, data, min_n, prior_chunk_size=1024, max_prior_samples=2**24,
     #                            prior_cache_file=None):

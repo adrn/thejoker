@@ -59,14 +59,15 @@ def get_t0(phi0, P, ref_mjd, max_iter=16):
     return Time(ref_mjd + guess, format='mjd', scale='tcb')
 
 @u.quantity_input(P=u.day)
-def get_phi0(t0, P):
+def get_phi0(t0, P, ref_mjd=0.):
     r"""
-    Compute the phase at pericenter given a time of pericenter. The
-    phase is computed with the time in Barycentric MJD.
+    Compute the phase at pericenter relative to the reference MJD
+    given a time of pericenter. The phase is computed with the
+    time in Barycentric MJD.
 
     .. math::
 
-        \phi_0 = \frac{2\pi \, t_0}{P} \bmod 2\pi
+        \phi_0 = \frac{2\pi \, (t_0-t_{\rm ref})}{P} \bmod 2\pi
 
     This is carefully written to not subtract large numbers, but might
     look like magic.
@@ -78,6 +79,7 @@ def get_phi0(t0, P):
         Barycentric MJD, or an Astropy time object.
     P : `~astropy.units.Quantity` [time]
         The period.
+    ref_mjd :
 
     Returns
     -------
@@ -87,6 +89,7 @@ def get_phi0(t0, P):
     if isinstance(t0, Time):
         t0 = t0.tcb.mjd
 
+    t0 = t0 - ref_mjd
     return ((2*np.pi*t0 / P.to(u.day).value) % (2*np.pi)) * u.radian
 
 def a1_sini(P, K, ecc):

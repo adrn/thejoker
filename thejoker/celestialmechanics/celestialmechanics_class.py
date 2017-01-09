@@ -27,20 +27,19 @@ class SimulatedRVOrbit(object):
         Phase at pericenter.
     omega : `~astropy.units.Quantity` [angle]
         Argument of pericenter.
-
-    TODO
-    ----
-    - This has to include the trend...
+    trend : TODO
+        TODO
 
     """
     @u.quantity_input(P=u.day, K=u.km/u.s,
                       phi0=u.radian, omega=u.radian)
-    def __init__(self, P, K, ecc, phi0, omega):
+    def __init__(self, P, K, ecc, phi0, omega, trend=None):
         self.P = P
         self.K = K
         self.ecc = float(ecc)
         self.phi0 = phi0
         self.omega = omega
+        self.trend = trend
 
     def t0(self, ref_mjd):
         """

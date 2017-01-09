@@ -27,7 +27,7 @@ class RVData(object):
         Any metadata associated with the object.
     t_offset : numeric (optional) [day]
         A time offset to apply before processing. Default is to subtract off
-        the median time in BMJD days.
+        the minimum time in BMJD days.
 
     """
     @u.quantity_input(rv=u.km/u.s)
@@ -97,9 +97,9 @@ class RVData(object):
         # metadata can be anything
         self.metadata = metadata
 
-        # if no offset is provided, subtract the median time
+        # if no offset is provided, subtract the minimum time
         if t_offset is None:
-            t_offset = np.median(self._t_bmjd)
+            t_offset = np.min(self._t_bmjd)
         self._t_bmjd = self._t_bmjd - t_offset
         self.t_offset = t_offset
 

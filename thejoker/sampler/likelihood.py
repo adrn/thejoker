@@ -31,12 +31,10 @@ def design_matrix(nonlinear_p, data, joker_params):
     """
     P, phi0, ecc, omega = nonlinear_p[:4] # we don't need the jitter here
 
-    t_offset = data.t_offset
+    # phi0 now is implicitly relative to data.t_offset, not mjd=0
     t = data._t_bmjd
-    dphi = (2*np.pi*t_offset/P) % (2*np.pi)
-
     zdot = rv_from_elements(times=t, P=P, K=1., e=ecc,
-                            omega=omega, phi0=phi0-dphi)
+                            omega=omega, phi0=phi0)
 
     # TODO: right now, we only support a single, global velocity trend!
     A1 = np.vander(t, N=joker_params.trend.n_terms, increasing=True)

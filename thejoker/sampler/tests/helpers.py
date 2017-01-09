@@ -38,19 +38,23 @@ class FakeData(object):
         orbit = SimulatedRVOrbit(**truth)
         rv = orbit.generate_rv_curve(mjd) + self.v0
         err = np.full_like(rv.value, 0.01) * u.km/u.s
-        self.data['binary'] = RVData(mjd, rv, stddev=err)
+        data = RVData(mjd, rv, stddev=err)
+        self.data['binary'] = data
         self.joker_params['binary'] = JokerParams(P_min=8*u.day, P_max=1024*u.day)
         self.truths['binary'] = truth.copy()
+        self.truths['binary']['phi0'] = self.truths['binary']['phi0'] - ((2*np.pi*data.t_offset/P.value))*u.radian
 
         # hierarchical triple - long term velocity trend
         self.v1 = np.random.uniform(-1, 1) * u.km/u.s/u.day
         orbit = SimulatedRVOrbit(**truth)
         rv = orbit.generate_rv_curve(mjd) + self.v0 + self.v1*(mjd-mjd.min())*u.day
         err = np.full_like(rv.value, 0.01) * u.km/u.s
-        self.data['triple'] = RVData(mjd, rv, stddev=err, t_offset=mjd.min())
+        data = RVData(mjd, rv, stddev=err, t_offset=mjd.min())
+        self.data['triple'] = data
         self.joker_params['triple'] = JokerParams(P_min=8*u.day, P_max=1024*u.day,
                                                   trend=PolynomialVelocityTrend(n_terms=2))
         self.truths['triple'] = truth.copy()
+        self.truths['triple']['phi0'] = self.truths['triple']['phi0'] - ((2*np.pi*data.t_offset/P.value))*u.radian
 
         # Binary on circular orbit
         truth = dict()
@@ -63,6 +67,8 @@ class FakeData(object):
         orbit = SimulatedRVOrbit(**truth)
         rv = orbit.generate_rv_curve(_genmjd) + self.v0
         err = np.full_like(rv.value, 0.1) * u.km/u.s
-        self.data['circ_binary'] = RVData(mjd+EPOCH, rv, stddev=err)
+        data = RVData(mjd+EPOCH, rv, stddev=err)
+        self.data['circ_binary'] = data
         self.joker_params['circ_binary'] = JokerParams(P_min=8*u.day, P_max=1024*u.day)
         self.truths['circ_binary'] = truth.copy()
+        self.truths['circ_binary']['phi0'] = self.truths['circ_binary']['phi0'] - (2*np.pi*data.t_offset/P.value)*u.radian

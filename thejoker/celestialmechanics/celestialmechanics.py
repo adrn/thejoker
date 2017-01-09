@@ -220,7 +220,7 @@ def rv_from_elements(times, P, K, e, omega, phi0):
     omega : numeric [radian]
         Argument of periastron.
     phi0 : numeric [radian]
-        Phase at t=0.
+        Phase at pericenter relative to t=0.
 
     Returns
     -------

@@ -75,7 +75,7 @@ def save_prior_samples(f, samples, rv_unit):
     must contain keys for:
 
         - ``P``, period
-        - ``phi0``, phase at t=0
+        - ``phi0``, phase at pericenter
         - ``ecc``, eccentricity
         - ``omega``, argument of periastron
         - ``jitter``, velocity jitter (optional)
@@ -111,27 +111,6 @@ def save_prior_samples(f, samples, rv_unit):
         f['samples'] = packed_samples
 
     return units
-
-def unpack_full_samples(samples, prior_units, joker_params):
-    """
-    """
-    sample_dict = dict()
-
-    n,n_params = samples.shape
-
-    # TODO: need to keep track of this elsewhere...
-    nonlin_params = ['P', 'phi0', 'ecc', 'omega', 'jitter']
-    for k,key in enumerate(nonlin_params):
-        sample_dict[key] = samples[:,k] * prior_units[k]
-
-    k += 1
-    sample_dict['K'] = samples[:,k] * prior_units[-1] # jitter unit
-
-    for j in range(joker_params.trend.n_terms):
-        k += j
-        sample_dict['v{}'.format(j)] = samples[:,k] * prior_units[-1] / u.day**j
-
-    return sample_dict
 
 # def quantity_from_hdf5(f, key, n=None):
 #     """

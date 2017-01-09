@@ -57,7 +57,7 @@ def test_rvdata():
     data1 = RVData(t=t, rv=rv, ivar=ivar)
     data2 = data1.copy()
 
-    data1._t_bmjd *= 1.5
+    data1._t_bmjd += 1.5
     data1.rv *= 1.5
     data1.ivar *= 1.5
     assert np.all(data2._t_bmjd != data1._t_bmjd)
