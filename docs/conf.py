@@ -67,6 +67,7 @@ exclude_patterns.append('_templates')
 # This is added to the end of RST files - a good place to put substitutions to
 # be used globally.
 rst_epilog += """
+.. |thejoker| replace:: *The Joker*
 """
 
 # Add h5py to intersphinx mapping
@@ -92,6 +93,12 @@ version = package.__version__.split('-', 1)[0]
 # The full version, including alpha/beta/rc tags.
 release = package.__version__
 
+# Use astropy plot style
+from astropy.visualization import astropy_mpl_docs_style
+plot_rcparams = astropy_mpl_docs_style
+plot_rcparams['figure.figsize'] = (8,6)
+plot_apply_rcparams = True
+plot_formats = [('png', 512)]
 
 # -- Options for HTML output --------------------------------------------------
 

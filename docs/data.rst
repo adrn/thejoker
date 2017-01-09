@@ -1,8 +1,13 @@
-*********************************
-Working with radial velocity data
-*********************************
+***************************************************
+Working with radial velocity data (`thejoker.data`)
+***************************************************
 
-`thejoker` provides a class for storing and passing around radial velocity
+.. currentmodule:: thejoker.data
+
+Introduction
+============
+
+|thejoker| provides a class for storing and passing around radial velocity
 measurements for individual targets.
 
 TODO: note that default behavior is to subtract out minimum time, so phi0 will
