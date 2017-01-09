@@ -97,7 +97,10 @@ class SimulatedRVOrbit(object):
                               omega=self.omega.to(u.radian).value,
                               phi0=self.phi0.to(u.radian).value)
 
-        v_trend = self.trend(_t).to(u.m/u.s).value
+        if self.trend is not None:
+            v_trend = self.trend(_t).to(u.m/u.s).value
+        else:
+            v_trend = 0.
 
         return rv + v_trend
 

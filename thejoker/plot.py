@@ -76,6 +76,7 @@ def plot_rv_curves(samples, t_grid, n_plot=128, rv_unit=None, data=None,
         this_samples = dict()
         for k in samples.keys():
             this_samples[k] = samples[k][i]
+        this_samples.pop('jitter')
 
         orbit = SimulatedRVOrbit(**this_samples)
         model_rv[i] = orbit.generate_rv_curve(t_grid).to(rv_unit).value

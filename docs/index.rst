@@ -104,9 +104,10 @@ visualize orbits computed from these posterior samples:
     >>> ax.set_ylim(0.75, 3.) # doctest: +SKIP
     >>> ax.scatter(61.942, 1.3959, marker='o', color='#31a354', zorder=-100) # doctest: +SKIP
 
+..    :width: 512
+
 .. plot::
     :align: center
-    :width: 512
 
     from thejoker.data import RVData
     from thejoker.sampler import JokerParams, TheJoker
@@ -142,9 +143,7 @@ visualize orbits computed from these posterior samples:
 Of the 65536 prior samples we considered, only a handful pass the rejection
 sampling step of |thejoker|. But even with the few samples returned, we can see
 that the period distribution is highly multi-modal. Let's visualize orbits
-computed from these posterior samples over the data:
-
-plot_rv_curves(samples, t_grid, n_plot=128, rv_unit=None, data=None,
+computed from these posterior samples over the data.
 
 .. rubric:: Footnotes
 

@@ -13,6 +13,7 @@ except:
 
 # Package
 from ..celestialmechanics_class import SimulatedRVOrbit
+from ..trends import PolynomialVelocityTrend
 
 pars = dict(P=30.*u.day, K=100.*u.m/u.s, ecc=0.11239,
             omega=0.*u.radian, phi0=0.25524*u.radian)
@@ -31,6 +32,17 @@ def test_init_simulatedrvorbit():
     # get pericenter time - check something?!
     orbit = SimulatedRVOrbit(**pars)
     orbit.t0(Time.now().tcb.mjd).tcb.mjd
+
+    # with trend
+    # trend = PolynomialVelocityTrend(coeffs=[100.*u.km/u.s, 1*u.km/u.s/u.day])
+    trend = PolynomialVelocityTrend(coeffs=[100.*u.km/u.s, 1E-3*u.km/u.s/u.day])
+    orbit1 = SimulatedRVOrbit(trend=trend, **pars)
+    orbit2 = SimulatedRVOrbit(v0=100.*u.km/u.s, v1=1E-3*u.km/u.s/u.day, **pars)
+
+    t = np.linspace(0, 100., 128)
+    rv1 = orbit1.generate_rv_curve(t)
+    rv2 = orbit2.generate_rv_curve(t)
+    assert quantity_allclose(rv1, rv2)
 
 @pytest.mark.skipif(not HAS_MPL, reason="matplotlib not installed")
 def test_plotting():
