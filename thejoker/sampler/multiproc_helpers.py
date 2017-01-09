@@ -147,7 +147,7 @@ def _sample_vector_worker(task):
                 omega += np.pi
                 omega = omega % (2*np.pi) # HACK: I think this is safe
 
-            pars[j] = [P, ecc, omega, phi0, s, K] + v_terms
+            pars[j] = [P, phi0, ecc, omega, s, K] + v_terms
 
     return pars
 

@@ -93,6 +93,12 @@ def save_prior_samples(f, samples, rv_unit):
     rv_unit : `~astropy.units.UnitBase`
         The radial velocity data unit.
 
+    Returns
+    -------
+    units : list
+        A list of `~astropy.units.UnitBase` objects specifying the
+        units for each column.
+
     """
 
     packed_samples, units = pack_prior_samples(samples, rv_unit)
@@ -107,8 +113,27 @@ def save_prior_samples(f, samples, rv_unit):
         f.attrs['units'] = np.array([str(x) for x in units]).astype('|S6')
         f['samples'] = packed_samples
 
-def unpack_full_samples():
-    pass
+def unpack_full_samples(samples, prior_units, joker_params):
+    """
+    """
+    sample_dict = dict()
+
+    n,n_params = samples.shape
+
+    # TODO: need to keep track of this elsewhere...
+    nonlin_params = ['P', 'phi0', 'ecc', 'omega', 'jitter']
+    for k,key in enumerate(nonlin_params):
+        sample_dict[key] = samples[:,k] * prior_units[k]
+
+    k += 1
+    sample_dict['K'] = samples[:,k] * prior_units[-1] # jitter unit
+
+    # TODO: broken API compared to other trend shite...
+    for j in range(joker_params.rv_trend.n_terms):
+        k += j
+        sample_dict['v{}'.format(j)] = samples[:,k] * prior_units[-1] / u.day**j
+
+    return sample_dict
 
 # def quantity_from_hdf5(f, key, n=None):
 #     """

@@ -1,10 +1,10 @@
 # Standard library
-import os
 import sys
 import tempfile
 
 # Third-party
 import astropy.units as u
+import h5py
 import numpy as np
 
 # Project
@@ -12,7 +12,7 @@ from ..log import log
 from ..data import RVData
 from .params import JokerParams
 from .multiproc_helpers import get_good_sample_indices, sample_indices_to_full_samples
-from .io import save_prior_samples
+from .io import save_prior_samples, unpack_full_samples
 
 class TheJoker(object):
     """
@@ -160,18 +160,19 @@ class TheJoker(object):
                              "experimental adaptive method, try .rejection_sample_adapt()")
 
         if prior_cache_file is not None:
+            # read prior units from cache file
+            with h5py.File(prior_cache_file, 'r') as f:
+                prior_units = [u.Unit(uu) for uu in f.attrs['units']]
             samples = self._rejection_sample_from_cache(data, n_prior_samples, prior_cache_file)
 
         else:
             with tempfile.NamedTemporaryFile(mode='r+') as f:
                 # first do prior sampling, cache to file
                 prior_samples = self.sample_prior(size=n_prior_samples)
-                save_prior_samples(f.name, self.data, prior_samples)
+                prior_units = save_prior_samples(f.name, prior_samples, self.data.rv.unit)
                 samples = self._rejection_sample_from_cache(data, n_prior_samples, f.name)
 
-        # TODO: unpack samples into some object... maybe a JokerSamples object?
-
-        return samples
+        return unpack_full_samples(samples, prior_units, self.params)
 
     # def rejection_sample_adapt(self, data, min_n, prior_chunk_size=1024, max_prior_samples=2**24,
     #                            prior_cache_file=None):

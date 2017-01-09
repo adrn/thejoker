@@ -51,7 +51,7 @@ class JokerParams(object):
     def __init__(self, P_min, P_max, trends=None, jitter=None, jitter_unit=None):
 
         # the names of the default parameters
-        self.default_params = ['P', 'K', 'ecc', 'omega', 'phi0']
+        self.default_params = ['P', 'phi0', 'ecc', 'omega', 'jitter', 'K']
 
         self.P_min = P_min
         self.P_max = P_max
@@ -111,7 +111,8 @@ class JokerParams(object):
     @property
     def num_params(self):
         n = len(self.default_params)
-        n += self._fixed_jitter
+        if self._fixed_jitter:
+            n -= 1
         n += sum([trend.n_terms for trend in self.trends])
         return n
 
