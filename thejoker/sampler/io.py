@@ -5,7 +5,7 @@ from collections import OrderedDict
 import astropy.units as u
 import numpy as np
 
-__all__ = ['pack_prior_samples', 'save_prior_samples'] #, 'quantity_from_hdf5', 'quantity_to_hdf5']
+__all__ = ['pack_prior_samples', 'save_prior_samples'] # 'quantity_from_hdf5', 'quantity_to_hdf5']
 
 # These units are required by the celestial mechanics code and the order
 #   is required for the likelihood code
@@ -18,10 +18,36 @@ _name_to_unit['omega'] = u.radian
 # TODO: make data 2nd argument. Could just pass in units instead of full data object. In
 # pack/unpack full_samples, also need joker_params because of trend
 
-def pack_prior_samples(data, samples):
+def pack_prior_samples(samples, rv_unit):
     """
     Pack a dictionary of prior samples as Astropy Quantity
-    objects into a single 2D array.
+    objects into a single 2D array. The prior samples dictionary
+    must contain keys for:
+
+        - ``P``, period
+        - ``phi0``, phase at t=0
+        - ``ecc``, eccentricity
+        - ``omega``, argument of periastron
+        - ``jitter``, velocity jitter (optional)
+
+    Parameters
+    ----------
+    samples : dict
+        A dictionary of prior samples as `~astropy.units.Quantity`
+        objects.
+    rv_unit : `~astropy.units.UnitBase`
+        The radial velocity data unit.
+
+    Returns
+    -------
+    arr_samples : `numpy.ndarray`
+        An array of ``n`` prior samples with shape ``(n, 5)``. If
+        jitter was not passed in, all jitter values will be
+        automatically set to 0.
+    units : list
+        A list of `~astropy.units.UnitBase` objects specifying the
+        units for each column.
+
     """
 
     arrs = []
@@ -38,18 +64,38 @@ def pack_prior_samples(data, samples):
         jitter = np.zeros_like(arrs[0])
 
     else:
-        jitter = samples['jitter'].to(data.rv.unit).value
+        jitter = samples['jitter'].to(rv_unit).value
     arrs.append(jitter)
-    units.append(data.rv.unit)
+    units.append(rv_unit)
 
     return np.vstack(arrs).T, units
 
-def save_prior_samples(f, data, samples):
+def save_prior_samples(f, samples, rv_unit):
     """
-    TODO:
+    Save a dictionary of Astropy Quantity prior samples to
+    an HDF5 file in a format expected and used by
+    `thejoker.sampler.TheJoker`. The prior samples dictionary
+    must contain keys for:
+
+        - ``P``, period
+        - ``phi0``, phase at t=0
+        - ``ecc``, eccentricity
+        - ``omega``, argument of periastron
+        - ``jitter``, velocity jitter (optional)
+
+    Parameters
+    ----------
+    f : str, :class:`h5py.File`, :class:`h5py.Group`, :class:`h5py.DataSet`
+        A string filename, or an instantiated `h5py` class.
+    samples : dict
+        A dictionary of prior samples as `~astropy.units.Quantity`
+        objects.
+    rv_unit : `~astropy.units.UnitBase`
+        The radial velocity data unit.
+
     """
 
-    packed_samples, units = pack_prior_samples(data, samples)
+    packed_samples, units = pack_prior_samples(samples, rv_unit)
 
     if isinstance(f, str):
         import h5py

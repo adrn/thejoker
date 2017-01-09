@@ -27,26 +27,26 @@ class TestIO(object):
     def test_pack_prior_samples(self):
         samples = self.samples.copy()
 
-        M,units = pack_prior_samples(self.data, samples)
+        M,units = pack_prior_samples(samples, self.data.rv.unit)
         assert units[-1] == u.km/u.s
         assert M.shape == (self.n, 5)
 
         samples.pop('jitter')
         assert 'jitter' not in samples
-        M,units = pack_prior_samples(self.data, samples)
+        M,units = pack_prior_samples(samples, self.data.rv.unit)
         assert units[-1] == u.km/u.s
         assert M.shape == (self.n, 5)
 
     def test_save_prior_samples(self, tmpdir):
 
         path = str(tmpdir.join('io-test1.hdf5'))
-        save_prior_samples(path, self.data, self.samples)
+        save_prior_samples(path, self.samples, self.data.rv.unit)
         with h5py.File(path, 'r') as f:
             assert f['samples'][:].shape == (self.n, 5)
 
         path = str(tmpdir.join('io-test2.hdf5'))
         with h5py.File(path, 'w') as f:
-            save_prior_samples(f, self.data, self.samples)
+            save_prior_samples(f, self.samples, self.data.rv.unit)
 
         with h5py.File(path, 'r') as f:
             assert f['samples'][:].shape == (self.n, 5)
