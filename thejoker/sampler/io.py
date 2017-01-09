@@ -15,6 +15,9 @@ _name_to_unit['phi0'] = u.radian
 _name_to_unit['ecc'] = u.one
 _name_to_unit['omega'] = u.radian
 
+# TODO: make data 2nd argument. Could just pass in units instead of full data object. In
+# pack/unpack full_samples, also need joker_params because of trend
+
 def pack_prior_samples(data, samples):
     """
     Pack a dictionary of prior samples as Astropy Quantity
@@ -57,6 +60,9 @@ def save_prior_samples(f, data, samples):
     else:
         f.attrs['units'] = np.array([str(x) for x in units]).astype('|S6')
         f['samples'] = packed_samples
+
+def unpack_full_samples():
+    pass
 
 # def quantity_from_hdf5(f, key, n=None):
 #     """
