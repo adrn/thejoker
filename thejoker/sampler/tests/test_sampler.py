@@ -60,3 +60,15 @@ class TestSampler(object):
 
         for key in samples1.keys():
             assert quantity_allclose(samples1[key], samples2[key])
+
+    def test_rejection_sample(self):
+
+        rnd = np.random.RandomState(42)
+
+        data = self.data['binary']
+        joker = TheJoker(self.joker_params['binary'], random_state=rnd)
+
+        with pytest.raises(ValueError):
+            joker.rejection_sample(data)
+
+        joker.rejection_sample(data, n_prior_samples=128)

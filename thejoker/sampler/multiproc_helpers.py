@@ -121,12 +121,12 @@ def _sample_vector_worker(task):
 
     if global_seed is not None:
         seed = int("{}{}".format(global_seed, chunk_index))
+        rnd = np.random.RandomState(seed)
+        log.debug("worker with chunk {} has seed {}".format(idx[0], seed))
 
     else:
-        seed = idx[0]
-
-    rnd = np.random.RandomState(seed)
-    log.debug("worker with chunk {} has seed {}".format(idx[0], seed))
+        rnd = np.random.RandomState()
+        log.debug("worker with chunk {} not seeded")
 
     pars = np.zeros((n_chunk, joker_params.num_params))
     with h5py.File(prior_cache_file, 'r') as f:

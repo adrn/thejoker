@@ -44,6 +44,8 @@ class TestMultiproc(object):
         jitter = np.zeros(n)
         samples = np.vstack((P,phi0,ecc,omega,jitter)).T
 
+        # TODO: use save_prior_samples here
+
         with h5py.File(prior_samples_file) as f:
             f['samples'] = samples
 
