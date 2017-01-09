@@ -1,3 +1,5 @@
+.. _random-numbers:
+
 **************
 Random numbers
 **************

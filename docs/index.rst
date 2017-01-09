@@ -104,10 +104,9 @@ visualize orbits computed from these posterior samples:
     >>> ax.set_ylim(0.75, 3.) # doctest: +SKIP
     >>> ax.scatter(61.942, 1.3959, marker='o', color='#31a354', zorder=-100) # doctest: +SKIP
 
-..    :width: 512
-
 .. plot::
     :align: center
+    :width: 512
 
     from thejoker.data import RVData
     from thejoker.sampler import JokerParams, TheJoker
@@ -124,7 +123,7 @@ visualize orbits computed from these posterior samples:
     pool = schwimmbad.MultiPool()
     joker = TheJoker(params, pool=pool)
 
-    samples = joker.rejection_sample(data, n_prior_samples=128)
+    samples = joker.rejection_sample(data, n_prior_samples=65536)
 
     fig, ax = plt.subplots(1, 1, figsize=(6,6)) # doctest: +SKIP
     ax.scatter(samples['P'].value, samples['K'].to(u.km/u.s).value,
@@ -137,13 +136,10 @@ visualize orbits computed from these posterior samples:
     ax.scatter(61.942, 1.3959, marker='o', color='#31a354', zorder=-100)
 
     fig, ax = plt.subplots(1, 1, figsize=(8,5)) # doctest: +SKIP
-    t_grid = np.linspace(0, 200, 1024)
-    plot_rv_curves(samples, t_grid, rv_unit=u.km/u.s, data=data, ax=ax)
-
-Of the 65536 prior samples we considered, only a handful pass the rejection
-sampling step of |thejoker|. But even with the few samples returned, we can see
-that the period distribution is highly multi-modal. Let's visualize orbits
-computed from these posterior samples over the data.
+    t_grid = np.linspace(-10, 210, 1024)
+    plot_rv_curves(samples, t_grid, rv_unit=u.km/u.s, data=data, ax=ax,
+                   plot_kwargs=dict(color='#888888'))
+    ax.set_xlim(-5, 205)
 
 .. rubric:: Footnotes
 

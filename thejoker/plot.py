@@ -13,7 +13,7 @@ __all__ = ['plot_rv_curves']
 _truth_color = '#006837'
 _prev_result_color = '#2166AC'
 
-def plot_rv_curves(samples, t_grid, n_plot=128, rv_unit=None, data=None,
+def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
                    ax=None, plot_kwargs=dict(), data_plot_kwargs=dict(),
                    add_labels=True):
     """
@@ -55,6 +55,9 @@ def plot_rv_curves(samples, t_grid, n_plot=128, rv_unit=None, data=None,
 
     if isinstance(t_grid, atime.Time):
         t_grid = t_grid.tcb.mjd
+
+    if n_plot is None:
+        n_plot = len(samples['P'])
 
     # scale the transparency of the lines
     Q = 4. # HACK
