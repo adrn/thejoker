@@ -5,14 +5,21 @@ Install
 From source
 ===========
 
-To install from source, you'll need to clone the repository or download a zip of
-the latest code from the `GitHub page <https://github.com/adrn/thejoker>`_.
+You can install The Joker using pip by doing:
+
+.. code-block:: bash
+
+    pip install git+https://github.com/adrn/thejoker.git
 
 We recommend installing The Joker into a new `Anaconda environment
-<http://conda.pydata.org/docs/using/envs.html>`_. You can use the provided
+<http://conda.pydata.org/docs/using/envs.html>`_.
+
+Alternatively, you can clone the repo (or download a zip of the latest code from
+the `GitHub page <https://github.com/adrn/thejoker>`_) and use the provided
 `environment.yml <https://github.com/adrn/thejoker/>`_ file to create a new
 environment for The Joker that is set up with all of the dependencies installed.
-In the top-level directory of the cloned repository, do
+To install in a new ``conda`` environment, change to the top-level directory of
+the cloned repository, and run:
 
 .. code-block:: bash
 
