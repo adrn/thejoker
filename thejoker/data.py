@@ -4,7 +4,7 @@ import astropy.units as u
 import numpy as np
 
 # Project
-from .log import log
+from .log import log as logger
 
 __all__ = ['RVData']
 
@@ -82,7 +82,7 @@ class RVData(object):
             idx &= np.isfinite(self.ivar) & (self.ivar.value > 0)
 
         if idx.sum() < len(self.rv):
-            log.info("Filtering {} NaN/Inf data points".format(len(self.rv) - idx.sum()))
+            logger.info("Filtering {} NaN/Inf data points".format(len(self.rv) - idx.sum()))
 
         self._t_bmjd = self._t_bmjd[idx]
         self.rv = self.rv[idx]

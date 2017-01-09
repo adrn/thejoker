@@ -12,7 +12,6 @@ Issues
 - Should I permit inputs of sin and cos instead of just angles?
 
 """
-from __future__ import division
 
 # Standard-library
 import warnings

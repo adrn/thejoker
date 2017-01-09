@@ -17,8 +17,8 @@ class JokerParams(object):
         Lower bound on prior over period, the smallest period considered.
     P_max : `astropy.units.Quantity` [time]
         Upper bound on prior over period, the largest period considered.
-    trends : iterable (optional)
-        A list of `~thejoker.TODO.PolynomialVelocityTrend` instances.
+    trend : `~thejoker.celestialmechanics.trends.VelocityTrend`
+        The long-term velocity trend.
     jitter : `~astropy.units.Quantity` [speed], tuple (optional)
         Represents additional Gaussian noise in the RV signal. Default
         is to fix the value of the jitter to 0. To fix the jitter to a
@@ -48,7 +48,7 @@ class JokerParams(object):
 
     """
     @u.quantity_input(P_min=u.day, P_max=u.day)
-    def __init__(self, P_min, P_max, trends=None, jitter=None, jitter_unit=None):
+    def __init__(self, P_min, P_max, trend=None, jitter=None, jitter_unit=None):
 
         # the names of the default parameters
         self.default_params = ['P', 'phi0', 'ecc', 'omega', 'jitter', 'K']
@@ -57,31 +57,15 @@ class JokerParams(object):
         self.P_max = P_max
 
         # validate the specified long-term velocity trends
-        if trends is None:
-            trends = []
-            trends.append(PolynomialVelocityTrend(n_terms=1))
+        if trend is None:
+            trend = PolynomialVelocityTrend(n_terms=1) # default is constant offset
 
-        elif not isiterable(trends):
-            trends = [trends]
+        # TODO: we may want to allow more general trends in the future, but for now...
+        if not isinstance(trend, PolynomialVelocityTrend):
+            raise TypeError("Velocity trends must be PolynomialVelocityTrend "
+                            "instances, not '{}'".format(type(trend)))
 
-        if len(trends) > 1:
-            # TODO: need to implement having different velocity trends for parts of the
-            #       time series. Need to modify design_matrix() be a lot bigger, with zero'd
-            #       out rows for each trend.
-            # TODO: marginalization then has to happen piece-wise?!
-            raise NotImplementedError("Sorry, right now only global velocity trends "
-                                      "are implemented!")
-
-        # TODO: check somewhere (maybe in TheJoker.sample()) that the sum is equal to data length
-        # data_mask_tot = 0
-        # data_mask_tot += trend.mask.sum()
-        for trend in trends:
-            # TODO: we may want to allow more general trends in the future, but for now...
-            if not isinstance(trend, PolynomialVelocityTrend):
-                raise TypeError("Velocity trends must be PolynomialVelocityTrend "
-                                "instances, not '{}'".format(type(trend)))
-
-        self.trends = trends
+        self.trend = trend
 
         # validate the input jitter specification
         if jitter is None:
@@ -111,9 +95,7 @@ class JokerParams(object):
     @property
     def num_params(self):
         n = len(self.default_params)
-        if self._fixed_jitter:
-            n -= 1
-        n += sum([trend.n_terms for trend in self.trends])
+        n += self.trend.n_terms
         return n
 
     # --- All old shit below here that needs to be moved ---

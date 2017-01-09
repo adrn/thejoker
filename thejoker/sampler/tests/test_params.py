@@ -1,7 +1,5 @@
 # Third-party
-from astropy import log as logger
 import astropy.units as u
-import numpy as np
 import pytest
 
 # Project
@@ -10,12 +8,12 @@ from ..params import JokerParams
 def test_init():
 
     pars = JokerParams(P_min=8.*u.day, P_max=8192*u.day)
-    assert len(pars.trends) == 1
+    assert pars.trend.n_terms == 1
     assert pars.jitter.value == 0
 
     # test invalid input
     with pytest.raises(TypeError):
-        pars = JokerParams(P_min=8.*u.day, P_max=8192*u.day, trends=["derp"])
+        pars = JokerParams(P_min=8.*u.day, P_max=8192*u.day, trend="derp")
 
     with pytest.raises(ValueError):
         pars = JokerParams(P_min=8.*u.day, P_max=8192*u.day, jitter="derp")

@@ -1,9 +1,11 @@
 # Third-party
 import astropy.time as atime
-from astropy import log as logger
 import astropy.units as u
 import matplotlib.pyplot as plt
 import numpy as np
+
+# Package
+from .log import log as logger
 
 __all__ = ['plot_rv_curves']
 

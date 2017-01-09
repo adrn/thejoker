@@ -8,7 +8,7 @@ import h5py
 import numpy as np
 
 # Project
-from ..log import log
+from ..log import log as logger
 from ..data import RVData
 from .params import JokerParams
 from .multiproc_helpers import get_good_sample_indices, sample_indices_to_full_samples
@@ -105,6 +105,9 @@ class TheJoker(object):
             log_s2 = rnd.normal(*self.params.jitter, size=size)
             pars['jitter'] = np.sqrt(np.exp(log_s2)) * self.params._jitter_unit
 
+        else:
+            pars['jitter'] = np.ones(size) * self.params.jitter
+
         return pars
 
     def _rejection_sample_from_cache(self, data, n_prior_samples, cache_file):
@@ -119,12 +122,12 @@ class TheJoker(object):
         good_samples_idx = get_good_sample_indices(n_prior_samples, cache_file, data,
                                                    self.params, pool=self.pool)
         if len(good_samples_idx) == 0:
-            log.error("Failed to find any good samples!")
+            logger.error("Failed to find any good samples!")
             self.pool.close()
             sys.exit(0)
 
         n_good = len(good_samples_idx)
-        log.info("{} good samples after rejection sampling".format(n_good))
+        logger.info("{} good samples after rejection sampling".format(n_good))
 
         # compute full parameter vectors for all good samples
         if self._rnd_passed:

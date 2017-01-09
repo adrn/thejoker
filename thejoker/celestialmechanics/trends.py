@@ -2,11 +2,6 @@
 import astropy.units as u
 import numpy as np
 
-"""
-TODO: what about having one trend object instead of passing around a list,
-but for more complicated cases have a PiecewisePolynomialVelocityTrend()?
-"""
-
 class VelocityTrend(object):
     pass
 
@@ -21,10 +16,6 @@ class PolynomialVelocityTrend(VelocityTrend):
     evaluate a polynomial trend at times, in which case the coefficient
     values should be passed in, ``coeffs``.
 
-    This class can also represent different, independent sections of the
-    data to handle, e.g., calibration offsets between epochs. See the
-    ``data_mask`` argument documentation below for more info.
-
     Parameters
     ----------
     n_terms : int (optional, see note)
@@ -33,16 +24,13 @@ class PolynomialVelocityTrend(VelocityTrend):
         The coefficients of the polynomial. The power is the index of
         the coefficient, so the 0th coefficient is the constant, the
         1st coefficient is the linear term, etc.
-    data_mask : callable (optional)
-        A function or callable that accepts an array of times and returns
-        a boolean array that masks values to ignore.
 
     TODO
     ----
-    - I think we need to have a reference epoch in here...
+    - We could add support for a reference epoch (other than mjd=0) in here...
 
     """
-    def __init__(self, n_terms=None, coeffs=None, data_mask=None):
+    def __init__(self, n_terms=None, coeffs=None):
 
         if n_terms is None and coeffs is None:
             raise ValueError("You must specify either n_terms or coeffs.")
@@ -73,21 +61,7 @@ class PolynomialVelocityTrend(VelocityTrend):
         else:
             self.n_terms = int(n_terms)
 
-        # validate input data mask
-        # HACK TODO: disabled for now
-        if data_mask is not None:
-            raise NotImplementedError("Sorry!")
-
-        if data_mask is None:
-            data_mask = lambda x: np.ones_like(x).astype(bool)
-
-        if not callable(data_mask):
-            raise TypeError("Invalid input for data mask. Must either be an "
-                            "array mask, or a callable that returns an array.")
-        self.data_mask = data_mask
-
     def __call__(self, t):
-        # TODO: use data_mask!
         if self.coeffs is None:
             raise ValueError("To evaluate the trend, you must have supplied coefficient "
                              "values at creation.")
@@ -99,6 +73,12 @@ class PolynomialVelocityTrend(VelocityTrend):
         if t.unit.physical_type != 'time':
             raise u.UnitsError("Input time(s) must be a Quantity with time units!")
 
-        # TODO: OMG WTF is this shit
         A = np.vander(t.to(u.day).value, N=self.n_terms, increasing=True)
         return sum([A[:,i]*u.day**i * self.coeffs[i] for i in range(A.shape[1])])
+
+class PiecewisePolynomialVelocityTrend(VelocityTrend):
+    # TODO:
+    # This class can also represent different, independent sections of the
+    # data to handle, e.g., calibration offsets between epochs. See the
+    # ``data_mask`` argument documentation below for more info.
+    pass

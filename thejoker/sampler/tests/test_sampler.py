@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 # Package
+from ..params import JokerParams
 from ..sampler import TheJoker
 from .helpers import FakeData
 
@@ -72,3 +73,14 @@ class TestSampler(object):
             joker.rejection_sample(data)
 
         joker.rejection_sample(data, n_prior_samples=128)
+
+        # check that jitter is always set to the fixed value
+        jitter = 5.*u.m/u.s
+        params = JokerParams(P_min=8*u.day, P_max=1024*u.day, jitter=jitter)
+        joker = TheJoker(params)
+
+        prior_samples = joker.sample_prior(128)
+        assert quantity_allclose(prior_samples['jitter'], jitter)
+
+        full_samples = joker.rejection_sample(data, n_prior_samples=128)
+        assert quantity_allclose(full_samples['jitter'], jitter)

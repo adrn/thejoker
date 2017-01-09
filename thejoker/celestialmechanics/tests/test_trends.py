@@ -24,6 +24,10 @@ def test_polynomial():
     with pytest.raises(u.UnitsError):
         PolynomialVelocityTrend(coeffs=[10.*u.km/u.s, 1.*u.km/u.s])
 
+    # valid even when n_terms = 0
+    trend = PolynomialVelocityTrend(n_terms=0)
+    assert trend.n_terms == 0
+
     # can't evaluate trend with no coeffs
     trend = PolynomialVelocityTrend(n_terms=2)
     with pytest.raises(ValueError):
@@ -35,10 +39,5 @@ def test_polynomial():
 
     with pytest.raises(u.UnitsError):
         trend(np.random.uniform(15., 23., 128)*u.km)
-
-    # TODO: for now
-    with pytest.raises(NotImplementedError):
-        PolynomialVelocityTrend(coeffs=[10.*u.km/u.s, 1.*u.km/u.s/u.day],
-                                data_mask=lambda x: x)
 
 

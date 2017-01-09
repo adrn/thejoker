@@ -1,10 +1,10 @@
 # Third-party
-from astropy import log as logger
 import numpy as np
 
 # Package
 from ..celestialmechanics import rv_from_elements
 from .utils import get_ivar
+from ..log import log as logger
 
 __all__ = ['design_matrix', 'tensor_vector_scalar', 'marginal_ln_likelihood']
 
@@ -39,7 +39,7 @@ def design_matrix(nonlinear_p, data, joker_params):
                             omega=omega, phi0=phi0-dphi)
 
     # TODO: right now, we only support a single, global velocity trend!
-    A1 = np.vander(t, N=joker_params.trends[0].n_terms, increasing=True)
+    A1 = np.vander(t, N=joker_params.trend.n_terms, increasing=True)
     A = np.hstack((zdot[:,None], A1))
 
     return A

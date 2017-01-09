@@ -49,7 +49,7 @@ class FakeData(object):
         err = np.full_like(rv.value, 0.01) * u.km/u.s
         self.data['triple'] = RVData(mjd, rv, stddev=err, t_offset=mjd.min())
         self.joker_params['triple'] = JokerParams(P_min=8*u.day, P_max=1024*u.day,
-                                                  trends=PolynomialVelocityTrend(n_terms=2))
+                                                  trend=PolynomialVelocityTrend(n_terms=2))
         self.truths['triple'] = truth.copy()
 
         # Binary on circular orbit

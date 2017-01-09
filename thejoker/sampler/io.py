@@ -15,9 +15,6 @@ _name_to_unit['phi0'] = u.radian
 _name_to_unit['ecc'] = u.one
 _name_to_unit['omega'] = u.radian
 
-# TODO: make data 2nd argument. Could just pass in units instead of full data object. In
-# pack/unpack full_samples, also need joker_params because of trend
-
 def pack_prior_samples(samples, rv_unit):
     """
     Pack a dictionary of prior samples as Astropy Quantity
@@ -113,6 +110,8 @@ def save_prior_samples(f, samples, rv_unit):
         f.attrs['units'] = np.array([str(x) for x in units]).astype('|S6')
         f['samples'] = packed_samples
 
+    return units
+
 def unpack_full_samples(samples, prior_units, joker_params):
     """
     """
@@ -128,8 +127,7 @@ def unpack_full_samples(samples, prior_units, joker_params):
     k += 1
     sample_dict['K'] = samples[:,k] * prior_units[-1] # jitter unit
 
-    # TODO: broken API compared to other trend shite...
-    for j in range(joker_params.rv_trend.n_terms):
+    for j in range(joker_params.trend.n_terms):
         k += j
         sample_dict['v{}'.format(j)] = samples[:,k] * prior_units[-1] / u.day**j
 
