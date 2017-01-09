@@ -31,12 +31,12 @@ def design_matrix(nonlinear_p, data, joker_params):
     """
     P, phi0, ecc, omega = nonlinear_p[:4] # we don't need the jitter here
 
-    t = data._t_bmjd
     t_offset = data.t_offset
+    t = data._t_bmjd
+    dphi = (2*np.pi*t_offset/P) % (2*np.pi)
 
-    print(t+t_offset)
-    zdot = rv_from_elements(times=t+t_offset, P=P, K=1., e=ecc,
-                            omega=omega, phi0=phi0)
+    zdot = rv_from_elements(times=t, P=P, K=1., e=ecc,
+                            omega=omega, phi0=phi0-dphi)
 
     # TODO: right now, we only support a single, global velocity trend!
     A1 = np.vander(t, N=joker_params.trends[0].n_terms, increasing=True)
@@ -85,8 +85,8 @@ def tensor_vector_scalar(A, ivar, y):
     # Note: this is unstable! if cond num is high, could do:
     # p,*_ = np.linalg.lstsq(A, y)
     p = np.linalg.solve(ATCinvA, ATCinv.dot(y))
-
     dy = A.dot(p) - y
+
     chi2 = np.sum(dy**2 * ivar) # don't need log term for the jitter b.c. in likelihood below
 
     return ATCinvA, p, chi2

@@ -15,17 +15,20 @@ class FakeData(object):
     def __init__(self, seed=42):
         np.random.seed(seed)
 
-        EPOCH = np.random.uniform(55000., 57000)
+        EPOCH = np.random.uniform(0., 40)
 
         self.data = OrderedDict()
         self.joker_params = OrderedDict()
         self.truths = OrderedDict()
 
-        mjd = np.linspace(0, 300., 128) + EPOCH
+        P = np.random.uniform(40, 80) * u.day
+
+        mjd = np.random.uniform(0, 300., 8)
+        _genmjd = mjd + (EPOCH % P.value)
 
         # First just a binary
         truth = dict()
-        truth['P'] = np.random.uniform(40, 80) * u.day
+        truth['P'] = P
         truth['K'] = np.random.uniform(5, 15) * u.km/u.s
         truth['phi0'] = np.random.uniform(0., 2*np.pi) * u.radian
         truth['omega'] = np.random.uniform(0., 2*np.pi) * u.radian
@@ -48,3 +51,18 @@ class FakeData(object):
         self.joker_params['triple'] = JokerParams(P_min=8*u.day, P_max=1024*u.day,
                                                   trends=PolynomialVelocityTrend(n_terms=2))
         self.truths['triple'] = truth.copy()
+
+        # Binary on circular orbit
+        truth = dict()
+        truth['P'] = P
+        truth['K'] = np.random.uniform(5, 15) * u.km/u.s
+        truth['phi0'] = np.random.uniform(0., 2*np.pi) * u.radian
+        truth['omega'] = 0*u.radian
+        truth['ecc'] = 0.
+
+        orbit = SimulatedRVOrbit(**truth)
+        rv = orbit.generate_rv_curve(_genmjd) + self.v0
+        err = np.full_like(rv.value, 0.1) * u.km/u.s
+        self.data['circ_binary'] = RVData(mjd+EPOCH, rv, stddev=err)
+        self.joker_params['circ_binary'] = JokerParams(P_min=8*u.day, P_max=1024*u.day)
+        self.truths['circ_binary'] = truth.copy()
