@@ -28,6 +28,10 @@ class SimulatedRVOrbit(object):
     omega : `~astropy.units.Quantity` [angle]
         Argument of pericenter.
 
+    TODO
+    ----
+    - This has to include the trend...
+
     """
     @u.quantity_input(P=u.day, K=u.km/u.s,
                       phi0=u.radian, omega=u.radian)
