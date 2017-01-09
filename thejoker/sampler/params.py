@@ -1,21 +1,3 @@
-"""
-Could have something like:
-
-    # remember: right now, priors on these terms are assumed to be broad and Gaussian
-    pvt = PolynomialVelocityTrend(n_terms=2) # linear
-    pvt.data_mask = lambda d: d._t_bmjd < 55562.24 # only apply to data before a date
-
-    # todo: marginalization then has to happen piece-wise?!
-
-Future:
-
-- Maybe make NonlinearParameter classes so that even nonlinear parameters can be extended?
-- Parameter class has a .sample_prior() method, .evaluate_prior()??
-- Some parameters are just required, need to be packed -- multiproc_helpers
-    functions just need to unpack/pack smarter?
-
-"""
-
 # Third-party
 from astropy.utils.misc import isiterable
 import astropy.units as u
@@ -86,6 +68,7 @@ class JokerParams(object):
             # TODO: need to implement having different velocity trends for parts of the
             #       time series. Need to modify design_matrix() be a lot bigger, with zero'd
             #       out rows for each trend.
+            # TODO: marginalization then has to happen piece-wise?!
             raise NotImplementedError("Sorry, right now only global velocity trends "
                                       "are implemented!")
 

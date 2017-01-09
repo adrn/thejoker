@@ -82,21 +82,23 @@ class TheJoker(object):
             customizable in some way...
 
         """
+        rnd = self.random_state
+
         pars = dict()
 
         # sample from priors in nonlinear parameters
-        pars['P'] = np.exp(np.random.uniform(np.log(self.params.P_min.to(u.day).value),
-                                             np.log(self.params.P_max.to(u.day).value),
-                                             size=size)) * u.day
-        pars['phi0'] = np.random.uniform(0, 2*np.pi, size=size) * u.radian
+        pars['P'] = np.exp(rnd.uniform(np.log(self.params.P_min.to(u.day).value),
+                                       np.log(self.params.P_max.to(u.day).value),
+                                       size=size)) * u.day
+        pars['phi0'] = rnd.uniform(0, 2*np.pi, size=size) * u.radian
 
         # MAGIC NUMBERS below: Kipping et al. 2013 (MNRAS 434 L51)
-        pars['ecc'] = np.random.beta(a=0.867, b=3.03, size=size)
-        pars['omega'] = np.random.uniform(0, 2*np.pi, size=size) * u.radian
+        pars['ecc'] = rnd.beta(a=0.867, b=3.03, size=size)
+        pars['omega'] = rnd.uniform(0, 2*np.pi, size=size) * u.radian
 
         if not self.params._fixed_jitter:
             # Gaussian prior in log(s^2)
-            log_s2 = np.random.normal(*self.params.jitter, size=size)
+            log_s2 = rnd.normal(*self.params.jitter, size=size)
             pars['jitter'] = np.sqrt(np.exp(log_s2)) * self.params._jitter_unit
 
         return pars
