@@ -5,6 +5,7 @@ import astropy.units as u
 # Project
 from .celestialmechanics import rv_from_elements
 from .utils import get_t0, a1_sini, mf
+from .trends import PolynomialVelocityTrend
 
 __all__ = ['SimulatedRVOrbit']
 
@@ -29,16 +30,28 @@ class SimulatedRVOrbit(object):
         Argument of pericenter.
     trend : TODO
         TODO
-
+    **kwargs
+        TODO
     """
     @u.quantity_input(P=u.day, K=u.km/u.s,
                       phi0=u.radian, omega=u.radian)
-    def __init__(self, P, K, ecc, phi0, omega, trend=None):
+    def __init__(self, P, K, ecc, phi0, omega, trend=None, **kwargs):
         self.P = P
         self.K = K
         self.ecc = float(ecc)
         self.phi0 = phi0
         self.omega = omega
+
+        if 'v0' in kwargs:
+            if trend is not None:
+                raise ValueError("TODO: can't set both")
+
+            coeffs = []
+            for i in range(len(kwargs)):
+                coeffs.append(kwargs['v{}'.format(i)])
+            trend = PolynomialVelocityTrend(coeffs=coeffs)
+            # TODO: test this bullshit magic
+
         self.trend = trend
 
     def t0(self, ref_mjd):
@@ -84,7 +97,9 @@ class SimulatedRVOrbit(object):
                               omega=self.omega.to(u.radian).value,
                               phi0=self.phi0.to(u.radian).value)
 
-        return rv
+        v_trend = self.trend(_t).to(u.m/u.s).value
+
+        return rv + v_trend
 
     def generate_rv_curve(self, t):
         """

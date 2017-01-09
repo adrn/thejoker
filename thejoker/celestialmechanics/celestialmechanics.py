@@ -210,7 +210,8 @@ def rv_from_elements(times, P, K, e, omega, phi0):
     Parameters
     ----------
     times : array_like [day]
-        BJD of observations.
+        Usually: Barycentric MJD of observations. But the epoch (t=0)
+        is arbitrary and up to the user to keep track of.
     p : numeric [day]
         Period.
     K : numeric [m/s]

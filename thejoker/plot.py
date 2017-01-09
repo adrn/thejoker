@@ -6,24 +6,28 @@ import numpy as np
 
 # Package
 from .log import log as logger
+from .celestialmechanics import SimulatedRVOrbit
 
 __all__ = ['plot_rv_curves']
 
 _truth_color = '#006837'
 _prev_result_color = '#2166AC'
 
-def plot_rv_curves(orbital_pars, t_grid, rv_unit=None, data=None,
+def plot_rv_curves(samples, t_grid, n_plot=128, rv_unit=None, data=None,
                    ax=None, plot_kwargs=dict(), data_plot_kwargs=dict(),
                    add_labels=True):
     """
-    Plot radial velocity curves for the input set of orbital parameters
-    over the input grid of times.
+    Plot radial velocity curves for the input set of orbital parameter
+    samples over the input grid of times.
 
     Parameters
     ----------
-    orbital_pars : `~thejoker.celestialmechanics.OrbitalParams`
+    samples : dict
+        TODO describe
     t_grid : array_like, `~astropy.time.Time`
         Array of times. Either in BMJD or as an Astropy time object.
+    n_plot : int (optional)
+        The maximum number of samples to plot. Defaults to 128.
     rv_unit : `~astropy.units.UnitBase` (optional)
         The units to use when plotting RV's.
     data : `~thejoker.data.RVData` (optional)
@@ -49,18 +53,12 @@ def plot_rv_curves(orbital_pars, t_grid, rv_unit=None, data=None,
     else:
         fig = ax.figure
 
-    n_samples = len(orbital_pars)
-
-    if n_samples > 128:
-        logger.warning("Plotting more than 128 radial velocity curves ({}) -- "
-                       "are you sure you want to do this?".format(n_samples))
-
     if isinstance(t_grid, atime.Time):
         t_grid = t_grid.tcb.mjd
 
     # scale the transparency of the lines
     Q = 4. # HACK
-    line_alpha = 0.05 + Q / (n_samples + Q)
+    line_alpha = 0.05 + Q / (n_plot + Q)
 
     if rv_unit is None:
         rv_unit = u.km/u.s
@@ -73,9 +71,13 @@ def plot_rv_curves(orbital_pars, t_grid, rv_unit=None, data=None,
     style.setdefault('color', '#555555')
 
     # plot orbits over the data
-    model_rv = np.zeros((n_samples, len(t_grid)))
-    for i in range(n_samples):
-        orbit = orbital_pars.rv_orbit(i)
+    model_rv = np.zeros((n_plot, len(t_grid)))
+    for i in range(n_plot):
+        this_samples = dict()
+        for k in samples.keys():
+            this_samples[k] = samples[k][i]
+
+        orbit = SimulatedRVOrbit(**this_samples)
         model_rv[i] = orbit.generate_rv_curve(t_grid).to(rv_unit).value
     ax.plot(t_grid, model_rv.T, **style)
 

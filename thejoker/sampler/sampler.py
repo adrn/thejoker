@@ -14,6 +14,8 @@ from .params import JokerParams
 from .multiproc_helpers import get_good_sample_indices, sample_indices_to_full_samples
 from .io import save_prior_samples
 
+__all__ = ['TheJoker']
+
 class TheJoker(object):
     """
     A custom Monte-Carlo sampler for two-body systems.
