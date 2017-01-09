@@ -2,6 +2,11 @@
 import astropy.units as u
 import numpy as np
 
+"""
+TODO: what about having one trend object instead of passing around a list,
+but for more complicated cases have a PiecewisePolynomialVelocityTrend()?
+"""
+
 class VelocityTrend(object):
     pass
 
