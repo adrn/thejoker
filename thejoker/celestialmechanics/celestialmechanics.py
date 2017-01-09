@@ -221,7 +221,7 @@ def rv_from_elements(times, P, K, e, omega, phi0):
     omega : numeric [radian]
         Argument of periastron.
     phi0 : numeric [radian]
-        Phase at periastron.
+        Phase at t=0.
 
     Returns
     -------
@@ -233,9 +233,7 @@ def rv_from_elements(times, P, K, e, omega, phi0):
     - could be made more efficient (there are lots of re-dos of trig calls)
     """
     times = np.array(times)
-    phase = (2 * np.pi * times / P) % (2*np.pi)
-
-    Ms = phase - phi0
+    Ms = (2 * np.pi * times / P) - phi0
 
     Es = eccentric_anomaly_from_mean_anomaly(Ms, e)
     fs = true_anomaly_from_eccentric_anomaly(Es, e)
