@@ -12,6 +12,7 @@ omit =
    {packagename}/*/*/tests/*
    {packagename}/version*
    {packagename}/plot.py
+   {packagename}/log.py
 
 [report]
 exclude_lines =
