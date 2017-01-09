@@ -1,5 +1,3 @@
-from __future__ import division, print_function
-
 def get_ivar(data, s):
     """
     Return a copy of the inverse variance array with jitter included.
