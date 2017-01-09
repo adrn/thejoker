@@ -30,8 +30,8 @@ class TheJoker(object):
         A processing pool (default is a ``schwimmbad.SerialPool`` instance).
     random_state : `numpy.random.RandomState` (optional)
         A ``RandomState`` instance to serve as a parent for the random
-        number generators. See the :ref:`random-numbers` page for more
-        information.
+        number generators. See the :ref:`random numbers <random-numbers>` page
+        for more information.
     """
     def __init__(self, params, pool=None, random_state=None):
 
@@ -210,6 +210,7 @@ class TheJoker(object):
         k += 1
         sample_dict['K'] = samples[:,k] * prior_units[-1] # jitter unit
 
+        k += 1
         for j in range(self.params.trend.n_terms):
             k += j
             sample_dict['v{}'.format(j)] = samples[:,k] * prior_units[-1] / u.day**j
