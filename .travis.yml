@@ -30,9 +30,9 @@ env:
         - ASTROPY_VERSION=stable
         - MAIN_CMD='python setup.py'
         - SETUP_CMD='test'
-        - PIP_DEPENDENCIES='schwimmbad'
+        - PIP_DEPENDENCIES='emcee schwimmbad'
         - CONDA_CHANNELS='astropy-ci-extras astropy'
-        - CONDA_DEPENDENCIES='scipy h5py emcee matplotlib'
+        - CONDA_DEPENDENCIES='scipy h5py matplotlib'
 
         # If there are matplotlib or other GUI tests, uncomment the following
         # line to use the X virtual framebuffer.
@@ -66,10 +66,6 @@ matrix:
         # Try older numpy versions
         - python: 3.5
           env: NUMPY_VERSION=1.10
-
-        # Try numpy pre-release
-        - python: 3.5
-          env: NUMPY_VERSION=prerelease
 
         # Do a PEP8 test with pycodestyle
         - python: 3.5
