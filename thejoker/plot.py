@@ -70,7 +70,7 @@ def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
     style = plot_kwargs.copy()
     style.setdefault('linestyle', '-')
     style.setdefault('alpha', line_alpha)
-    style.setdefault('marker', None)
+    style.setdefault('marker', '')
     style.setdefault('color', '#555555')
 
     # plot orbits over the data
