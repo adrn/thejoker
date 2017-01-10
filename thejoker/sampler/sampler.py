@@ -216,8 +216,8 @@ class TheJoker(object):
             sample_dict['v{}'.format(j)] = samples[:,k] * prior_units[-1] / u.day**j
 
         # convert phi0 from relative to t=data.t_offset to relative to mjd=0
-        dphi = 2*np.pi*self.data.t_offset/sample_dict['P'].to(u.day).value * u.radian
-        sample_dict['phi0'] = sample_dict['phi0'] - dphi
+        dphi = (2*np.pi*self.data.t_offset/sample_dict['P'].to(u.day).value * u.radian) % (2*np.pi*u.radian)
+        sample_dict['phi0'] = (sample_dict['phi0'] + dphi) % (2*np.pi*u.radian)
 
         return sample_dict
 
