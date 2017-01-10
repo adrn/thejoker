@@ -2,24 +2,28 @@
 Installation
 ************
 
-From source
-===========
+We recommend installing The Joker into a new `Anaconda environment
+<http://conda.pydata.org/docs/using/envs.html>`_.
 
-You can install The Joker using pip by doing:
+pip
+===
+
+|thejoker| has not been released as a package on PyPI, but you can still install
+it using pip using the GitHub project link:
 
 .. code-block:: bash
 
     pip install git+https://github.com/adrn/thejoker.git
 
-We recommend installing The Joker into a new `Anaconda environment
-<http://conda.pydata.org/docs/using/envs.html>`_.
+From source
+===========
 
 Alternatively, you can clone the repo (or download a zip of the latest code from
 the `GitHub page <https://github.com/adrn/thejoker>`_) and use the provided
 `environment.yml <https://github.com/adrn/thejoker/>`_ file to create a new
-environment for The Joker that is set up with all of the dependencies installed.
-To install in a new ``conda`` environment, change to the top-level directory of
-the cloned repository, and run:
+environment for |thejoker| that is set up with all of the dependencies
+installed. To install in a new ``conda`` environment, change to the top-level
+directory of the cloned repository, and run:
 
 .. code-block:: bash
 
