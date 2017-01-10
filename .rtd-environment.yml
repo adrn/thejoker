@@ -2,6 +2,7 @@ name: thejoker
 
 channels:
   - astropy
+  - conda-forge
 
 dependencies:
   - python=3
@@ -10,8 +11,12 @@ dependencies:
   - numpy
   - matplotlib
   - scipy
-  - pyyaml
-  - emcee
   - h5py
+  - sphinx>=1.4 # this and next 3 needed for nbsphinx
+  - pandoc
+  - nbconvert
+  - ipykernel
   - pip:
     - schwimmbad
+    - emcee
+    - nbsphinx

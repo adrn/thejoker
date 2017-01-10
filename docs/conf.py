@@ -63,9 +63,13 @@ setup_cfg = dict(conf.items('metadata'))
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 exclude_patterns.append('_templates')
+exclude_patterns.append('**.ipynb_checkpoints')
 
 # This is added to the end of RST files - a good place to put substitutions to
 # be used globally.
+# TODO: swap this once bugfix is in nbsphinx
+#   see: https://github.com/spatialaudio/nbsphinx/issues/38
+# rst_epilog = ""
 rst_epilog += """
 .. |thejoker| replace:: *The Joker*
 """
@@ -94,9 +98,7 @@ version = package.__version__.split('-', 1)[0]
 release = package.__version__
 
 # Use astropy plot style
-from astropy.visualization import astropy_mpl_docs_style
-plot_rcparams = astropy_mpl_docs_style
-plot_rcparams['figure.figsize'] = (8,6)
+plot_rcparams = package.mpl_style
 plot_apply_rcparams = True
 plot_formats = [('png', 512)]
 
@@ -184,3 +186,12 @@ if eval(setup_cfg.get('edit_on_github')):
 # -- Resolving issue number to links in changelog -----------------------------
 github_issues_url = 'https://github.com/{0}/issues/'.format(setup_cfg['github_project'])
 
+# -- Custom --
+
+# add nbsphinx extension
+extensions += ['nbsphinx']
+extensions += ['IPython.sphinxext.ipython_console_highlighting']
+# try:
+#     source_parsers['.ipynb'] = 'nbsphinx.NotebookParser'
+# except NameError:
+#     source_parsers = {'.ipynb': 'nbsphinx.NotebookParser'}
