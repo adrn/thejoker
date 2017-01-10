@@ -99,6 +99,9 @@ release = package.__version__
 
 # Use astropy plot style
 plot_rcparams = package.mpl_style
+plot_rcparams['text.usetex'] = True
+plot_rcparams['savefig.facecolor'] = 'none'
+plot_rcparams['savefig.bbox'] = 'tight'
 plot_apply_rcparams = True
 plot_formats = [('png', 512)]
 
