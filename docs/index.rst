@@ -23,16 +23,6 @@ TODO: really for the case of sparse or low-quality data
     install
     random-numbers
 
-API
-===
-
-.. toctree::
-    :maxdepth: 1
-
-    data
-    sampler
-    celestialmechanics
-
 Getting started
 ===============
 
@@ -92,17 +82,9 @@ Finally we can create the sampler object and run:
 Of the 65536 prior samples we considered, only a handful pass the rejection
 sampling step of |thejoker|. Let's visualize the surviving samples in the
 subspace of the period :math:`P` and velocity semi-amplitude :math:`K`. We'll
-also plot the true values as a green marker. As a separate plote, we'll also
-visualize orbits computed from these posterior samples:
-
-    >>> fig, ax = plt.subplots(1, 1, figsize=(8,8)) # doctest: +SKIP
-    >>> ax.scatter(samples['P'].value, samples['K'].to(u.km/u.s).value,
-    ...            marker='.', linestyle='none', alpha=0.2) # doctest: +SKIP
-    >>> ax.set_xlabel("$P$ [day]") # doctest: +SKIP
-    >>> ax.set_ylabel("$K$ [km/s]") # doctest: +SKIP
-    >>> ax.set_xlim(-5, 512) # doctest: +SKIP
-    >>> ax.set_ylim(0.75, 3.) # doctest: +SKIP
-    >>> ax.scatter(61.942, 1.3959, marker='o', color='#31a354', zorder=-100) # doctest: +SKIP
+also plot the true values as a green marker. As a separate plot, we'll also
+visualize orbits computed from these posterior samples (check the source code
+below to see how these were made):
 
 .. plot::
     :align: center
@@ -140,6 +122,24 @@ visualize orbits computed from these posterior samples:
     plot_rv_curves(samples, t_grid, rv_unit=u.km/u.s, data=data, ax=ax,
                    plot_kwargs=dict(color='#888888'))
     ax.set_xlim(-5, 205)
+
+More examples / tutorials
+=========================
+
+.. toctree::
+    :maxdepth: 1
+
+    examples/multiproc-example.ipynb
+
+API
+===
+
+.. toctree::
+    :maxdepth: 1
+
+    data
+    sampler
+    celestialmechanics
 
 .. rubric:: Footnotes
 
