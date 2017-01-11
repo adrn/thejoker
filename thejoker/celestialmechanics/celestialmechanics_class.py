@@ -73,22 +73,16 @@ class SimulatedRVOrbit(object):
         """
         return get_t0(self.phi0, self.P, ref_mjd)
 
-    def _generate_rv_curve(self, t):
-        """
-        Parameters
-        ----------
-        t : array_like, `~astropy.time.Time`
-            Array of times. Either in BJD or as an Astropy time.
-
-        Returns
-        -------
-        rv : numpy.ndarray
-        """
-
+    def _generate_rv_curve(self, t, trend_t0=0.):
         if isinstance(t, at.Time):
             _t = t.tcb.mjd
         else:
             _t = t
+
+        if isinstance(trend_t0, at.Time):
+            _t0 = trend_t0.tcb.mjd
+        else:
+            _t0 = trend_t0
 
         rv = rv_from_elements(times=_t,
                               P=self.P.to(u.day).value,
@@ -98,24 +92,25 @@ class SimulatedRVOrbit(object):
                               phi0=self.phi0.to(u.radian).value)
 
         if self.trend is not None:
-            v_trend = self.trend(_t).to(u.m/u.s).value
+            v_trend = self.trend(_t - _t0).to(u.m/u.s).value
         else:
             v_trend = 0.
 
         return rv + v_trend
 
-    def generate_rv_curve(self, t):
+    def generate_rv_curve(self, t, trend_t0=0.):
         """
         Parameters
         ----------
         t : array_like, `~astropy.time.Time`
             Time array. Either in BMJD or as an Astropy time.
+        TODO: document ``trend_t0``
 
         Returns
         -------
         rv : astropy.units.Quantity [speed]
         """
-        rv = self._generate_rv_curve(t)
+        rv = self._generate_rv_curve(t, trend_t0)
         return (rv*u.m/u.s).to(u.km/u.s)
 
     def __call__(self, t):

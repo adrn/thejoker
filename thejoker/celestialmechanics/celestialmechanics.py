@@ -13,13 +13,13 @@ Issues
 
 """
 
-# Standard-library
-import warnings
-
 # Third-party
 import astropy.units as u
 import numpy as np
 au_per_day_m_s = (1*u.m/u.s*u.day).to(u.au).value
+
+# Package
+from ..log import log as logger
 
 __all__ = ['mean_anomaly_from_eccentric_anomaly',
            'eccentric_anomaly_from_mean_anomaly',
@@ -96,8 +96,8 @@ def eccentric_anomaly_from_mean_anomaly(Ms, e, tol=1E-13, maxiter=128):
             break
 
     else:
-        warnings.warn("eccentric_anomaly_from_mean_anomaly() reached maximum "
-                      "number of iterations ({})".format(maxiter), RuntimeWarning)
+        logger.warn("eccentric_anomaly_from_mean_anomaly() reached maximum "
+                    "number of iterations ({})".format(maxiter))
 
     return Es
 
