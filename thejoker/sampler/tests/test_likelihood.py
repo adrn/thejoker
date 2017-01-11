@@ -9,6 +9,7 @@ from .helpers import FakeData
 
 class TestLikelihood(object):
 
+    # TODO: repeated code
     def truths_to_nlp(self, truths):
         # P, phi0, ecc, omega
         P = truths['P'].to(u.day).value
