@@ -15,7 +15,7 @@ _prev_result_color = '#2166AC'
 
 def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
                    ax=None, plot_kwargs=dict(), data_plot_kwargs=dict(),
-                   add_labels=True):
+                   add_labels=True, trend_t_offset=0.):
     """
     Plot radial velocity curves for the input set of orbital parameter
     samples over the input grid of times.
@@ -41,6 +41,7 @@ def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
         Passed to `thejoker.data.RVData.plot()`.
     add_labels : bool (optional)
         Add labels to the axes or not.
+    TODO: trend_t_offset
 
     Returns
     -------
@@ -82,7 +83,7 @@ def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
         this_samples.pop('jitter')
 
         orbit = SimulatedRVOrbit(**this_samples)
-        model_rv[i] = orbit.generate_rv_curve(t_grid).to(rv_unit).value
+        model_rv[i] = orbit.generate_rv_curve(t_grid, trend_t_offset).to(rv_unit).value
     ax.plot(t_grid, model_rv.T, **style)
 
     if data is not None:
