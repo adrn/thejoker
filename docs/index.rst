@@ -130,6 +130,9 @@ More examples / tutorials
     :maxdepth: 1
 
     examples/multiproc-example.ipynb
+    examples/velocity-trend.ipynb
+    .. examples/continue-mcmc.ipynb
+    .. examples/mpi.rst
 
 API
 ===
