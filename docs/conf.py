@@ -51,6 +51,12 @@ conf = ConfigParser()
 conf.read([os.path.join(os.path.dirname(__file__), '..', 'setup.cfg')])
 setup_cfg = dict(conf.items('metadata'))
 
+# see if we're running on travis
+if 'CI' in os.environ:
+    ON_TRAVIS = True
+else:
+    ON_TRAVIS = False
+
 # -- General configuration ----------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -99,7 +105,8 @@ release = package.__version__
 
 # Use astropy plot style
 plot_rcparams = package.mpl_style
-plot_rcparams['text.usetex'] = True
+if not ON_TRAVIS:
+    plot_rcparams['text.usetex'] = True
 plot_rcparams['savefig.facecolor'] = 'none'
 plot_rcparams['savefig.bbox'] = 'tight'
 plot_apply_rcparams = True
