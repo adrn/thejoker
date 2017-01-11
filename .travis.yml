@@ -32,7 +32,7 @@ env:
         # TODO: A lot of the dependencies are because of nbsphinx...we may want
         #   to drop the nbsphinx component of the build when on travis?
         - PIP_DEPENDENCIES='emcee schwimmbad git+https://github.com/spatialaudio/nbsphinx.git@master'
-        - CONDA_CHANNELS='astropy-ci-extras astropy'
+        - CONDA_CHANNELS='astropy-ci-extras astropy conda-forge'
         - CONDA_DEPENDENCIES='scipy h5py matplotlib pandoc nbconvert ipykernel'
 
         # If there are matplotlib or other GUI tests, uncomment the following
