@@ -19,4 +19,4 @@ dependencies:
   - pip:
     - schwimmbad
     - emcee
-    - nbsphinx
+    - git+https://github.com/spatialaudio/nbsphinx.git@master
