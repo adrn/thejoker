@@ -3,7 +3,6 @@ language: python
 python:
     - 3.4
     - 3.5
-    - 3.6
 
 # Setting sudo to false opts in to Travis-CI container-based builds.
 sudo: false
@@ -30,9 +29,11 @@ env:
         - ASTROPY_VERSION=stable
         - MAIN_CMD='python setup.py'
         - SETUP_CMD='test'
-        - PIP_DEPENDENCIES='emcee schwimmbad'
+        # TODO: A lot of the dependencies are because of nbsphinx...we may want
+        #   to drop the nbsphinx component of the build when on travis?
+        - PIP_DEPENDENCIES='emcee schwimmbad git+https://github.com/spatialaudio/nbsphinx.git@master'
         - CONDA_CHANNELS='astropy-ci-extras astropy'
-        - CONDA_DEPENDENCIES='scipy h5py matplotlib'
+        - CONDA_DEPENDENCIES='scipy h5py matplotlib pandoc nbconvert ipykernel'
 
         # If there are matplotlib or other GUI tests, uncomment the following
         # line to use the X virtual framebuffer.
@@ -76,6 +77,10 @@ matrix:
         # (allow to fail unless your code completely compliant)
         - python: 3.5
           env: MAIN_CMD='pycodestyle packagename --count' SETUP_CMD=''
+
+        # Python 3.6 builds still fail because of missing conda packages
+        - python: 3.6
+          env: MAIN_CMD='test'
 
 install:
 
