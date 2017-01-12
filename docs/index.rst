@@ -131,8 +131,9 @@ More examples / tutorials
 
     examples/multiproc-example.ipynb
     examples/velocity-trend.ipynb
-    .. examples/continue-mcmc.ipynb
-    .. examples/mpi.rst
+
+.. examples/continue-mcmc.ipynb
+.. examples/mpi.rst
 
 API
 ===
