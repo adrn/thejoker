@@ -164,7 +164,6 @@ class TheJoker(object):
         if not isinstance(data, RVData):
             raise TypeError("Input data must be an RVData instance, not '{}'"
                             .format(type(data)))
-        self.data = data
 
         if n_prior_samples is None and prior_cache_file is None:
             raise ValueError("You either have to specify the number of prior samples "
@@ -192,9 +191,9 @@ class TheJoker(object):
                 samples = self._rejection_sample_from_cache(data, n_prior_samples,
                                                             f.name, start_idx)
 
-        return self.unpack_full_samples(samples, prior_units)
+        return self.unpack_full_samples(samples, data.t_offset, prior_units)
 
-    def unpack_full_samples(self, samples, prior_units):
+    def unpack_full_samples(self, samples, t_offset, prior_units):
         """
         Unpack an array of Joker samples into a dictionary of Astropy
         Quantity objects (with units). Note that the phase of pericenter
@@ -204,6 +203,7 @@ class TheJoker(object):
         ----------
         samples : `numpy.ndarray`
             TODO
+        t_offset : numeric TODO
         prior_units : list
             List of units for the prior samples.
 
@@ -231,7 +231,7 @@ class TheJoker(object):
             sample_dict['v{}'.format(j)] = samples[:,k] * prior_units[-1] / u.day**j
 
         # convert phi0 from relative to t=data.t_offset to relative to mjd=0
-        dphi = (2*np.pi*self.data.t_offset/sample_dict['P'].to(u.day).value * u.radian) % (2*np.pi*u.radian)
+        dphi = (2*np.pi*t_offset/sample_dict['P'].to(u.day).value * u.radian) % (2*np.pi*u.radian)
         sample_dict['phi0'] = (sample_dict['phi0'] + dphi) % (2*np.pi*u.radian)
 
         return sample_dict
