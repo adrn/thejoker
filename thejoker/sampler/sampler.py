@@ -32,8 +32,11 @@ class TheJoker(object):
         A ``RandomState`` instance to serve as a parent for the random
         number generators. See the :ref:`random numbers <random-numbers>` page
         for more information.
+    anomaly_tol : float (optional)
+        Tolerance passed to
+        `~thejoker.celestialmechanics.celestialmechanics.eccentric_anomaly_from_mean_anomaly`.
     """
-    def __init__(self, params, pool=None, random_state=None):
+    def __init__(self, params, pool=None, random_state=None, tol=1E-13):
 
         # set the processing pool
         if pool is None:

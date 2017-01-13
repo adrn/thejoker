@@ -13,6 +13,9 @@ Issues
 
 """
 
+# Standard library
+import warnings
+
 # Third-party
 import astropy.units as u
 import numpy as np
@@ -95,10 +98,9 @@ def eccentric_anomaly_from_mean_anomaly(Ms, e, tol=1E-13, maxiter=128):
         if np.all(np.abs(deltaMs) < tol):
             break
 
-    # else:
-    #     logger.warn("eccentric_anomaly_from_mean_anomaly() reached maximum "
-    #                 "number of iterations ({})".format(maxiter))
-    # TODO: what do about these cases?
+    else:
+        warnings.warn("eccentric_anomaly_from_mean_anomaly() reached maximum "
+                      "number of iterations ({})".format(maxiter), RuntimeWarning)
 
     return Es
 
@@ -206,7 +208,7 @@ def Z_from_elements(times, P, K, e, omega, time0):
 
     return rs * np.sin(omega + fs)
 
-def rv_from_elements(times, P, K, e, omega, phi0):
+def rv_from_elements(times, P, K, e, omega, phi0, anomaly_tol=1E-13):
     """
     Parameters
     ----------
@@ -223,6 +225,10 @@ def rv_from_elements(times, P, K, e, omega, phi0):
         Argument of periastron.
     phi0 : numeric [radian]
         Phase at pericenter relative to t=0.
+    anomaly_tol : numeric (optional)
+        Tolerance passed to
+        `~thejoker.celestialmechanics.celestialmechanics.eccentric_anomaly_from_mean_anomaly` for
+        solving for the eccentric anomaly.
 
     Returns
     -------
@@ -236,7 +242,7 @@ def rv_from_elements(times, P, K, e, omega, phi0):
     times = np.array(times)
     Ms = (2 * np.pi * times / P) - phi0
 
-    Es = eccentric_anomaly_from_mean_anomaly(Ms, e)
+    Es = eccentric_anomaly_from_mean_anomaly(Ms, e, tol=anomaly_tol)
     fs = true_anomaly_from_eccentric_anomaly(Es, e)
     vz = K * (np.cos(omega + fs) + e*np.cos(omega))
 

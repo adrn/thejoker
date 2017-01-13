@@ -34,7 +34,8 @@ def design_matrix(nonlinear_p, data, joker_params):
     # phi0 now is implicitly relative to data.t_offset, not mjd=0
     t = data._t_bmjd
     zdot = rv_from_elements(times=t, P=P, K=1., e=ecc,
-                            omega=omega, phi0=phi0)
+                            omega=omega, phi0=phi0,
+                            anomaly_tol=joker_params.anomaly_tol)
 
     # TODO: right now, we only support a single, global velocity trend!
     A1 = np.vander(t, N=joker_params.trend.n_terms, increasing=True)

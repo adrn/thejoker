@@ -30,12 +30,15 @@ class SimulatedRVOrbit(object):
         Argument of pericenter.
     trend : TODO
         TODO
+    anomaly_tol : float (optional)
+        Tolerance passed to
+        `~thejoker.celestialmechanics.celestialmechanics.eccentric_anomaly_from_mean_anomaly`.
     **kwargs
         TODO
     """
     @u.quantity_input(P=u.day, K=u.km/u.s,
                       phi0=u.radian, omega=u.radian)
-    def __init__(self, P, K, ecc, phi0, omega, trend=None, **kwargs):
+    def __init__(self, P, K, ecc, phi0, omega, trend=None, anomaly_tol=1E-13, **kwargs):
         self.P = P
         self.K = K
         self.ecc = float(ecc)
@@ -53,6 +56,7 @@ class SimulatedRVOrbit(object):
             # TODO: test this bullshit magic
 
         self.trend = trend
+        self.anomaly_tol = anomaly_tol
 
     def t0(self, ref_mjd):
         """
@@ -89,7 +93,8 @@ class SimulatedRVOrbit(object):
                               K=self.K.to(u.m/u.s).value,
                               e=self.ecc,
                               omega=self.omega.to(u.radian).value,
-                              phi0=self.phi0.to(u.radian).value)
+                              phi0=self.phi0.to(u.radian).value,
+                              anomaly_tol=self.anomaly_tol)
 
         if self.trend is not None:
             v_trend = self.trend(_t - _t0).to(u.m/u.s).value
