@@ -48,7 +48,7 @@ class TheJoker(object):
 
         # set the parent random state - child processes get different states based on the parent
         if random_state is None:
-            self._rnd_passed = True
+            self._rnd_passed = False
             random_state = np.random.RandomState()
 
         elif not isinstance(random_state, np.random.RandomState):
@@ -56,7 +56,7 @@ class TheJoker(object):
                             "not '{}'".format(type(random_state)))
 
         else:
-            self._rnd_passed = False
+            self._rnd_passed = True
 
         self.random_state = random_state
 
