@@ -15,13 +15,15 @@ perturbations from a third or other bodies are much longer than the dominant
 companion. See the paper [#f2]_ for more details about the method and
 applications.
 
-TODO: really for the case of sparse or low-quality data
+|thejoker| is particularly useful for sparse or low-quality radial velocity
+data.
 
 .. toctree::
     :maxdepth: 1
 
     install
     random-numbers
+    faq
 
 Getting started
 ===============
@@ -134,6 +136,7 @@ More examples / tutorials
 
 .. examples/continue-mcmc.ipynb
 .. examples/mpi.rst
+.. examples/caching-samples.ipynb
 
 API
 ===
