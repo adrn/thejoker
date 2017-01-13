@@ -90,12 +90,19 @@ def get_good_sample_indices(n_prior_samples, prior_cache_file, start_idx, data, 
         # try chunking by the pool size
         chunk_size = n_prior_samples // pool.size
         if chunk_size == 0:
-            chunk_size = 1
+            chunk_size = n_prior_samples
+
     else:
         chunk_size = n_prior_samples
 
+    # if chunk doesn't divide evenly into pool, the last chunk will be the remainder
+    if n_prior_samples % chunk_size:
+        plus = 1
+    else:
+        plus = 0
+
     tasks = [[(i*chunk_size+start_idx, (i+1)*chunk_size+start_idx), prior_cache_file, data, joker_params]
-             for i in range(n_prior_samples//chunk_size+1)]
+             for i in range(n_prior_samples//chunk_size+plus)]
 
     results = [r for r in pool.map(_marginal_ll_worker, tasks)]
     marg_ll = np.concatenate(results)
