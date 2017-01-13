@@ -95,9 +95,10 @@ def eccentric_anomaly_from_mean_anomaly(Ms, e, tol=1E-13, maxiter=128):
         if np.all(np.abs(deltaMs) < tol):
             break
 
-    else:
-        logger.warn("eccentric_anomaly_from_mean_anomaly() reached maximum "
-                    "number of iterations ({})".format(maxiter))
+    # else:
+    #     logger.warn("eccentric_anomaly_from_mean_anomaly() reached maximum "
+    #                 "number of iterations ({})".format(maxiter))
+    # TODO: what do about these cases?
 
     return Es
 

@@ -168,6 +168,11 @@ class TheJoker(object):
             # read prior units from cache file
             with h5py.File(prior_cache_file, 'r') as f:
                 prior_units = [u.Unit(uu) for uu in f.attrs['units']]
+
+                # TODO: test this
+                if n_prior_samples is None:
+                    n_prior_samples = len(f['samples'])
+
             samples = self._rejection_sample_from_cache(data, n_prior_samples, prior_cache_file)
 
         else:

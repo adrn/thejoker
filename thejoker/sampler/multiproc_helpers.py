@@ -90,7 +90,7 @@ def get_good_sample_indices(n_prior_samples, prior_cache_file, data, joker_param
         if chunk_size == 0:
             chunk_size = 1
     else:
-        chunk_size = 1
+        chunk_size = n_prior_samples
 
     tasks = [[(i*chunk_size, (i+1)*chunk_size), prior_cache_file, data, joker_params]
              for i in range(n_prior_samples//chunk_size+1)]
@@ -186,9 +186,9 @@ def sample_indices_to_full_samples(good_samples_idx, prior_cache_file, data, jok
         # try chunking by the pool size
         chunk_size = n_samples // pool.size
         if chunk_size == 0:
-            chunk_size = 1
+            chunk_size = n_samples
     else:
-        chunk_size = 1
+        chunk_size = n_samples
 
     # if chunk doesn't divide evenly into pool, the last chunk will be the remainder
     if n_samples % chunk_size:
