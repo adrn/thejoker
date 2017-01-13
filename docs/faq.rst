@@ -13,6 +13,6 @@ a huge range in days. But don't worry too much about this -- for most extreme
 cases (e.g., when the data span years) the variations are below
 :math:`10^{-11}`. If you see this warning, you can just increase the default
 tolerance from :math:`10^{-13}` to :math:`10^{-11}` to remove the warning. From
-the high-level interface (e.g., from `~thejoker.sampler.sampler.TheJoker`), pass
-the keyword argument ``tol=1E-11`` to the class on initialization to change the
-tolerance.
+the high-level interface (e.g., from `~thejoker.sampler.params.JokerParams`),
+pass the keyword argument ``anomaly_tol=1E-11`` to the class on initialization
+to change the tolerance.

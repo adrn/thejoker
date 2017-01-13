@@ -36,6 +36,9 @@ class JokerParams(object):
         If sampling over the jitter as an extra non-linear parameter,
         you must also specify the units of the jitter prior. See note
         above about the ``jitter`` argument.
+    anomaly_tol : float (optional)
+        Tolerance passed to
+        `~thejoker.celestialmechanics.celestialmechanics.eccentric_anomaly_from_mean_anomaly`.
 
     Examples
     --------
@@ -48,13 +51,14 @@ class JokerParams(object):
 
     """
     @u.quantity_input(P_min=u.day, P_max=u.day)
-    def __init__(self, P_min, P_max, trend=None, jitter=None, jitter_unit=None):
+    def __init__(self, P_min, P_max, trend=None, jitter=None, jitter_unit=None, anomaly_tol=1E-13):
 
         # the names of the default parameters
         self.default_params = ['P', 'phi0', 'ecc', 'omega', 'jitter', 'K']
 
         self.P_min = P_min
         self.P_max = P_max
+        self.anomaly_tol = float(anomaly_tol)
 
         # validate the specified long-term velocity trends
         if trend is None:
