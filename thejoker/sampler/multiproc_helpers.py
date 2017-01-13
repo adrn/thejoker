@@ -135,7 +135,7 @@ def _sample_vector_worker(task):
 
     else:
         rnd = np.random.RandomState()
-        log.debug("worker with chunk {} not seeded")
+        log.debug("worker with chunk {} not seeded".format(idx[0]))
 
     pars = np.zeros((n_chunk, joker_params.num_params))
     with h5py.File(prior_cache_file, 'r') as f:
