@@ -49,7 +49,7 @@ class TestMultiproc(object):
         with h5py.File(prior_samples_file) as f:
             f['samples'] = samples
 
-        idx = get_good_sample_indices(n, prior_samples_file, data, joker_params, pool)
+        idx = get_good_sample_indices(n, prior_samples_file, 0, data, joker_params, pool)
         assert len(idx) > 1
 
         full_samples = sample_indices_to_full_samples(idx, prior_samples_file, data,

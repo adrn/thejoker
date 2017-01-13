@@ -46,7 +46,7 @@ def _marginal_ll_worker(task):
 
     return ll
 
-def get_good_sample_indices(n_prior_samples, prior_cache_file, data, joker_params, pool):
+def get_good_sample_indices(n_prior_samples, prior_cache_file, start_idx, data, joker_params, pool):
     """
     Return the indices of 'good' samples by computing the log-likelihood
     for ``n_prior_samples`` prior samples and doing rejection sampling.
@@ -63,6 +63,8 @@ def get_good_sample_indices(n_prior_samples, prior_cache_file, data, joker_param
         The number of prior samples to use.
     prior_cache_file : str
         Path to an HDF5 file containing the prior samples.
+    start_idx : int
+        Index to start reading prior samples from in the prior cache file.
     data : `~thejoker.data.RVData`
         An instance of ``RVData`` with the data we're modeling.
     joker_params : `~thejoker.sampler.params.JokerParams`
@@ -92,7 +94,7 @@ def get_good_sample_indices(n_prior_samples, prior_cache_file, data, joker_param
     else:
         chunk_size = n_prior_samples
 
-    tasks = [[(i*chunk_size, (i+1)*chunk_size), prior_cache_file, data, joker_params]
+    tasks = [[(i*chunk_size+start_idx, (i+1)*chunk_size+start_idx), prior_cache_file, data, joker_params]
              for i in range(n_prior_samples//chunk_size+1)]
 
     results = [r for r in pool.map(_marginal_ll_worker, tasks)]

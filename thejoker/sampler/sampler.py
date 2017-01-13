@@ -112,7 +112,7 @@ class TheJoker(object):
 
         return pars
 
-    def _rejection_sample_from_cache(self, data, n_prior_samples, cache_file):
+    def _rejection_sample_from_cache(self, data, n_prior_samples, cache_file, start_idx):
         """
         """
 
@@ -121,8 +121,8 @@ class TheJoker(object):
         #   a boolean array (in which case I need to process all likelihood values) or
         #   an array of integers...Right now, _marginal_ll_worker has to return the values
         #   because we then compare with the maximum value of the likelihood
-        good_samples_idx = get_good_sample_indices(n_prior_samples, cache_file, data,
-                                                   self.params, pool=self.pool)
+        good_samples_idx = get_good_sample_indices(n_prior_samples, cache_file, start_idx,
+                                                   data, self.params, pool=self.pool)
         if len(good_samples_idx) == 0:
             logger.error("Failed to find any good samples!")
             self.pool.close()
@@ -143,13 +143,21 @@ class TheJoker(object):
 
         return full_samples
 
-    def rejection_sample(self, data, n_prior_samples=None, prior_cache_file=None):
+    def rejection_sample(self, data, n_prior_samples=None,
+                         prior_cache_file=None, start_idx=0):
         """
+        Run The Joker's rejection sampling on prior samples to get
+        posterior samples for the input data.
+
         Parameters
         ----------
-        data :
-        n_prior_samples :
-        prior_cache_file :
+        data : `~thejoker.data.RVData`
+            The radial velocity.
+        n_prior_samples : int (optional)
+        prior_cache_file : str (optional)
+        start_idx : int (optional)
+            Index to start reading from in the prior cache file.
+
         """
 
         # validate input data
@@ -173,14 +181,16 @@ class TheJoker(object):
                 if n_prior_samples is None:
                     n_prior_samples = len(f['samples'])
 
-            samples = self._rejection_sample_from_cache(data, n_prior_samples, prior_cache_file)
+            samples = self._rejection_sample_from_cache(data, n_prior_samples,
+                                                        prior_cache_file, start_idx)
 
         else:
             with tempfile.NamedTemporaryFile(mode='r+') as f:
                 # first do prior sampling, cache to file
                 prior_samples = self.sample_prior(size=n_prior_samples)
                 prior_units = save_prior_samples(f.name, prior_samples, self.data.rv.unit)
-                samples = self._rejection_sample_from_cache(data, n_prior_samples, f.name)
+                samples = self._rejection_sample_from_cache(data, n_prior_samples,
+                                                            f.name, start_idx)
 
         return self.unpack_full_samples(samples, prior_units)
 
