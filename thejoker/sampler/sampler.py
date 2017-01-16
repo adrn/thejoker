@@ -187,7 +187,7 @@ class TheJoker(object):
             with tempfile.NamedTemporaryFile(mode='r+') as f:
                 # first do prior sampling, cache to file
                 prior_samples = self.sample_prior(size=n_prior_samples)
-                prior_units = save_prior_samples(f.name, prior_samples, self.data.rv.unit)
+                prior_units = save_prior_samples(f.name, prior_samples, data.rv.unit)
                 samples = self._rejection_sample_from_cache(data, n_prior_samples,
                                                             f.name, start_idx)
 
