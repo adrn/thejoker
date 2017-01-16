@@ -9,6 +9,40 @@ from .likelihood import design_matrix, tensor_vector_scalar, marginal_ln_likelih
 
 __all__ = ['get_good_sample_indices', 'sample_indices_to_full_samples']
 
+def chunk_tasks(N, pool, arr=None, args=None, start_idx=0):
+    if args is None:
+        args = []
+
+    args = list(args)
+
+    tasks = []
+    if pool.size > 0 and N > pool.size:
+        # chunk by the pool size
+        base_chunk_size = N // pool.size
+        rmdr = N % pool.size
+
+        i1 = start_idx
+        for i in range(pool.size):
+            i2 = i1 + base_chunk_size
+            if i < rmdr:
+                i2 += 1
+
+            if arr is None: # store indices
+                tasks.append([(i1, i2), i1] + args)
+            else: # store sliced array
+                tasks.append([arr[i1:i2], i1] + args)
+
+            i1 = i2
+
+    else:
+        if arr is None: # store indices
+            tasks.append([(start_idx,N+start_idx), start_idx] + args)
+
+        else: # store sliced array
+            tasks.append([arr[start_idx:N+start_idx], start_idx] + args)
+
+    return tasks
+
 def _marginal_ll_worker(task):
     """
     Compute the marginal log-likelihood, i.e. the likelihood integrated over
@@ -28,7 +62,7 @@ def _marginal_ll_worker(task):
         Array of log-likelihood values.
 
     """
-    start_stop, prior_cache_file, data, jparams = task
+    start_stop, chunk_index, prior_cache_file, data, jparams = task
 
     # read a chunk of the prior samples
     with h5py.File(prior_cache_file, 'r') as f:
@@ -86,23 +120,8 @@ def get_good_sample_indices(n_prior_samples, prior_cache_file, start_idx, data, 
         the likelihood values instead?
 
     """
-    if pool.size > 0:
-        # try chunking by the pool size
-        chunk_size = n_prior_samples // pool.size
-        if chunk_size == 0:
-            chunk_size = n_prior_samples
-
-    else:
-        chunk_size = n_prior_samples
-
-    # if chunk doesn't divide evenly into pool, the last chunk will be the remainder
-    if n_prior_samples % chunk_size:
-        plus = 1
-    else:
-        plus = 0
-
-    tasks = [[(i*chunk_size+start_idx, (i+1)*chunk_size+start_idx), prior_cache_file, data, joker_params]
-             for i in range(n_prior_samples//chunk_size+plus)]
+    args = [prior_cache_file, data, joker_params]
+    tasks = chunk_tasks(n_prior_samples, pool=pool, args=args, start_idx=start_idx)
 
     results = [r for r in pool.map(_marginal_ll_worker, tasks)]
     marg_ll = np.concatenate(results)
@@ -125,7 +144,7 @@ def _sample_vector_worker(task):
         is not supposed to be in the public API.
     """
 
-    idx, prior_cache_file, data, joker_params, global_seed, chunk_index = task
+    idx, chunk_index, prior_cache_file, data, joker_params, global_seed = task
     n_chunk = len(idx)
 
     if global_seed is not None:
@@ -190,26 +209,12 @@ def sample_indices_to_full_samples(good_samples_idx, prior_cache_file, data, jok
     """
 
     n_samples = len(good_samples_idx)
-
-    if pool.size > 0:
-        # try chunking by the pool size
-        chunk_size = n_samples // pool.size
-        if chunk_size == 0:
-            chunk_size = n_samples
-    else:
-        chunk_size = n_samples
-
-    # if chunk doesn't divide evenly into pool, the last chunk will be the remainder
-    if n_samples % chunk_size:
-        plus = 1
-    else:
-        plus = 0
-
-    tasks = [[good_samples_idx[i*chunk_size:(i+1)*chunk_size], prior_cache_file,
-              data, joker_params, global_seed, i]
-             for i in range(n_samples//chunk_size+plus)]
+    args = [prior_cache_file, data, joker_params, global_seed]
+    tasks = chunk_tasks(n_samples, arr=good_samples_idx, pool=pool, args=args)
 
     samples = [r for r in pool.map(_sample_vector_worker, tasks)]
     samples = np.concatenate(samples)
+
+    assert len(samples) == n_samples
 
     return samples.reshape(-1, samples.shape[-1])
