@@ -9,6 +9,8 @@ The Joker [YO-ker] /'joʊkər/
         :target: https://github.com/adrn/thejoker/blob/master/LICENSE
 .. image:: http://img.shields.io/badge/arXiv-1610.07602-orange.svg?style=flat
         :target: https://arxiv.org/abs/1610.07602
+.. image:: https://img.shields.io/badge/ascl-1701.001-blue.svg?colorB=262255
+        :target: http://ascl.net/1701.001
 
 
 A custom Monte Carlo sampler for the two-body problem.
