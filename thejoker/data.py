@@ -230,7 +230,7 @@ class RVData(object):
         """
 
         import h5py
-        if isinstance(file_or_path, six.string_types):
+        if isinstance(file_or_path, str):
             f = h5py.File(file_or_path, 'w')
             close = True
 
@@ -242,11 +242,11 @@ class RVData(object):
         d.attrs['format'] = 'mjd'
         d.attrs['scale'] = 'tcb'
 
-        d = f.create_dataset('rv', data=self._rv)
-        d.attrs['unit'] = str(default_units['v0'])
+        d = f.create_dataset('rv', data=self.rv.value)
+        d.attrs['unit'] = str(self.rv.unit)
 
-        d = f.create_dataset('rv_err', data=1/np.sqrt(self._ivar))
-        d.attrs['unit'] = str(default_units['v0'])
+        d = f.create_dataset('rv_err', data=self.stddev.value)
+        d.attrs['unit'] = str(self.stddev.unit)
 
         if close:
             f.close()
@@ -262,7 +262,7 @@ class RVData(object):
         """
 
         import h5py
-        if isinstance(file_or_path, six.string_types):
+        if isinstance(file_or_path, str):
             f = h5py.File(file_or_path, 'r')
             close = True
 
