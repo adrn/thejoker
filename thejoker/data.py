@@ -238,7 +238,7 @@ class RVData(object):
             f = file_or_path
             close = False
 
-        d = f.create_dataset('mjd', data=self._t + self.t_offset)
+        d = f.create_dataset('mjd', data=self.t.tcb.mjd)
         d.attrs['format'] = 'mjd'
         d.attrs['scale'] = 'tcb'
 
