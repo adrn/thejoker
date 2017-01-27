@@ -148,7 +148,7 @@ def _sample_vector_worker(task):
     n_chunk = len(idx)
 
     if global_seed is not None:
-        seed = int("{}{}".format(global_seed, chunk_index))
+        seed = global_seed + chunk_index
         rnd = np.random.RandomState(seed)
         log.debug("worker with chunk {} has seed {}".format(idx[0], seed))
 
