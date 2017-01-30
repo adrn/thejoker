@@ -10,9 +10,6 @@ from .celestialmechanics import SimulatedRVOrbit
 
 __all__ = ['plot_rv_curves']
 
-_truth_color = '#006837'
-_prev_result_color = '#2166AC'
-
 def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
                    ax=None, plot_kwargs=dict(), data_plot_kwargs=dict(),
                    add_labels=True, trend_t_offset=0.):
