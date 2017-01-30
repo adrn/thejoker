@@ -22,10 +22,8 @@ class TheJoker(object):
 
     Parameters
     ----------
-    data : `~thejoker.data.RVData`
-        The radial velocity data.
     params : `~thejoker.sampler.params.JokerParams`
-        TODO
+        Object specifying hyper-parameters for The Joker.
     pool : ``schwimmbad.BasePool`` (optional)
         A processing pool (default is a ``schwimmbad.SerialPool`` instance).
     random_state : `numpy.random.RandomState` (optional)
