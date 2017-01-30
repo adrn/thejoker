@@ -108,6 +108,7 @@ def unpack_samples(samples_arr, params, data):
         samples['jitter'] = samples_arr.T[4] * data.rv.unit
         shift = 1
     else:
+        samples['jitter'] = np.zeros_like(samples_arr.T[0]) * data.rv.unit
         shift = 0
 
     samples['K'] = samples_arr.T[4+shift] * data.rv.unit
