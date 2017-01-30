@@ -1,4 +1,5 @@
 # Third-party
+import astropy.units as u
 import numpy as np
 from scipy.stats import beta, norm
 
@@ -6,7 +7,9 @@ from scipy.stats import beta, norm
 from ..celestialmechanics import rv_from_elements
 from .utils import get_ivar
 
-__all__ = ['to_mcmc_params', 'from_mcmc_params', 'ln_likelihood', 'ln_prior']
+__all__ = ['to_mcmc_params', 'from_mcmc_params',
+           'pack_samples', 'pack_samples_mcmc', 'unpack_samples', 'unpack_samples_mcmc',
+           'ln_likelihood', 'ln_prior', 'ln_posterior']
 
 log_2pi = np.log(2*np.pi)
 
@@ -65,17 +68,79 @@ def from_mcmc_params(p):
                       np.sqrt(np.exp(log_s2)),
                       (sqrtK_cos_phi0**2 + sqrtK_sin_phi0**2)] + v_terms)
 
+def pack_samples(samples, params, data):
+    """
+    """
+    if 'jitter' in samples:
+        jitter = samples['jitter'].to(data.rv.unit).value
+    else:
+        jitter = np.zeros_like(samples['P'].value)
+
+    arr = [samples['P'].to(u.day).value,
+           samples['phi0'].to(u.radian).value,
+           np.asarray(samples['ecc']),
+           samples['omega'].to(u.radian).value,
+           jitter,
+           samples['K'].to(data.rv.unit).value]
+    arr = arr + [samples['v{}'.format(i)].to(data.rv.unit/u.day**i).value
+                 for i in range(params.trend.n_terms)]
+    return np.array(arr).T
+
+def pack_samples_mcmc(samples, params, data):
+    """
+    """
+    samples_vec = pack_samples(samples, params, data)
+    samples_mcmc = to_mcmc_params(samples_vec.T)
+
+    if params._fixed_jitter:
+        samples_mcmc = np.delete(samples_mcmc, 5, axis=0)
+
+    return np.array(samples_mcmc).T
+
+def unpack_samples(samples_arr, params, data):
+    samples = dict()
+    samples['P'] = samples_arr.T[0] * u.day
+    samples['phi0'] = samples_arr.T[1] * u.radian
+    samples['ecc'] = samples_arr.T[2] * u.one
+    samples['omega'] = samples_arr.T[3] * u.radian
+
+    if not params._fixed_jitter:
+        samples['jitter'] = samples_arr.T[4] * data.rv.unit
+        shift = 1
+    else:
+        shift = 0
+
+    samples['K'] = samples_arr.T[4+shift] * data.rv.unit
+
+    for i in range(params.trend.n_terms):
+        samples['v{}'.format(i)] = samples_arr.T[5+shift+i] * data.rv.unit/u.day**i
+
+    return samples
+
+def unpack_samples_mcmc(samples_arr, params, data):
+    samples_arr = from_mcmc_params(samples_arr.T).T
+    return unpack_samples(samples_arr, params, data)
+
 def ln_likelihood(p, joker_params, data):
     P, phi0, ecc, omega, s, K, *v_terms = p
 
     # a little repeated code here...
-    A = np.vander(data._t_bmjd, N=len(v_terms), increasing=True)
-    trend = np.sum([A[:,i]**i * v_terms[i] for i in range(A.shape[1])], axis=0)
 
-    model_rv = rv_from_elements(data._t_bmjd, P, K, ecc, omega, phi0) + trend
+    # phi0 now is implicitly relative to data.t_offset, not mjd=0
+    t = data._t_bmjd
+    zdot = rv_from_elements(times=t, P=P, K=1., e=ecc,
+                            omega=omega, phi0=phi0,
+                            anomaly_tol=joker_params.anomaly_tol)
+
+    # TODO: right now, we only support a single, global velocity trend!
+    A1 = np.vander(t, N=joker_params.trend.n_terms, increasing=True)
+    A = np.hstack((zdot[:,None], A1))
+    p = np.array([K] + v_terms)
     ivar = get_ivar(data, s)
 
-    return 0.5 * (-(model_rv - data.rv.value)**2 * ivar - log_2pi + np.log(ivar))
+    dy = A.dot(p) - data.rv.value
+
+    return 0.5 * (-dy**2 * ivar - log_2pi + np.log(ivar))
 
 def ln_prior(p, joker_params):
     P, phi0, ecc, omega, s, K, *v_terms = p
@@ -92,7 +157,9 @@ def ln_prior(p, joker_params):
 
     if not joker_params._fixed_jitter:
         # DFM's idea: wide, Gaussian prior in log(s^2)
-        lnp += norm.logpdf(np.log(s), ) # TODO: put in hyper-parameters
+        # lnp += norm.logpdf(np.log(s), ) # TODO: put in hyper-parameters
+        # TODO:
+        pass
 
     return lnp
 
@@ -101,7 +168,7 @@ def ln_posterior(mcmc_p, joker_params, data):
         mcmc_p = list(mcmc_p)
         mcmc_p.insert(5, -np.inf) # HACK: whoa, major hackage!
 
-    p = from_mcmc_params(mcmc_p)
+    p = from_mcmc_params(mcmc_p).reshape(len(mcmc_p))
 
     lnp = ln_prior(p, joker_params)
     if np.isinf(lnp):

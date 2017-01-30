@@ -3,8 +3,8 @@ import astropy.units as u
 import numpy as np
 
 # Package
-from ..mcmc import (to_mcmc_params, from_mcmc_params, ln_likelihood, ln_prior,
-                    ln_posterior)
+from ..mcmc import (pack_samples, pack_samples_mcmc, to_mcmc_params, from_mcmc_params,
+                    ln_likelihood, ln_prior, ln_posterior)
 
 from .helpers import FakeData
 
@@ -20,6 +20,52 @@ def test_roundtrip():
     mcmc_p = to_mcmc_params(p)
     p2 = from_mcmc_params(mcmc_p)
     assert np.allclose(p, p2.reshape(p.shape))
+
+# def test_emcee_run():
+#     d = FakeData()
+#     data = d.data['binary']
+#     params = d.joker_params['binary']
+#     samples = d.truths['binary'].copy()
+#     samples['v0'] = d.v0
+
+#     for k in samples:
+#         samples[k] = u.Quantity([samples[k], samples[k]])
+
+#     mcmc_p = pack_samples_mcmc(samples, params, data)[0]
+#     lnpost = ln_posterior(mcmc_p, params, data)
+
+#     import emcee
+
+#     n_walkers = 128
+#     p0 = emcee.utils.sample_ball(mcmc_p, 1E-6*np.abs(mcmc_p), size=n_walkers)
+
+#     sampler = emcee.EnsembleSampler(n_walkers, p0.shape[1],
+#                                     lnpostfn=ln_posterior, args=(params,data))
+#     pos,prob,state = sampler.run_mcmc(p0, 1024) # MAGIC NUMBER
+
+#     import matplotlib.pyplot as plt
+#     nwalkers, nlinks, dim = sampler.chain.shape
+#     for k in range(dim):
+#         plt.figure()
+#         for n in range(nwalkers):
+#             plt.plot(sampler.chain[n,:,k], marker='', drawstyle='steps', alpha=0.1)
+
+#     plt.show()
+
+#     return
+
+#     # -----
+
+#     idx = 2
+#     vals = np.linspace(0.95, 1.05, 128) * mcmc_p[idx]
+#     probs = np.zeros_like(vals)
+#     for i,val in enumerate(vals):
+#         _p = mcmc_p.copy()
+#         _p[idx] = val
+#         probs[i] = ln_posterior(_p, params, data)
+#     plt.plot(vals, probs)
+#     plt.axvline(mcmc_p[idx], color='r', zorder=-100)
+#     plt.show()
 
 class TestMCMC(object):
 
