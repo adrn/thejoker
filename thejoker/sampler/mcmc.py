@@ -70,6 +70,22 @@ def from_mcmc_params(p):
 
 def pack_samples(samples, params, data):
     """
+    Pack a dictionary of samples as Quantity objects into a 2D array.
+
+    Parameters
+    ----------
+    samples : dict
+        Dictionary of `~astropy.units.Quantity` objects for period,
+        phi0, etc.
+    params : `~thejoker.sampler.params.JokerParams`
+        Object specifying hyper-parameters for The Joker.
+    data : `~thejoker.data.RVData`
+        The radial velocity data.
+
+    Returns
+    -------
+    arr : `numpy.ndarray`
+        A 2D numpy array with shape `(nsamples, ndim)`.
     """
     if 'jitter' in samples:
         jitter = samples['jitter'].to(data.rv.unit).value
@@ -88,6 +104,23 @@ def pack_samples(samples, params, data):
 
 def pack_samples_mcmc(samples, params, data):
     """
+    Pack a dictionary of samples as Quantity objects into a 2D array,
+    transformed to the parametrization used by the MCMC functions.
+
+    Parameters
+    ----------
+    samples : dict
+        Dictionary of `~astropy.units.Quantity` objects for period,
+        phi0, etc.
+    params : `~thejoker.sampler.params.JokerParams`
+        Object specifying hyper-parameters for The Joker.
+    data : `~thejoker.data.RVData`
+        The radial velocity data.
+
+    Returns
+    -------
+    arr : `numpy.ndarray`
+        A 2D numpy array with shape `(nsamples, ndim)`.
     """
     samples_vec = pack_samples(samples, params, data)
     samples_mcmc = to_mcmc_params(samples_vec.T)
@@ -98,6 +131,24 @@ def pack_samples_mcmc(samples, params, data):
     return np.array(samples_mcmc).T
 
 def unpack_samples(samples_arr, params, data):
+    """
+    Unpack a 2D array of samples into a dictionary of samples as Quantity objects.
+
+    Parameters
+    ----------
+    samples_arr : `numpy.ndarray`
+        A 2D numpy array with shape `(nsamples, ndim)` containing the values.
+    params : `~thejoker.sampler.params.JokerParams`
+        Object specifying hyper-parameters for The Joker.
+    data : `~thejoker.data.RVData`
+        The radial velocity data.
+
+    Returns
+    -------
+    samples : dict
+        Dictionary of `~astropy.units.Quantity` objects for period,
+        phi0, etc.
+    """
     samples = dict()
     samples['P'] = samples_arr.T[0] * u.day
     samples['phi0'] = samples_arr.T[1] * u.radian
@@ -119,6 +170,27 @@ def unpack_samples(samples_arr, params, data):
     return samples
 
 def unpack_samples_mcmc(samples_arr, params, data):
+    """
+    Unpack a 2D array of samples transformed to the parametrization used by the
+    MCMC functions into a dictionary of samples as Quantity objects in the
+    standard parametrization (i.e. period, angles, ..).
+
+    Parameters
+    ----------
+    samples_arr : `numpy.ndarray`
+        A 2D numpy array with shape `(nsamples, ndim)` containing the
+        values in the MCMC coordinates.
+    params : `~thejoker.sampler.params.JokerParams`
+        Object specifying hyper-parameters for The Joker.
+    data : `~thejoker.data.RVData`
+        The radial velocity data.
+
+    Returns
+    -------
+    samples : dict
+        Dictionary of `~astropy.units.Quantity` objects for period,
+        phi0, etc.
+    """
     samples_arr = from_mcmc_params(samples_arr.T).T
     return unpack_samples(samples_arr, params, data)
 
