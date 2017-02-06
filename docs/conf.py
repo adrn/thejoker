@@ -104,7 +104,8 @@ version = package.__version__.split('-', 1)[0]
 release = package.__version__
 
 # Use astropy plot style
-plot_rcparams = package.mpl_style
+from astropy.visualization import mpl_style
+plot_rcparams = mpl_style
 if not ON_TRAVIS:
     plot_rcparams['text.usetex'] = True
 plot_rcparams['savefig.facecolor'] = 'none'
