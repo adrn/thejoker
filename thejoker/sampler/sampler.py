@@ -65,7 +65,7 @@ class TheJoker(object):
                             "not a '{}'".format(type(params)))
         self.params = params
 
-    def sample_prior(self, size=1, return_logval=False):
+    def sample_prior(self, size=1, return_logvals=False):
         """
         Generate samples from the prior. Logarithmic in period, uniform in
         phase and argument of pericenter, Beta distribution in eccentricity.
@@ -74,7 +74,7 @@ class TheJoker(object):
         ----------
         size : int
             Number of samples to generate.
-        return_logval : bool (optional)
+        return_logvals : bool (optional)
             If ``True``, will also return the log-value of the prior at each sample.
 
         Returns
@@ -122,7 +122,7 @@ class TheJoker(object):
         else:
             pars['jitter'] = np.ones(size) * self.params.jitter
 
-        if return_logval:
+        if return_logvals:
             return pars, ln_prior_val
         else:
             return pars
