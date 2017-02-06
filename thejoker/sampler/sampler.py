@@ -6,6 +6,7 @@ import tempfile
 import astropy.units as u
 import h5py
 import numpy as np
+from scipy.stats import beta, norm
 
 # Project
 from ..log import log as logger
@@ -64,7 +65,7 @@ class TheJoker(object):
                             "not a '{}'".format(type(params)))
         self.params = params
 
-    def sample_prior(self, size=1):
+    def sample_prior(self, size=1, return_logval=False):
         """
         Generate samples from the prior. Logarithmic in period, uniform in
         phase and argument of pericenter, Beta distribution in eccentricity.
@@ -73,6 +74,8 @@ class TheJoker(object):
         ----------
         size : int
             Number of samples to generate.
+        return_logval : bool (optional)
+            If ``True``, will also return the log-value of the prior at each sample.
 
         Returns
         -------
@@ -90,25 +93,39 @@ class TheJoker(object):
 
         pars = dict()
 
+        ln_prior_val = np.zeros(size)
+
         # sample from priors in nonlinear parameters
-        pars['P'] = np.exp(rnd.uniform(np.log(self.params.P_min.to(u.day).value),
-                                       np.log(self.params.P_max.to(u.day).value),
-                                       size=size)) * u.day
+        a,b = (np.log(self.params.P_min.to(u.day).value),
+               np.log(self.params.P_max.to(u.day).value))
+        pars['P'] = np.exp(rnd.uniform(a, b, size=size)) * u.day
+        ln_prior_val += -np.log(b-a) - np.log(pars['P'].value) # Jacobian
+
         pars['phi0'] = rnd.uniform(0, 2*np.pi, size=size) * u.radian
+        ln_prior_val += -np.log(2*np.pi)
 
         # MAGIC NUMBERS below: Kipping et al. 2013 (MNRAS 434 L51)
         pars['ecc'] = rnd.beta(a=0.867, b=3.03, size=size)
+        ln_prior_val += beta.logpdf(pars['ecc'], 0.867, 3.03)
+
         pars['omega'] = rnd.uniform(0, 2*np.pi, size=size) * u.radian
+        ln_prior_val += -np.log(2*np.pi)
 
         if not self.params._fixed_jitter:
             # Gaussian prior in log(s^2)
             log_s2 = rnd.normal(*self.params.jitter, size=size)
             pars['jitter'] = np.sqrt(np.exp(log_s2)) * self.params._jitter_unit
+            ln_prior_val += norm.logpdf(log_s2,
+                                        loc=self.params.jitter[0],
+                                        scale=self.params.jitter[1]) * (2/pars['jitter'].value) # Jacobian
 
         else:
             pars['jitter'] = np.ones(size) * self.params.jitter
 
-        return pars
+        if return_logval:
+            return pars, ln_prior_val
+        else:
+            return pars
 
     def _rejection_sample_from_cache(self, data, n_prior_samples, cache_file, start_idx):
         """
