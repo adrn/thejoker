@@ -5,7 +5,7 @@ from collections import OrderedDict
 import astropy.units as u
 import numpy as np
 
-__all__ = ['pack_prior_samples', 'save_prior_samples'] # 'quantity_from_hdf5', 'quantity_to_hdf5']
+__all__ = ['pack_prior_samples', 'save_prior_samples']
 
 # These units are required by the celestial mechanics code and the order
 #   is required for the likelihood code
