@@ -14,6 +14,7 @@ from ..data import RVData
 from .params import JokerParams
 from .multiproc_helpers import get_good_sample_indices, sample_indices_to_full_samples
 from .io import save_prior_samples
+from .samples import JokerSamples
 
 __all__ = ['TheJoker']
 
@@ -79,7 +80,7 @@ class TheJoker(object):
 
         Returns
         -------
-        prior_samples : dict
+        samples : `~thejoker.sampler.samples.JokerSamples`
             Keys: `['P', 'phi0', 'ecc', 'omega']`, each as
             `astropy.units.Quantity` objects (i.e. with units).
 
@@ -91,7 +92,7 @@ class TheJoker(object):
         """
         rnd = self.random_state
 
-        pars = dict()
+        pars = JokerSamples()
 
         ln_prior_val = np.zeros(size)
 
@@ -224,11 +225,10 @@ class TheJoker(object):
 
         Returns
         -------
-        samples_dict : dict
-            TODO
+        samples : `~thejoker.sampler.samples.JokerSamples`
 
         """
-        sample_dict = dict()
+        sample_dict = JokerSamples()
 
         n,n_params = samples.shape
 
