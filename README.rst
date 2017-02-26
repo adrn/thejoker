@@ -20,9 +20,9 @@ A custom Monte Carlo sampler for the two-body problem.
 Authors
 -------
 
-- Adrian Price-Whelan (Princeton)
-- David W. Hogg (NYU, MPIA)
-- Dan Foreman-Mackey (UW)
+- **Adrian Price-Whelan** (Princeton)
+- **David W. Hogg** (NYU, MPIA, & Flatiron)
+- **Dan Foreman-Mackey** (UW)
 
 Documentation
 -------------
