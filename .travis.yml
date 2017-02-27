@@ -72,8 +72,8 @@ matrix:
           env: NUMPY_VERSION=1.11
 
         # Do a PEP8 test with pycodestyle
-        - python: 3.6
-          env: MAIN_CMD='pycodestyle packagename --count' SETUP_CMD=''
+        # - python: 3.6
+        #   env: MAIN_CMD='pycodestyle packagename --count' SETUP_CMD=''
 
     # allow_failures:
     #     # Do a PEP8 test with pycodestyle
