@@ -45,7 +45,7 @@ these data into a `~thejoker.data.RVData` object:
     >>> import astropy.units as u
     >>> t = [0., 49.452, 95.393, 127.587, 190.408]
     >>> rv = [38.77, 39.70, 37.45, 38.31, 38.31] * u.km/u.s
-    >>> err = [0.1, 0.1, 0.1, 0.1, 0.1] * u.km/u.s
+    >>> err = [0.184, 0.261, 0.112, 0.155, 0.223] * u.km/u.s
     >>> data = RVData(t=t, rv=rv, stddev=err)
     >>> ax = data.plot() # doctest: +SKIP
     >>> ax.set_xlim(-10, 200) # doctest: +SKIP
@@ -61,7 +61,7 @@ these data into a `~thejoker.data.RVData` object:
 
     t = [0., 49.452, 95.393, 127.587, 190.408]
     rv = [38.77, 39.70, 37.45, 38.31, 38.31] * u.km/u.s
-    err = [0.1, 0.1, 0.1, 0.1, 0.1] * u.km/u.s
+    err = [0.184, 0.261, 0.112, 0.155, 0.223] * u.km/u.s
 
     data = RVData(t=t, rv=rv, stddev=err)
     ax = data.plot() # doctest: +SKIP
@@ -100,7 +100,7 @@ below to see how these were made):
 
     t = [0., 49.452, 95.393, 127.587, 190.408]
     rv = [38.77, 39.70, 37.45, 38.31, 38.31] * u.km/u.s
-    err = [0.1, 0.1, 0.1, 0.1, 0.1] * u.km/u.s
+    err = [0.184, 0.261, 0.112, 0.155, 0.223] * u.km/u.s
 
     data = RVData(t=t, rv=rv, stddev=err)
     params = JokerParams(P_min=8*u.day, P_max=512*u.day)
