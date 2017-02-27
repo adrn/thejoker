@@ -10,6 +10,8 @@ The Joker [YO-ker] /'joʊkər/
 .. image:: https://zenodo.org/badge/67356932.svg
         :target: https://zenodo.org/badge/latestdoi/67356932
 
+|
+
 .. image:: http://img.shields.io/travis/adrn/thejoker/master.svg?style=flat
         :target: http://travis-ci.org/adrn/thejoker
 .. image:: http://img.shields.io/badge/license-MIT-blue.svg?style=flat
