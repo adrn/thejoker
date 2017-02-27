@@ -12,6 +12,9 @@ sudo: false
 #
 # https://github.com/travis-ci/apt-package-whitelist/blob/master/ubuntu-precise
 
+notifications:
+  email: false
+
 addons:
     apt:
         packages:
