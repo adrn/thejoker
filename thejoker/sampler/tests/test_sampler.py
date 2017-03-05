@@ -62,7 +62,7 @@ class TestSampler(object):
         for key in samples1.keys():
             assert quantity_allclose(samples1[key], samples2[key])
 
-        samples, ln_vals = joker2.sample_prior(8, return_logvals=True)
+        samples, ln_vals = joker2.sample_prior(8, return_logprobs=True)
         assert np.isfinite(ln_vals).all()
 
     def test_rejection_sample(self):

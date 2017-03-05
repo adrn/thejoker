@@ -67,7 +67,7 @@ def pack_prior_samples(samples, rv_unit):
 
     return np.vstack(arrs).T, units
 
-def save_prior_samples(f, samples, rv_unit):
+def save_prior_samples(f, samples, rv_unit, ln_prior_probs=None):
     """
     Save a dictionary of Astropy Quantity prior samples to
     an HDF5 file in a format expected and used by
@@ -106,8 +106,14 @@ def save_prior_samples(f, samples, rv_unit):
             g.attrs['units'] = np.array([str(x) for x in units]).astype('|S6')
             g['samples'] = packed_samples
 
+            if ln_prior_probs is not None:
+                g['ln_prior_probs'] = ln_prior_probs
+
     else:
         f.attrs['units'] = np.array([str(x) for x in units]).astype('|S6')
         f['samples'] = packed_samples
+
+        if ln_prior_probs is not None:
+            f['ln_prior_probs'] = ln_prior_probs
 
     return units
