@@ -27,7 +27,7 @@ class JokerParams(object):
         additional non-linear parameter. Currently, the only prior
         pdf supported for doing this is a Gaussian in natural-log of
         the jitter squared--that is,
-        :math:`p(x) = \mathcal{N}(x|\mu,\sigma)` where
+        :math:`p(a) = \mathcal{N}(a|\mu,\sigma)` where
         :math:`a = \log s^2`. The (dimensionless) mean and standard
         deviation of this prior can also be passed in to this argument
         by passing a length-2 tuple of numbers. If you do this, you must
