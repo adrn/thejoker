@@ -5,18 +5,18 @@ channels:
   - conda-forge
 
 dependencies:
-  - python=3.5
+  - python=3
   - astropy
   - astropy-helpers
   - numpy
   - matplotlib
   - scipy
   - h5py
-  - sphinx>=1.4 # this and next 3 needed for nbsphinx
+  - sphinx
   - pandoc
   - nbconvert
   - ipykernel
   - pip:
     - schwimmbad
     - emcee
-    - git+https://github.com/spatialaudio/nbsphinx.git@master
+    - nbsphinx
