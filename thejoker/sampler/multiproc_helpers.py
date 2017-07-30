@@ -80,7 +80,8 @@ def _marginal_ll_worker(task):
 
     return ll
 
-def get_good_sample_indices(n_prior_samples, prior_cache_file, start_idx, data, joker_params, pool):
+def get_good_sample_indices(n_prior_samples, prior_cache_file, start_idx, data,
+                            joker_params, pool, seed=None):
     """
     Return the indices of 'good' samples by computing the log-likelihood
     for ``n_prior_samples`` prior samples and doing rejection sampling.
@@ -105,6 +106,8 @@ def get_good_sample_indices(n_prior_samples, prior_cache_file, start_idx, data, 
         A specification of the parameters to use.
     pool : `~schwimmbad.pool.BasePool` or subclass
         An instance of a processing pool - must have a ``.map()`` method.
+    seed : int (optional)
+        Random number seed for uniform samples to use in rejection sampling.
 
     Returns
     -------
@@ -121,7 +124,8 @@ def get_good_sample_indices(n_prior_samples, prior_cache_file, start_idx, data, 
 
     """
     args = [prior_cache_file, data, joker_params]
-    tasks = chunk_tasks(n_prior_samples, pool=pool, args=args, start_idx=start_idx)
+    tasks = chunk_tasks(n_prior_samples, pool=pool, args=args,
+                        start_idx=start_idx)
 
     results = [r for r in pool.map(_marginal_ll_worker, tasks)]
     marg_ll = np.concatenate(results)
@@ -129,7 +133,8 @@ def get_good_sample_indices(n_prior_samples, prior_cache_file, start_idx, data, 
     assert len(marg_ll) == n_prior_samples
 
     # rejection sample using the marginal likelihood
-    uu = np.random.uniform(size=n_prior_samples)
+    rnd = np.random.RandomState(seed)
+    uu = rnd.uniform(size=n_prior_samples)
     good_samples_bool = uu < np.exp(marg_ll - marg_ll.max())
     good_samples_idx, = np.where(good_samples_bool)
 
@@ -179,8 +184,8 @@ def _sample_vector_worker(task):
 
     return pars
 
-def sample_indices_to_full_samples(good_samples_idx, prior_cache_file, data, joker_params,
-                                   pool, global_seed=None):
+def sample_indices_to_full_samples(good_samples_idx, prior_cache_file, data,
+                                   joker_params, pool, global_seed=None):
     """
     Generate the full set of parameter values (linear + non-linear) for
     the nonlinear parameter prior samples that pass the rejection sampling.

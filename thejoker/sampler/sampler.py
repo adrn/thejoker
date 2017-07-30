@@ -128,7 +128,8 @@ class TheJoker(object):
         else:
             return pars
 
-    def _rejection_sample_from_cache(self, data, n_prior_samples, cache_file, start_idx):
+    def _rejection_sample_from_cache(self, data, n_prior_samples, cache_file,
+                                     start_idx, seed):
         """
         """
 
@@ -137,8 +138,9 @@ class TheJoker(object):
         #   a boolean array (in which case I need to process all likelihood values) or
         #   an array of integers...Right now, _marginal_ll_worker has to return the values
         #   because we then compare with the maximum value of the likelihood
-        good_samples_idx = get_good_sample_indices(n_prior_samples, cache_file, start_idx,
-                                                   data, self.params, pool=self.pool)
+        good_samples_idx = get_good_sample_indices(n_prior_samples, cache_file,
+                                                   start_idx, data, self.params,
+                                                   pool=self.pool, seed=seed)
         if len(good_samples_idx) == 0:
             logger.error("Failed to find any good samples!")
             self.pool.close()
@@ -147,15 +149,11 @@ class TheJoker(object):
         n_good = len(good_samples_idx)
         logger.info("{} good samples after rejection sampling".format(n_good))
 
-        # compute full parameter vectors for all good samples
-        if self._rnd_passed:
-            seed = self.random_state.randint(np.random.randint(2**16))
-        else:
-            seed = None
-
-        full_samples = sample_indices_to_full_samples(good_samples_idx, cache_file,
+        full_samples = sample_indices_to_full_samples(good_samples_idx,
+                                                      cache_file,
                                                       data, self.params,
-                                                      pool=self.pool, global_seed=seed)
+                                                      pool=self.pool,
+                                                      global_seed=seed)
 
         return full_samples
 
@@ -187,6 +185,12 @@ class TheJoker(object):
                              "samples in (TODO: what format?). If you want to try an "
                              "experimental adaptive method, try .rejection_sample_adapt()")
 
+        # compute full parameter vectors for all good samples
+        if self._rnd_passed:
+            seed = self.random_state.randint(np.random.randint(2**16))
+        else:
+            seed = None
+
         if prior_cache_file is not None:
             # read prior units from cache file
             with h5py.File(prior_cache_file, 'r') as f:
@@ -197,7 +201,8 @@ class TheJoker(object):
                     n_prior_samples = len(f['samples'])
 
             samples = self._rejection_sample_from_cache(data, n_prior_samples,
-                                                        prior_cache_file, start_idx)
+                                                        prior_cache_file,
+                                                        start_idx, seed=seed)
 
         else:
             with tempfile.NamedTemporaryFile(mode='r+') as f:
@@ -205,7 +210,8 @@ class TheJoker(object):
                 prior_samples = self.sample_prior(size=n_prior_samples)
                 prior_units = save_prior_samples(f.name, prior_samples, data.rv.unit)
                 samples = self._rejection_sample_from_cache(data, n_prior_samples,
-                                                            f.name, start_idx)
+                                                            f.name, start_idx,
+                                                            seed=seed)
 
         return self.unpack_full_samples(samples, data.t_offset, prior_units)
 
