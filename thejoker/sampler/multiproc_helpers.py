@@ -149,7 +149,8 @@ def _sample_vector_worker(task):
         is not supposed to be in the public API.
     """
 
-    idx, chunk_index, prior_cache_file, data, joker_params, global_seed = task
+    (idx, chunk_index, prior_cache_file, data, joker_params, global_seed,
+     return_logprobs) = task
     n_chunk = len(idx)
 
     if global_seed is not None:
@@ -161,10 +162,12 @@ def _sample_vector_worker(task):
         rnd = np.random.RandomState()
         log.debug("worker with chunk {} not seeded".format(idx[0]))
 
-    pars = np.zeros((n_chunk, joker_params.num_params))
+    pars = np.zeros((n_chunk, joker_params.num_params + int(return_logprobs)))
     with h5py.File(prior_cache_file, 'r') as f:
-        for j,i in enumerate(idx): # these are the integer locations of the 'good' samples!
+        # idx are the integer locations of the 'good' samples!
+        for j,i in enumerate(idx):
             nonlinear_p = f['samples'][i]
+            ln_prob = f['ln_prior_probs'][i]
             P, phi0, ecc, omega, s = nonlinear_p
 
             ivar = get_ivar(data, s)
@@ -180,12 +183,17 @@ def _sample_vector_worker(task):
                 omega += np.pi
                 omega = omega % (2*np.pi) # HACK: I think this is safe
 
-            pars[j] = [P, phi0, ecc, omega, s, K] + v_terms
+            row = [P, phi0, ecc, omega, s, K] + v_terms
+            if return_logprobs:
+                row = row + [ln_prob]
+
+            pars[j] = row
 
     return pars
 
 def sample_indices_to_full_samples(good_samples_idx, prior_cache_file, data,
-                                   joker_params, pool, global_seed=None):
+                                   joker_params, pool, global_seed=None,
+                                   return_logprobs=False):
     """
     Generate the full set of parameter values (linear + non-linear) for
     the nonlinear parameter prior samples that pass the rejection sampling.
@@ -210,16 +218,23 @@ def sample_indices_to_full_samples(good_samples_idx, prior_cache_file, data,
         An instance of a processing pool - must have a ``.map()`` method.
     global_seed : int (optional)
         The global level random number seed.
+    return_logprobs : bool (optional)
+        Also return the log-probabilities of the prior samples.
 
     """
 
     n_samples = len(good_samples_idx)
-    args = [prior_cache_file, data, joker_params, global_seed]
+    args = [prior_cache_file, data, joker_params, global_seed, return_logprobs]
     tasks = chunk_tasks(n_samples, arr=good_samples_idx, pool=pool, args=args)
 
     samples = [r for r in pool.map(_sample_vector_worker, tasks)]
     samples = np.concatenate(samples)
 
     assert len(samples) == n_samples
+    samples = samples.reshape(-1, samples.shape[-1])
 
-    return samples.reshape(-1, samples.shape[-1])
+    if return_logprobs:
+        return samples[:, :-1], samples[:, -1]
+
+    else:
+        return samples

@@ -129,7 +129,7 @@ class TheJoker(object):
             return pars
 
     def _rejection_sample_from_cache(self, data, n_prior_samples, cache_file,
-                                     start_idx, seed):
+                                     start_idx, seed, return_logprobs=False):
         """
         """
 
@@ -149,11 +149,9 @@ class TheJoker(object):
         n_good = len(good_samples_idx)
         logger.info("{} good samples after rejection sampling".format(n_good))
 
-        full_samples = sample_indices_to_full_samples(good_samples_idx,
-                                                      cache_file,
-                                                      data, self.params,
-                                                      pool=self.pool,
-                                                      global_seed=seed)
+        full_samples = sample_indices_to_full_samples(
+            good_samples_idx, cache_file, data, self.params,
+            pool=self.pool, global_seed=seed, return_logprobs=return_logprobs)
 
         return full_samples
 
