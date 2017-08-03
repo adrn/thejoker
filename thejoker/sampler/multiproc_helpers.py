@@ -167,7 +167,6 @@ def _sample_vector_worker(task):
         # idx are the integer locations of the 'good' samples!
         for j,i in enumerate(idx):
             nonlinear_p = f['samples'][i]
-            ln_prob = f['ln_prior_probs'][i]
             P, phi0, ecc, omega, s = nonlinear_p
 
             ivar = get_ivar(data, s)
@@ -185,6 +184,7 @@ def _sample_vector_worker(task):
 
             row = [P, phi0, ecc, omega, s, K] + v_terms
             if return_logprobs:
+                ln_prob = f['ln_prior_probs'][i]
                 row = row + [ln_prob]
 
             pars[j] = row
