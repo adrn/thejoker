@@ -188,7 +188,7 @@ def _sample_vector_worker(task):
                 ln_prior = f['ln_prior_probs'][i]
                 ln_like = marginal_ln_likelihood(nonlinear_p, data,
                                                  joker_params,
-                                                 tvs=(ATA, p, chi2))
+                                                 tvs=(ATA, p, chi2, ivar))
                 row = row + [ln_prior, ln_like]
 
             pars[j] = row
