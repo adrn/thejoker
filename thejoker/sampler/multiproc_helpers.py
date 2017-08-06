@@ -163,7 +163,7 @@ def _sample_vector_worker(task):
         rnd = np.random.RandomState()
         log.debug("worker with chunk {} not seeded".format(idx[0]))
 
-    pars = np.zeros((n_chunk, joker_params.num_params + int(return_logprobs)))
+    pars = np.zeros((n_chunk, joker_params.num_params + 2*int(return_logprobs)))
     with h5py.File(prior_cache_file, 'r') as f:
         # idx are the integer locations of the 'good' samples!
         for j,i in enumerate(idx):
@@ -188,7 +188,7 @@ def _sample_vector_worker(task):
                 ln_prior = f['ln_prior_probs'][i]
                 ln_like = marginal_ln_likelihood(nonlinear_p, data,
                                                  joker_params,
-                                                 tvs=(ATA, p, chi2, ivar))
+                                                 tvsi=(ATA, p, chi2, ivar))
                 row = row + [ln_prior, ln_like]
 
             pars[j] = row
