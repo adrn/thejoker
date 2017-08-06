@@ -95,6 +95,8 @@ def marginal_ln_likelihood(nonlinear_p, data, joker_params):
     Internal function used to compute the likelihood marginalized
     over the linear parameters.
 
+    This returns Eq. 11 arxiv:1610.07602v2
+
     Parameters
     ----------
     nonlinear_p : array_like
@@ -115,17 +117,18 @@ def marginal_ln_likelihood(nonlinear_p, data, joker_params):
     """
     A = design_matrix(nonlinear_p, data, joker_params)
 
-    # TODO: jitter must be in same units as the data RV's / ivar!
+    # jitter must be in same units as the data RV's / ivar!
     s = nonlinear_p[4]
     ivar = get_ivar(data, s)
 
     ATCinvA, p, chi2 = tensor_vector_scalar(A, ivar, data.rv.value)
 
-    sign, logdet = np.linalg.slogdet(ATCinvA)
+    # This is -logdet(2πC_j)
+    sign, logdet = np.linalg.slogdet(ATCinvA / (2*np.pi))
     if not np.all(sign == 1.):
         logger.debug('logdet sign < 0')
         return np.nan
 
-    logdet += np.sum(np.log(ivar/(2*np.pi))) # TODO: this needs a final audit, and is inconsistent with math in the paper
+    logdet += np.sum(np.log(ivar / (2*np.pi)))
 
     return 0.5*logdet - 0.5*np.atleast_1d(chi2)
