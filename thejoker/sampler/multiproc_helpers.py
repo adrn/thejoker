@@ -5,7 +5,8 @@ import numpy as np
 # Project
 from ..log import log
 from .utils import get_ivar
-from .likelihood import design_matrix, tensor_vector_scalar, marginal_ln_likelihood
+from .likelihood import (design_matrix, tensor_vector_scalar,
+                         marginal_ln_likelihood)
 
 __all__ = ['get_good_sample_indices', 'sample_indices_to_full_samples']
 
@@ -171,7 +172,7 @@ def _sample_vector_worker(task):
 
             ivar = get_ivar(data, s)
             A = design_matrix(nonlinear_p, data, joker_params)
-            ATA, p, ll = tensor_vector_scalar(A, ivar, data.rv.value)
+            ATA, p, chi2 = tensor_vector_scalar(A, ivar, data.rv.value)
 
             cov = np.linalg.inv(ATA)
             K, *v_terms = rnd.multivariate_normal(p, cov)
@@ -184,8 +185,11 @@ def _sample_vector_worker(task):
 
             row = [P, phi0, ecc, omega, s, K] + v_terms
             if return_logprobs:
-                ln_prob = f['ln_prior_probs'][i]
-                row = row + [ln_prob]
+                ln_prior = f['ln_prior_probs'][i]
+                ln_like = marginal_ln_likelihood(nonlinear_p, data,
+                                                 joker_params,
+                                                 tvs=(ATA, p, chi2))
+                row = row + [ln_prior, ln_like]
 
             pars[j] = row
 
@@ -234,7 +238,8 @@ def sample_indices_to_full_samples(good_samples_idx, prior_cache_file, data,
     samples = samples.reshape(-1, samples.shape[-1])
 
     if return_logprobs:
-        return samples[:, :-1], samples[:, -1]
+        # samples, ln(prior), ln(likelihood)
+        return samples[:, :-2], samples[:, -2], samples[:, -1]
 
     else:
         return samples
