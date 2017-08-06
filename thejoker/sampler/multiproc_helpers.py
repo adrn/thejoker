@@ -8,7 +8,8 @@ from .utils import get_ivar
 from .likelihood import (design_matrix, tensor_vector_scalar,
                          marginal_ln_likelihood)
 
-__all__ = ['get_good_sample_indices', 'sample_indices_to_full_samples']
+__all__ = ['compute_likelihoods', 'get_good_sample_indices',
+           'sample_indices_to_full_samples']
 
 def chunk_tasks(N, pool, arr=None, args=None, start_idx=0):
     if args is None:
@@ -81,8 +82,8 @@ def _marginal_ll_worker(task):
 
     return ll
 
-def get_good_sample_indices(n_prior_samples, prior_cache_file, start_idx, data,
-                            joker_params, pool, seed=None):
+def compute_likelihoods(n_prior_samples, prior_cache_file, start_idx, data,
+                        joker_params, pool):
     """
     Return the indices of 'good' samples by computing the log-likelihood
     for ``n_prior_samples`` prior samples and doing rejection sampling.
@@ -107,8 +108,6 @@ def get_good_sample_indices(n_prior_samples, prior_cache_file, start_idx, data,
         A specification of the parameters to use.
     pool : `~schwimmbad.pool.BasePool` or subclass
         An instance of a processing pool - must have a ``.map()`` method.
-    seed : int (optional)
-        Random number seed for uniform samples to use in rejection sampling.
 
     Returns
     -------
@@ -133,9 +132,30 @@ def get_good_sample_indices(n_prior_samples, prior_cache_file, start_idx, data,
 
     assert len(marg_ll) == n_prior_samples
 
+    return marg_ll
+
+def get_good_sample_indices(marg_ll, seed=None):
+    """Return the indices of 'good' samples from pre-computed values of the
+    log-likelihood.
+
+    Parameters
+    ----------
+    marg_ll : array_like
+        Array of marginal log-likelihood values.
+    seed : int (optional)
+        Random number seed for uniform samples to use in rejection sampling.
+
+    Returns
+    -------
+    samples_idx : `numpy.ndarray`
+        An array of integers for the prior samples that pass
+        rejection sampling.
+
+    """
+
     # rejection sample using the marginal likelihood
     rnd = np.random.RandomState(seed)
-    uu = rnd.uniform(size=n_prior_samples)
+    uu = rnd.uniform(size=len(marg_ll))
     good_samples_bool = uu < np.exp(marg_ll - marg_ll.max())
     good_samples_idx, = np.where(good_samples_bool)
 
