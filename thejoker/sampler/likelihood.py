@@ -90,7 +90,7 @@ def tensor_vector_scalar(A, ivar, y):
 
     return ATCinvA, p, chi2
 
-def marginal_ln_likelihood(nonlinear_p, data, joker_params):
+def marginal_ln_likelihood(nonlinear_p, data, joker_params, tvs=None):
     """
     Internal function used to compute the likelihood marginalized
     over the linear parameters.
@@ -108,6 +108,9 @@ def marginal_ln_likelihood(nonlinear_p, data, joker_params):
         The observations.
     joker_params : `~thejoker.sampler.params.JokerParams`
         The specificationof parameters to infer with The Joker.
+    tvs : iterable (optional)
+        Optionally pass in the tensor, vector, scalar values so they aren't
+        re-computed.
 
     Returns
     -------
@@ -115,13 +118,16 @@ def marginal_ln_likelihood(nonlinear_p, data, joker_params):
         Marginal log-likelihood values.
 
     """
-    A = design_matrix(nonlinear_p, data, joker_params)
+    if tvs is None:
+        A = design_matrix(nonlinear_p, data, joker_params)
 
-    # jitter must be in same units as the data RV's / ivar!
-    s = nonlinear_p[4]
-    ivar = get_ivar(data, s)
+        # jitter must be in same units as the data RV's / ivar!
+        s = nonlinear_p[4]
+        ivar = get_ivar(data, s)
+        ATCinvA, p, chi2 = tensor_vector_scalar(A, ivar, data.rv.value)
 
-    ATCinvA, p, chi2 = tensor_vector_scalar(A, ivar, data.rv.value)
+    else:
+        ATCinvA, p, chi2 = tvs
 
     # This is -logdet(2πC_j)
     sign, logdet = np.linalg.slogdet(ATCinvA / (2*np.pi))
