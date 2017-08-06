@@ -171,7 +171,7 @@ def _sample_vector_worker(task):
 
             ivar = get_ivar(data, s)
             A = design_matrix(nonlinear_p, data, joker_params)
-            ATA,p,_ = tensor_vector_scalar(A, ivar, data.rv.value)
+            ATA, p, ll = tensor_vector_scalar(A, ivar, data.rv.value)
 
             cov = np.linalg.inv(ATA)
             K, *v_terms = rnd.multivariate_normal(p, cov)

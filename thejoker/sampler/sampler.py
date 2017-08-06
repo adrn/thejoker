@@ -12,7 +12,8 @@ from scipy.stats import beta, norm
 from ..log import log as logger
 from ..data import RVData
 from .params import JokerParams
-from .multiproc_helpers import get_good_sample_indices, sample_indices_to_full_samples
+from .multiproc_helpers import (get_good_sample_indices,
+                                sample_indices_to_full_samples)
 from .io import save_prior_samples
 from .samples import JokerSamples
 
@@ -134,13 +135,15 @@ class TheJoker(object):
         """
 
         # Get indices of good samples from the cache file
-        # TODO: I have some implementation questions about whether this should return
-        #   a boolean array (in which case I need to process all likelihood values) or
-        #   an array of integers...Right now, _marginal_ll_worker has to return the values
-        #   because we then compare with the maximum value of the likelihood
+        # TODO: I have some implementation questions about whether this should
+        #   return a boolean array (in which case I need to process all
+        #   likelihood values) or an array of integers...Right now,
+        #   _marginal_ll_worker has to return the values because we then compare
+        #   with the maximum value of the likelihood
         good_samples_idx = get_good_sample_indices(n_prior_samples, cache_file,
                                                    start_idx, data, self.params,
                                                    pool=self.pool, seed=seed)
+
         if len(good_samples_idx) == 0:
             logger.error("Failed to find any good samples!")
             self.pool.close()
