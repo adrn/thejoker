@@ -187,6 +187,7 @@ class RVData(object):
         style.setdefault('marker', 'o')
         style.setdefault('color', 'k')
         style.setdefault('ecolor', '#666666')
+        style.setdefault('elinewidth', 1)
 
         if callable(time_format):
             t = time_format(self.t)

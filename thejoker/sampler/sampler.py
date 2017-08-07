@@ -318,9 +318,8 @@ class TheJoker(object):
             good_samples_idx = get_good_sample_indices(all_marg_lls, seed=seed)
 
             if len(good_samples_idx) == 0:
-                logger.error("Failed to find any good samples!")
-                self.pool.close()
-                sys.exit(0)
+                # self.pool.close()
+                raise RuntimeError("Failed to find any good samples!")
 
             n_good = len(good_samples_idx)
             logger.log(1, "{0} good samples after rejection sampling"
