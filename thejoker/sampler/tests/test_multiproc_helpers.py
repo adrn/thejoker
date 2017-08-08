@@ -5,7 +5,8 @@ import numpy as np
 import schwimmbad
 
 # Package
-from ..multiproc_helpers import get_good_sample_indices, sample_indices_to_full_samples
+from ..multiproc_helpers import (get_good_sample_indices, compute_likelihoods,
+                                 sample_indices_to_full_samples)
 from .helpers import FakeData
 
 class TestMultiproc(object):
@@ -49,10 +50,12 @@ class TestMultiproc(object):
         with h5py.File(prior_samples_file) as f:
             f['samples'] = samples
 
-        idx = get_good_sample_indices(n, prior_samples_file, 0, data, joker_params, pool)
-        assert len(idx) > 1
+        lls = compute_likelihoods(n, prior_samples_file, 0, data,
+                                  joker_params, pool)
+        idx = get_good_sample_indices(lls)
+        assert len(idx) >= 1
 
-        full_samples = sample_indices_to_full_samples(idx, prior_samples_file, data,
-                                                      joker_params, pool)
+        full_samples = sample_indices_to_full_samples(idx, prior_samples_file,
+                                                      data, joker_params, pool)
         print(full_samples)
 
