@@ -200,6 +200,7 @@ class RVData(object):
                         **style)
         else:
             style.pop('ecolor')
+            style.pop('elinewidth')
             ax.plot(t, self.rv.to(rv_unit).value, **style)
 
         return ax
