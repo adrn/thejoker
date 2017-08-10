@@ -41,22 +41,25 @@ and the Zenodo DOI |DOI| as a software citation::
     }
 
     @ARTICLE{Price-Whelan:2017b,
-       author = {{Price-Whelan}, A.~M. and {Hogg}, D.~W. and {Foreman-Mackey}, D. and
-        {Rix}, H.-W.},
-        title = "{The Joker: A Custom Monte Carlo Sampler for Binary-star and Exoplanet Radial Velocity Data}",
-      journal = {\apj},
-    archivePrefix = "arXiv",
-       eprint = {1610.07602},
-     primaryClass = "astro-ph.SR",
-     keywords = {binaries: spectroscopic, methods: data analysis, methods: statistical, planets and satellites: fundamental parameters, surveys, techniques: radial velocities},
-         year = 2017,
+       author = {{Price-Whelan}, A.~M. and {Hogg}, D.~W. and
+                 {Foreman-Mackey}, D. and {Rix}, H.-W.},
+        title = "{The Joker: A Custom Monte Carlo Sampler for Binary-star and
+                  Exoplanet Radial Velocity Data}",
+        journal = {\apj},
+        archivePrefix = "arXiv",
+        eprint = {1610.07602},
+        primaryClass = "astro-ph.SR",
+        keywords = {binaries: spectroscopic, methods: data analysis,
+                    methods: statistical, planets and satellites: fundamental
+                    parameters, surveys, techniques: radial velocities},
+        year = 2017,
         month = mar,
-       volume = 837,
-          eid = {20},
+        volume = 837,
+        eid = {20},
         pages = {20},
-          doi = {10.3847/1538-4357/aa5e50},
-       adsurl = {http://adsabs.harvard.edu/abs/2017ApJ...837...20P},
-      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+        doi = {10.3847/1538-4357/aa5e50},
+        adsurl = {http://adsabs.harvard.edu/abs/2017ApJ...837...20P},
+        adsnote = {Provided by the SAO/NASA Astrophysics Data System}
     }
 
 Documentation
