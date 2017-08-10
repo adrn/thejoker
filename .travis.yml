@@ -34,7 +34,7 @@ env:
         - SETUP_CMD='test'
         # TODO: A lot of the dependencies are because of nbsphinx...we may want
         #   to drop the nbsphinx component of the build when on travis?
-        - PIP_DEPENDENCIES='emcee schwimmbad nbsphinx'
+        - PIP_DEPENDENCIES='emcee schwimmbad nbsphinx git+https://github.com/adrn/TwoBody'
         - CONDA_CHANNELS='astropy-ci-extras astropy'
         - CONDA_DEPENDENCIES='scipy h5py matplotlib pandoc nbconvert ipykernel'
 
