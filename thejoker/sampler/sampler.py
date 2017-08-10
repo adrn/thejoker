@@ -94,7 +94,7 @@ class TheJoker(object):
         """
         rnd = self.random_state
 
-        pars = JokerSamples()
+        pars = JokerSamples(self.params.trend_cls)
 
         ln_prior_val = np.zeros(size)
 
@@ -118,9 +118,11 @@ class TheJoker(object):
             # Gaussian prior in log(s^2)
             log_s2 = rnd.normal(*self.params.jitter, size=size)
             pars['jitter'] = np.sqrt(np.exp(log_s2)) * self.params._jitter_unit
+
+            Jac = (2 / pars['jitter'].value) # Jacobian
             ln_prior_val += norm.logpdf(log_s2,
                                         loc=self.params.jitter[0],
-                                        scale=self.params.jitter[1]) * (2/pars['jitter'].value) # Jacobian
+                                        scale=self.params.jitter[1]) * Jac
 
         else:
             pars['jitter'] = np.ones(size) * self.params.jitter
@@ -178,14 +180,15 @@ class TheJoker(object):
 
         # validate input data
         if not isinstance(data, RVData):
-            raise TypeError("Input data must be an RVData instance, not '{}'"
+            raise TypeError("Input data must be an RVData instance, not '{0}'"
                             .format(type(data)))
 
         if n_prior_samples is None and prior_cache_file is None:
-            raise ValueError("You either have to specify the number of prior samples "
-                             "to generate, or a path to a file containing cached prior "
-                             "samples in (TODO: what format?). If you want to try an "
-                             "experimental adaptive method, try .rejection_sample_adapt()")
+            raise ValueError("You either have to specify the number of prior "
+                             "samples to generate, or a path to a file "
+                             "containing cached prior samples in (TODO: what "
+                             "format?). If you want to try an experimental "
+                             "adaptive method, try .rejection_sample_adapt()")
 
         # compute full parameter vectors for all good samples
         if self._rnd_passed:
@@ -236,7 +239,7 @@ class TheJoker(object):
         samples : `~thejoker.sampler.samples.JokerSamples`
 
         """
-        sample_dict = JokerSamples()
+        sample_dict = JokerSamples(self.params.trend_cls)
 
         n,n_params = samples.shape
 
@@ -250,10 +253,9 @@ class TheJoker(object):
 
         k += 1
 
-        # TODO: assumes polynomial velocity trend
-        for j in range(self.params._n_trend):
+        for j, par_name in enumerate(self.params.trend_cls.parameters):
             k += j
-            sample_dict['v{}'.format(j)] = samples[:,k] * prior_units[-1] / u.day**j
+            sample_dict[par_name] = samples[:,k] * prior_units[-1] / u.day**j
 
         # convert phi0 from relative to t=data.t_offset to relative to mjd=0
         dphi = (2*np.pi*t_offset/sample_dict['P'].to(u.day).value * u.radian) % (2*np.pi*u.radian)

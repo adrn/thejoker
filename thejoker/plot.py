@@ -16,8 +16,8 @@ def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
 
     Parameters
     ----------
-    samples : dict
-        TODO describe
+    samples : :class:`~thejoker.sampler.JokerSamples`
+        Posterior samples from The Joker.
     t_grid : array_like, `~astropy.time.Time`
         Array of times. Either in BMJD or as an Astropy time object.
     n_plot : int, optional
@@ -71,13 +71,18 @@ def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
     # plot orbits over the data
     model_rv = np.zeros((n_plot, len(t_grid)))
     for i in range(n_plot):
-        # TODO: need to change how the parsing of parameters happens here
         this_samples = dict()
         for k in samples.keys():
             this_samples[k] = samples[k][i]
-        this_samples.pop('jitter')
+        this_samples.pop('jitter', None)
 
-        orbit = RVOrbit(**this_samples)
+        # get the trend parameters out
+        trend_samples = dict()
+        for k in samples.trend_cls.parameters:
+            trend_samples[k] = this_samples.pop(k)
+        trend = samples.trend_cls(t0=trend_t0, **trend_samples)
+
+        orbit = RVOrbit(trend=trend, **this_samples)
         model_rv[i] = orbit.generate_rv_curve(t_grid).to(rv_unit).value
     ax.plot(t_grid, model_rv.T, **style)
 
