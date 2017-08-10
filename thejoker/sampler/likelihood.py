@@ -1,8 +1,8 @@
 # Third-party
 import numpy as np
+from twobody.celestial import rv_from_elements
 
 # Package
-from ..celestialmechanics import rv_from_elements
 from .utils import get_ivar
 from ..log import log as logger
 
@@ -38,7 +38,7 @@ def design_matrix(nonlinear_p, data, joker_params):
                             anomaly_tol=joker_params.anomaly_tol)
 
     # TODO: right now, we only support a single, global velocity trend!
-    A1 = np.vander(t, N=joker_params.trend.n_terms, increasing=True)
+    A1 = np.vander(t, N=joker_params._n_trend, increasing=True)
     A = np.hstack((zdot[:,None], A1))
 
     return A

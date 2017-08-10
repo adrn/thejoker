@@ -249,7 +249,9 @@ class TheJoker(object):
         sample_dict['K'] = samples[:,k] * prior_units[-1] # jitter unit
 
         k += 1
-        for j in range(self.params.trend.n_terms):
+
+        # TODO: assumes polynomial velocity trend
+        for j in range(self.params._n_trend):
             k += j
             sample_dict['v{}'.format(j)] = samples[:,k] * prior_units[-1] / u.day**j
 
