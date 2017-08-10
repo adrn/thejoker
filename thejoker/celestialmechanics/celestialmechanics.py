@@ -100,7 +100,8 @@ def eccentric_anomaly_from_mean_anomaly(Ms, e, tol=1E-13, maxiter=128):
 
     else:
         warnings.warn("eccentric_anomaly_from_mean_anomaly() reached maximum "
-                      "number of iterations ({})".format(maxiter), RuntimeWarning)
+                      "number of iterations ({})".format(maxiter),
+                      RuntimeWarning)
 
     return Es
 
