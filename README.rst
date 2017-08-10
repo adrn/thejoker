@@ -11,6 +11,8 @@ The Joker [YO-ker] /'joʊkər/
         :target: https://zenodo.org/badge/latestdoi/67356932
 .. image:: http://img.shields.io/travis/adrn/thejoker/master.svg?style=flat
         :target: http://travis-ci.org/adrn/thejoker
+.. image:: https://coveralls.io/repos/github/adrn/thejoker/badge.svg?branch=master
+        :target: https://coveralls.io/github/adrn/thejoker?branch=master
 
 A custom Monte Carlo sampler for the two-body problem.
 
