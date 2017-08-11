@@ -1,5 +1,6 @@
 # Standard library
 from collections import OrderedDict
+import copy
 
 # Third-party
 import numpy as np
@@ -13,7 +14,7 @@ class JokerSamples(OrderedDict):
 
     _valid_keys = ['P', 'phi0', 'ecc', 'omega', 'jitter', 'K']
 
-    def __init__(self, trend_cls, **kwargs):
+    def __init__(self, trend_cls=None, **kwargs):
         """ """
 
         kw = kwargs.copy()
@@ -29,28 +30,33 @@ class JokerSamples(OrderedDict):
         super(JokerSamples, self).__init__(**kw)
 
         self.trend_cls = trend_cls
-        self._valid_keys += trend_cls.parameters
+        if trend_cls is not None:
+            self._valid_keys += trend_cls.parameters
 
     def _validate_key(self, key):
         if key not in self._valid_keys:
             raise ValueError("Invalid key '{0}'.".format(key))
 
     def _validate_val(self, val):
+        val = np.atleast_1d(val)
         if self._n_samples is not None and len(val) != self._n_samples:
             raise ValueError("Length of new samples must match those already "
                              "stored! ({0}, expected {1})"
                              .format(len(val), self._n_samples))
 
-        return np.atleast_1d(val)
+        return val
 
     def __getitem__(self, slc):
         if isinstance(slc, str):
             return super(JokerSamples, self).__getitem__(slc)
 
         else:
-            new = self.__class__()
+            new = copy.copy(self)
+            new._n_samples = None # reset number of samples
+
             for k in self.keys():
                 new[k] = self[k][slc]
+
             return new
 
     def __setitem__(self, key, val):
