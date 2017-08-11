@@ -70,8 +70,11 @@ def _marginal_ll_worker(task):
     with h5py.File(prior_cache_file, 'r') as f:
         chunk = np.array(f['samples'][start_stop[0]:start_stop[1]])
 
+    chunk = chunk.astype(np.float64)
+
     n_chunk = len(chunk)
 
+    # TODO: this loop is what could be turned into a Cython-ized loop...
     ll = np.zeros(n_chunk)
     for i in range(n_chunk):
         try:
@@ -188,7 +191,7 @@ def _sample_vector_worker(task):
         # idx are the integer locations of the 'good' samples!
         for j,i in enumerate(idx):
             nonlinear_p = f['samples'][i]
-            P, phi0, ecc, omega, s = nonlinear_p
+            P, phi0, ecc, omega, s = np.array(nonlinear_p).astype(np.float64)
 
             ivar = get_ivar(data, s)
             A = design_matrix(nonlinear_p, data, joker_params)
