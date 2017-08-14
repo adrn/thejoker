@@ -146,7 +146,6 @@ API
 
     data
     sampler
-    celestialmechanics
 
 .. rubric:: Footnotes
 
