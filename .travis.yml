@@ -36,7 +36,7 @@ env:
         #   to drop the nbsphinx component of the build when on travis?
         - PIP_DEPENDENCIES='emcee schwimmbad nbsphinx git+https://github.com/adrn/TwoBody'
         - CONDA_CHANNELS='astropy-ci-extras astropy'
-        - CONDA_DEPENDENCIES='scipy h5py matplotlib pandoc nbconvert ipykernel'
+        - CONDA_DEPENDENCIES='cython scipy h5py matplotlib pandoc nbconvert ipykernel'
 
         # If there are matplotlib or other GUI tests, uncomment the following
         # line to use the X virtual framebuffer.
