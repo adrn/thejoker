@@ -94,43 +94,43 @@ class TheJoker(object):
         """
         rnd = self.random_state
 
-        pars = JokerSamples(self.params.trend_cls)
+        samples = JokerSamples(self.params.trend_cls)
 
         ln_prior_val = np.zeros(size)
 
         # sample from priors in nonlinear parameters
         a,b = (np.log(self.params.P_min.to(u.day).value),
                np.log(self.params.P_max.to(u.day).value))
-        pars['P'] = np.exp(rnd.uniform(a, b, size=size)) * u.day
-        ln_prior_val += -np.log(b-a) - np.log(pars['P'].value) # Jacobian
+        samples['P'] = np.exp(rnd.uniform(a, b, size=size)) * u.day
+        ln_prior_val += -np.log(b-a) - np.log(samples['P'].value) # Jacobian
 
-        pars['phi0'] = rnd.uniform(0, 2*np.pi, size=size) * u.radian
+        samples['phi0'] = rnd.uniform(0, 2*np.pi, size=size) * u.radian
         ln_prior_val += -np.log(2*np.pi)
 
         # MAGIC NUMBERS below: Kipping et al. 2013 (MNRAS 434 L51)
-        pars['ecc'] = rnd.beta(a=0.867, b=3.03, size=size)
-        ln_prior_val += beta.logpdf(pars['ecc'], 0.867, 3.03)
+        samples['ecc'] = rnd.beta(a=0.867, b=3.03, size=size)
+        ln_prior_val += beta.logpdf(samples['ecc'], 0.867, 3.03)
 
-        pars['omega'] = rnd.uniform(0, 2*np.pi, size=size) * u.radian
+        samples['omega'] = rnd.uniform(0, 2*np.pi, size=size) * u.radian
         ln_prior_val += -np.log(2*np.pi)
 
         if not self.params._fixed_jitter:
             # Gaussian prior in log(s^2)
             log_s2 = rnd.normal(*self.params.jitter, size=size)
-            pars['jitter'] = np.sqrt(np.exp(log_s2)) * self.params._jitter_unit
+            samples['jitter'] = np.sqrt(np.exp(log_s2)) * self.params._jitter_unit
 
-            Jac = (2 / pars['jitter'].value) # Jacobian
+            Jac = (2 / samples['jitter'].value) # Jacobian
             ln_prior_val += norm.logpdf(log_s2,
                                         loc=self.params.jitter[0],
                                         scale=self.params.jitter[1]) * Jac
 
         else:
-            pars['jitter'] = np.ones(size) * self.params.jitter
+            samples['jitter'] = np.ones(size) * self.params.jitter
 
         if return_logprobs:
-            return pars, ln_prior_val
+            return samples, ln_prior_val
         else:
-            return pars
+            return samples
 
     def _rejection_sample_from_cache(self, data, n_prior_samples, cache_file,
                                      start_idx, seed, return_logprobs=False):
@@ -229,7 +229,6 @@ class TheJoker(object):
         Parameters
         ----------
         samples : `numpy.ndarray`
-            TODO
         t_offset : numeric TODO
         prior_units : list
             List of units for the prior samples.
@@ -239,29 +238,32 @@ class TheJoker(object):
         samples : `~thejoker.sampler.samples.JokerSamples`
 
         """
-        sample_dict = JokerSamples(self.params.trend_cls)
 
         n,n_params = samples.shape
+
+        joker_samples = JokerSamples(self.params.trend_cls)
 
         # TODO: need to keep track of this elsewhere...
         nonlin_params = ['P', 'phi0', 'ecc', 'omega', 'jitter']
         for k,key in enumerate(nonlin_params):
-            sample_dict[key] = samples[:,k] * prior_units[k]
+            joker_samples[key] = samples[:,k] * prior_units[k]
 
         k += 1
-        sample_dict['K'] = samples[:,k] * prior_units[-1] # jitter unit
+        joker_samples['K'] = samples[:,k] * prior_units[-1] # jitter unit
 
         k += 1
 
         for j, par_name in enumerate(self.params.trend_cls.parameters):
             k += j
-            sample_dict[par_name] = samples[:,k] * prior_units[-1] / u.day**j
+            joker_samples[par_name] = samples[:,k] * prior_units[-1] / u.day**j
 
         # convert phi0 from relative to t=data.t_offset to relative to mjd=0
-        dphi = (2*np.pi*t_offset/sample_dict['P'].to(u.day).value * u.radian) % (2*np.pi*u.radian)
-        sample_dict['phi0'] = (sample_dict['phi0'] + dphi) % (2*np.pi*u.radian)
+        dphi = (2*np.pi*t_offset/joker_samples['P'].to(u.day).value * u.radian)
+        dphi %= (2*np.pi*u.radian)
 
-        return sample_dict
+        joker_samples['phi0'] = (joker_samples['phi0'] + dphi) % (2*np.pi*u.radian)
+
+        return joker_samples
 
     def iterative_rejection_sample(self, data, n_requested_samples,
                                    prior_cache_file, n_prior_samples=None,

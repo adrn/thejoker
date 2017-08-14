@@ -12,10 +12,10 @@ __all__ = ['JokerSamples']
 
 class JokerSamples(OrderedDict):
 
-    _valid_keys = ['P', 'phi0', 'ecc', 'omega', 'jitter', 'K']
-
     def __init__(self, trend_cls=None, **kwargs):
         """ """
+
+        self._valid_keys = ['P', 'phi0', 'ecc', 'omega', 'jitter', 'K']
 
         kw = kwargs.copy()
 
