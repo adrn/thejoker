@@ -74,9 +74,9 @@ def _marginal_ll_worker(task):
 
     chunk = chunk.astype(np.float64)
 
+    # memoryview is returned
     ll = batch_marginal_ln_likelihood(chunk, data, jparams)
-
-    return ll
+    return np.array(ll)
 
 def compute_likelihoods(n_prior_samples, prior_cache_file, start_idx, data,
                         joker_params, pool):
