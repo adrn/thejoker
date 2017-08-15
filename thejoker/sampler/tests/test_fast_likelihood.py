@@ -44,5 +44,4 @@ def test_shit():
             py_ll[i] = np.nan
     print("Python:", time.time() - t0)
 
-    print(np.array(cy_ll))
-    print(py_ll)
+    assert np.allclose(np.array(cy_ll), py_ll)
