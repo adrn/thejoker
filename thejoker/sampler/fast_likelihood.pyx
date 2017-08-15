@@ -5,8 +5,6 @@
 # cython: wraparound=False
 # cython: profile=False
 
-from __future__ import division, print_function
-
 # Third-party
 import numpy as np
 cimport numpy as np
@@ -23,42 +21,58 @@ cdef extern from "celestial/src/twobody.h":
                             double P, double K, double e, double omega,
                             double phi0, double tol, int maxiter)
 
+# Log of 2π
 cdef double LN_2PI = 1.8378770664093453
 
-# __all__ = []
-
 cdef void design_matrix(double P, double phi0, double ecc, double omega,
-                        double[::1] t, double[:,::1] A_T,
-                        int n_trend, double anomaly_tol, int maxiter):
-    """
+                        double[::1] t,
+                        double[:,::1] A_T,
+                        int n_trend,
+                        double anomaly_tol, int anomaly_maxiter):
+    """Construct the elements of the design matrix.
 
     Parameters
     ----------
+    P : double
+        Period [day].
+    phi0 : double
+        Phase [radian].
+    ecc : double
+        Eccentricity
+    omega : double
+        Argument of pericenter [radian].
+    t : `numpy.ndarray`
+        Data time array.
+    n_trend : int
+        Number of terms in the long-term velocity trend.
+    anomaly_tol : double
+        Tolerance passed to c_rv_from_elements.
+    anomaly_maxiter : int
+        Max. number of iterations passed to c_rv_from_elements.
 
     Outputs
     -------
     A_T : `numpy.ndarray`
-        The transpose of the design matrix. Should have shape
-        (number of linear parameters, number of data points).
+        The transpose of the design matrix, to be filled by this function.
+        Should have shape: (number of linear parameters, number of data points).
 
     """
     cdef:
         int i, j
         int n_times = t.shape[0]
 
-    # phi0 now is implicitly relative to data.t_offset, not mjd=0
+    # phi0 is implicitly relative to data.t_offset, not mjd=0
     c_rv_from_elements(&t[0], &A_T[0,0], n_times,
                        P, 1., ecc, omega, phi0,
                        anomaly_tol, maxiter)
 
-    if n_trend > 1: # TODO: this is a hack, could be more efficient
-        for i in range(n_trend):
+    for j in range(n_times):
+        A_T[1, j] = 1.
+
+    if n_trend > 1: # only needed if more than constant trend
+        for i in range(1, n_trend):
             for j in range(n_times):
                 A_T[1+i, j] = pow(t[j], i)
-
-    else:
-        for j in range(n_times):
-            A_T[1, j] = 1.
 
 cdef void get_ivar(double[::1] ivar, double s, double[::1] new_ivar):
     """Return new ivar values with the jitter incorporated.
@@ -68,6 +82,7 @@ cdef void get_ivar(double[::1] ivar, double s, double[::1] new_ivar):
     Parameters
     ----------
     ivar : `numpy.ndarray`
+        Inverse-variance array.
     s : numeric
         Jitter in the same units as the RV data.
     new_ivar : `numpy.ndarray`
@@ -84,17 +99,15 @@ cdef void get_ivar(double[::1] ivar, double s, double[::1] new_ivar):
 cdef double tensor_vector_scalar(double[:,::1] A_T, double[::1] ivar,
                                  double[::1] y,
                                  double[:,::1] ATCinvA, double[::1] p):
-    """
-    Internal function used to construct linear algebra objects
-    used to compute the marginal log-likelihood.
+    """Construct objects used to compute the marginal log-likelihood.
 
     Parameters
     ----------
-    A_T : `~numpy.ndarray`
+    A_T : `numpy.ndarray`
         Transpose of the design matrix.
-    ivar : `~numpy.ndarray`
+    ivar : `numpy.ndarray`
         Inverse-variance matrix.
-    y : `~numpy.ndarray`
+    y : `numpy.ndarray`
         Data (in this case, radial velocities).
 
     Outputs
@@ -104,6 +117,9 @@ cdef double tensor_vector_scalar(double[:,::1] A_T, double[::1] ivar,
         of the linear parameters.
     p : `numpy.ndarray`
         Optimal values of linear parameters.
+
+    Returns
+    -------
     chi2 : float
         Chi-squared value.
 
@@ -165,6 +181,19 @@ cdef double tensor_vector_scalar(double[:,::1] A_T, double[::1] ivar,
     return chi2
 
 cdef double logdet(double[:,::1] A):
+    """Compute the log-determinant of the (assumed) square, symmetric matrix A.
+
+    Parameters
+    ----------
+    A : `numpy.ndarray`
+        The input matrix.
+
+    Returns
+    -------
+    log_det : float
+        Log-determinant value.
+
+    """
     cdef:
         int i
         int n_pars = A.shape[0] # A is assumed symmetric
@@ -185,12 +214,13 @@ cdef double logdet(double[:,::1] A):
     for i in range(n_pars):
         log_det += log(fabs(B[i,i]))
 
-    # TODO: error
-    # if info != 0:
+    if info != 0:
+        raise ValueError("Log-determinant function failed.")
 
     return log_det
 
 cdef double logdet_term(double[:,::1] ATCinvA, double[::1] ivar):
+    """Compute the log-determinant term of the log-likelihood."""
     cdef:
         int i
         int n_pars = ATCinvA.shape[0] # symmetric
@@ -208,7 +238,7 @@ cdef double logdet_term(double[:,::1] ATCinvA, double[::1] ivar):
 
 cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
                                    data, joker_params):
-    """
+    """Compute the marginal log-likelihood for a batch of prior samples.
 
     Parameters
     ----------

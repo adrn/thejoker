@@ -31,6 +31,7 @@ def chunk_tasks(N, pool, arr=None, args=None, start_idx=0):
 
             if arr is None: # store indices
                 tasks.append([(i1, i2), i1] + args)
+
             else: # store sliced array
                 tasks.append([arr[i1:i2], i1] + args)
 
