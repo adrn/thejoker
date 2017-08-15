@@ -64,7 +64,7 @@ cdef void design_matrix(double P, double phi0, double ecc, double omega,
     # phi0 is implicitly relative to data.t_offset, not mjd=0
     c_rv_from_elements(&t[0], &A_T[0,0], n_times,
                        P, 1., ecc, omega, phi0,
-                       anomaly_tol, maxiter)
+                       anomaly_tol, anomaly_maxiter)
 
     for j in range(n_times):
         A_T[1, j] = 1.
@@ -281,17 +281,23 @@ cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
         double[::1] ll = np.full(n_samples, np.nan)
 
     for n in range(n_samples):
-        design_matrix(chunk[n,0], chunk[n,1], chunk[n,2], chunk[n,3],
-                      t, A_T, n_trend, anomaly_tol, anomaly_maxiter)
+        try:
+            design_matrix(chunk[n,0], chunk[n,1], chunk[n,2], chunk[n,3],
+                          t, A_T, n_trend, anomaly_tol, anomaly_maxiter)
 
-        # jitter must be in same units as the data RV's / ivar!
-        get_ivar(ivar, chunk[n,4], jitter_ivar)
+            # jitter must be in same units as the data RV's / ivar!
+            get_ivar(ivar, chunk[n,4], jitter_ivar)
 
-        # compute things needed for the ln(likelihood)
-        # - ATCinvA, p are populated by the function
-        chi2 = tensor_vector_scalar(A_T, ivar, rv, ATCinvA, p)
+            # compute things needed for the ln(likelihood)
+            # - ATCinvA, p are populated by the function
+            chi2 = tensor_vector_scalar(A_T, ivar, rv, ATCinvA, p)
 
-        logdet = logdet_term(ATCinvA, ivar)
+            logdet = logdet_term(ATCinvA, ivar)
+
+        except Exception as e:
+            ll[n] = np.nan
+            # TODO: could output a log message here...
+            continue
 
         ll[n] = 0.5*logdet - 0.5*chi2
 

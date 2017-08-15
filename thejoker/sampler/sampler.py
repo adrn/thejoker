@@ -293,16 +293,6 @@ class TheJoker(object):
             if n_prior_samples is None: # take all samples if not specified
                 n_prior_samples = len(f['samples'])
 
-        # TODO: here's where we need to do the iterative bullshit
-        # cache_path, _filename = path.split(prior_cache_file)
-        # prob_cache_tmpfile = path.join(cache_path, 'tmp_{0}'.format(_filename))
-
-        # if path.exists(prob_cache_tmpfile):
-        #     raise RuntimeError('SHIT!') # TODO: make this nicer or figure out what to do
-
-        # with h5py.File(prob_cache_tmpfile, 'a') as f:
-        #     f.create_dataset('probs', (0, 0), maxshape=(None, 2))
-
         # Start from the beginning of the prior cache file
         start_idx = 0
 
@@ -352,10 +342,16 @@ class TheJoker(object):
             # We should never get here!!
             raise RuntimeError("Hit maximum number of iterations!")
 
-        full_samples, ln_prior, ln_like = sample_indices_to_full_samples(
+        result = sample_indices_to_full_samples(
             good_samples_idx, prior_cache_file, data, self.params,
             pool=self.pool, global_seed=seed,
-            return_logprobs=True)
+            return_logprobs=return_logprobs)
+
+        if return_logprobs:
+            full_samples, ln_prior, ln_like = result
+
+        else:
+            full_samples = result
 
         samples_dict = self.unpack_full_samples(full_samples, data.t_offset,
                                                 prior_units)

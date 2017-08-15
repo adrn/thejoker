@@ -7,6 +7,7 @@ from ..log import log
 from .utils import get_ivar
 from .likelihood import (design_matrix, tensor_vector_scalar,
                          marginal_ln_likelihood)
+from .fast_likelihood import batch_marginal_ln_likelihood
 
 __all__ = ['compute_likelihoods', 'get_good_sample_indices',
            'sample_indices_to_full_samples']
@@ -73,16 +74,7 @@ def _marginal_ll_worker(task):
 
     chunk = chunk.astype(np.float64)
 
-    n_chunk = len(chunk)
-
-    # TODO: this loop is what could be turned into a Cython-ized loop...
-    ll = np.zeros(n_chunk)
-    for i in range(n_chunk):
-        try:
-            ll[i] = marginal_ln_likelihood(chunk[i], data, jparams)
-        except Exception as e:
-            log.error(e)
-            ll[i] = np.nan
+    ll = batch_marginal_ln_likelihood(chunk, data, jparams)
 
     return ll
 
