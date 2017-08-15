@@ -166,8 +166,8 @@ cdef double tensor_vector_scalar(double[:,::1] A_T, double[::1] ivar,
                  &work[0,0], &lwork[0,0],
                  &info)
 
-    # TODO: raise error if info != 0
-    # if info != 0:
+    if info != 0:
+        raise ValueError("Failed to 'solve'.")
 
     for k in range(n_times):
         y2 = 0.
