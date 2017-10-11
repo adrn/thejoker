@@ -7,8 +7,7 @@ import numpy as np
 
 __all__ = ['pack_prior_samples', 'save_prior_samples']
 
-# These units are required by the celestial mechanics code and the order
-#   is required for the likelihood code
+# These units and the order are required for the likelihood code
 _name_to_unit = OrderedDict()
 _name_to_unit['P'] = u.day
 _name_to_unit['phi0'] = u.radian
@@ -30,20 +29,18 @@ def pack_prior_samples(samples, rv_unit):
     Parameters
     ----------
     samples : dict
-        A dictionary of prior samples as `~astropy.units.Quantity`
-        objects.
+        A dictionary of prior samples as `~astropy.units.Quantity` objects.
     rv_unit : `~astropy.units.UnitBase`
         The radial velocity data unit.
 
     Returns
     -------
     arr_samples : `numpy.ndarray`
-        An array of ``n`` prior samples with shape ``(n, 5)``. If
-        jitter was not passed in, all jitter values will be
-        automatically set to 0.
+        An array of ``n`` prior samples with shape ``(n, 5)``. If jitter was not
+        passed in, all jitter values will be automatically set to 0.
     units : list
-        A list of `~astropy.units.UnitBase` objects specifying the
-        units for each column.
+        A list of `~astropy.units.UnitBase` objects specifying the units for
+        each column.
 
     """
 

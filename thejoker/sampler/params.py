@@ -1,10 +1,7 @@
 # Third-party
 from astropy.utils.misc import isiterable
 import astropy.units as u
-
-# Project
-from ..celestialmechanics.trends import PolynomialVelocityTrend
-# from ..util import quantity_from_hdf5, quantity_to_hdf5
+from twobody.celestial import VelocityTrend1
 
 __all__ = ['JokerParams']
 
@@ -17,8 +14,9 @@ class JokerParams(object):
         Lower bound on prior over period, the smallest period considered.
     P_max : `astropy.units.Quantity` [time]
         Upper bound on prior over period, the largest period considered.
-    trend : `~thejoker.celestialmechanics.trends.VelocityTrend`
-        The long-term velocity trend.
+    trend_cls : class
+        The long-term velocity trend class to use. This must not be an
+        instantiated object, just the class!
     jitter : `~astropy.units.Quantity` [speed], tuple (optional)
         Represents additional Gaussian noise in the RV signal. Default
         is to fix the value of the jitter to 0. To fix the jitter to a
@@ -37,8 +35,9 @@ class JokerParams(object):
         you must also specify the units of the jitter prior. See note
         above about the ``jitter`` argument.
     anomaly_tol : float (optional)
-        Tolerance passed to
-        `~thejoker.celestialmechanics.celestialmechanics.eccentric_anomaly_from_mean_anomaly`.
+        Convergence tolerance passed to
+        :func:`twobody.celestial.eccentric_anomaly_from_mean_anomaly`.
+        Arbitrarily set to 1E-10 by default.
 
     Examples
     --------
@@ -51,7 +50,8 @@ class JokerParams(object):
 
     """
     @u.quantity_input(P_min=u.day, P_max=u.day)
-    def __init__(self, P_min, P_max, trend=None, jitter=None, jitter_unit=None, anomaly_tol=1E-13):
+    def __init__(self, P_min, P_max, trend_cls=None,
+                 jitter=None, jitter_unit=None, anomaly_tol=1E-10):
 
         # the names of the default parameters
         self.default_params = ['P', 'phi0', 'ecc', 'omega', 'jitter', 'K']
@@ -60,20 +60,20 @@ class JokerParams(object):
         self.P_max = P_max
         self.anomaly_tol = float(anomaly_tol)
 
-        # validate the specified long-term velocity trends
-        if trend is None:
-            trend = PolynomialVelocityTrend(n_terms=1) # default is constant offset
+        # TODO: validate the specified long-term velocity trends
+        # if trend is not None and not isinstance(trend, PolynomialVelocityTrend):
+        #     raise TypeError("Velocity trends must be PolynomialVelocityTrend "
+        #                     "instances, not '{0}'".format(type(trend)))
 
-        # TODO: we may want to allow more general trends in the future, but for now...
-        if not isinstance(trend, PolynomialVelocityTrend):
-            raise TypeError("Velocity trends must be PolynomialVelocityTrend "
-                            "instances, not '{}'".format(type(trend)))
+        if trend_cls is None: # by default, assume constant
+            trend_cls = VelocityTrend1
 
-        self.trend = trend
+        self.trend_cls = trend_cls
+        self._n_trend = len(self.trend_cls.parameters)
 
         # validate the input jitter specification
         if jitter is None:
-            jitter = 0*u.km/u.s
+            jitter = 0 * u.km/u.s
 
         if isiterable(jitter):
             if len(jitter) != 2:
@@ -99,7 +99,7 @@ class JokerParams(object):
     @property
     def num_params(self):
         n = len(self.default_params)
-        n += self.trend.n_terms
+        n += self._n_trend
         return n
 
     # --- All old shit below here that needs to be moved ---

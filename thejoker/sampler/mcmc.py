@@ -2,9 +2,9 @@
 import astropy.units as u
 import numpy as np
 from scipy.stats import beta, norm
+from twobody.celestial import rv_from_elements
 
 # Project
-from ..celestialmechanics import rv_from_elements
 from .utils import get_ivar
 
 __all__ = ['to_mcmc_params', 'from_mcmc_params',
@@ -98,8 +98,10 @@ def pack_samples(samples, params, data):
            samples['omega'].to(u.radian).value,
            jitter,
            samples['K'].to(data.rv.unit).value]
+
+    # TODO: assumes polynomial velocity trend
     arr = arr + [samples['v{}'.format(i)].to(data.rv.unit/u.day**i).value
-                 for i in range(params.trend.n_terms)]
+                 for i in range(params._n_trend)]
     return np.array(arr).T
 
 def pack_samples_mcmc(samples, params, data):
@@ -164,7 +166,8 @@ def unpack_samples(samples_arr, params, data):
 
     samples['K'] = samples_arr.T[4+shift] * data.rv.unit
 
-    for i in range(params.trend.n_terms):
+    # TODO: assumes polynomial velocity trend
+    for i in range(params._n_trend):
         samples['v{}'.format(i)] = samples_arr.T[5+shift+i] * data.rv.unit/u.day**i
 
     return samples
@@ -206,7 +209,7 @@ def ln_likelihood(p, joker_params, data):
                             anomaly_tol=joker_params.anomaly_tol)
 
     # TODO: right now, we only support a single, global velocity trend!
-    A1 = np.vander(t, N=joker_params.trend.n_terms, increasing=True)
+    A1 = np.vander(t, N=joker_params._n_trend, increasing=True)
     A = np.hstack((zdot[:,None], A1))
     p = np.array([K] + v_terms)
     ivar = get_ivar(data, s)

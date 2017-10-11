@@ -3,42 +3,39 @@ import astropy.time as atime
 import astropy.units as u
 import matplotlib.pyplot as plt
 import numpy as np
-
-# Package
-from .log import log as logger
-from .celestialmechanics import SimulatedRVOrbit
+from twobody.celestial import RVOrbit
 
 __all__ = ['plot_rv_curves']
 
 def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
                    ax=None, plot_kwargs=dict(), data_plot_kwargs=dict(),
-                   add_labels=True, trend_t_offset=0.):
+                   add_labels=True, trend_t0=0.):
     """
     Plot radial velocity curves for the input set of orbital parameter
     samples over the input grid of times.
 
     Parameters
     ----------
-    samples : dict
-        TODO describe
+    samples : :class:`~thejoker.sampler.JokerSamples`
+        Posterior samples from The Joker.
     t_grid : array_like, `~astropy.time.Time`
         Array of times. Either in BMJD or as an Astropy time object.
-    n_plot : int (optional)
+    n_plot : int, optional
         The maximum number of samples to plot. Defaults to 128.
-    rv_unit : `~astropy.units.UnitBase` (optional)
+    rv_unit : `~astropy.units.UnitBase`, optional
         The units to use when plotting RV's.
-    data : `~thejoker.data.RVData` (optional)
+    data : `~thejoker.data.RVData`, optional
         Over-plot the data as well.
-    ax : `~matplotlib.Axes` (optional)
+    ax : `~matplotlib.Axes`, optional
         A matplotlib axes object to plot on to. If not specified, will
         create a new figure and plot on that.
-    plot_kwargs : dict
+    plot_kwargs : dict, optional
         Passed to `matplotlib.pyplot.plot()`.
-    data_plot_kwargs : dict
+    data_plot_kwargs : dict, optional
         Passed to `thejoker.data.RVData.plot()`.
-    add_labels : bool (optional)
+    add_labels : bool, optional
         Add labels to the axes or not.
-    TODO: trend_t_offset
+    trend_t0 : numeric, optional
 
     Returns
     -------
@@ -77,10 +74,16 @@ def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
         this_samples = dict()
         for k in samples.keys():
             this_samples[k] = samples[k][i]
-        this_samples.pop('jitter')
+        this_samples.pop('jitter', None)
 
-        orbit = SimulatedRVOrbit(**this_samples)
-        model_rv[i] = orbit.generate_rv_curve(t_grid, trend_t_offset).to(rv_unit).value
+        # get the trend parameters out
+        trend_samples = dict()
+        for k in samples.trend_cls.parameters:
+            trend_samples[k] = this_samples.pop(k)
+        trend = samples.trend_cls(t0=trend_t0, **trend_samples)
+
+        orbit = RVOrbit(trend=trend, **this_samples)
+        model_rv[i] = orbit.generate_rv_curve(t_grid).to(rv_unit).value
     ax.plot(t_grid, model_rv.T, **style)
 
     if data is not None:

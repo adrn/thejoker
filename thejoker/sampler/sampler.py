@@ -94,41 +94,43 @@ class TheJoker(object):
         """
         rnd = self.random_state
 
-        pars = JokerSamples()
+        samples = JokerSamples(self.params.trend_cls)
 
         ln_prior_val = np.zeros(size)
 
         # sample from priors in nonlinear parameters
         a,b = (np.log(self.params.P_min.to(u.day).value),
                np.log(self.params.P_max.to(u.day).value))
-        pars['P'] = np.exp(rnd.uniform(a, b, size=size)) * u.day
-        ln_prior_val += -np.log(b-a) - np.log(pars['P'].value) # Jacobian
+        samples['P'] = np.exp(rnd.uniform(a, b, size=size)) * u.day
+        ln_prior_val += -np.log(b-a) - np.log(samples['P'].value) # Jacobian
 
-        pars['phi0'] = rnd.uniform(0, 2*np.pi, size=size) * u.radian
+        samples['phi0'] = rnd.uniform(0, 2*np.pi, size=size) * u.radian
         ln_prior_val += -np.log(2*np.pi)
 
         # MAGIC NUMBERS below: Kipping et al. 2013 (MNRAS 434 L51)
-        pars['ecc'] = rnd.beta(a=0.867, b=3.03, size=size)
-        ln_prior_val += beta.logpdf(pars['ecc'], 0.867, 3.03)
+        samples['ecc'] = rnd.beta(a=0.867, b=3.03, size=size)
+        ln_prior_val += beta.logpdf(samples['ecc'], 0.867, 3.03)
 
-        pars['omega'] = rnd.uniform(0, 2*np.pi, size=size) * u.radian
+        samples['omega'] = rnd.uniform(0, 2*np.pi, size=size) * u.radian
         ln_prior_val += -np.log(2*np.pi)
 
         if not self.params._fixed_jitter:
             # Gaussian prior in log(s^2)
             log_s2 = rnd.normal(*self.params.jitter, size=size)
-            pars['jitter'] = np.sqrt(np.exp(log_s2)) * self.params._jitter_unit
+            samples['jitter'] = np.sqrt(np.exp(log_s2)) * self.params._jitter_unit
+
+            Jac = (2 / samples['jitter'].value) # Jacobian
             ln_prior_val += norm.logpdf(log_s2,
                                         loc=self.params.jitter[0],
-                                        scale=self.params.jitter[1]) * (2/pars['jitter'].value) # Jacobian
+                                        scale=self.params.jitter[1]) * Jac
 
         else:
-            pars['jitter'] = np.ones(size) * self.params.jitter
+            samples['jitter'] = np.ones(size) * self.params.jitter
 
         if return_logprobs:
-            return pars, ln_prior_val
+            return samples, ln_prior_val
         else:
-            return pars
+            return samples
 
     def _rejection_sample_from_cache(self, data, n_prior_samples, cache_file,
                                      start_idx, seed, return_logprobs=False):
@@ -178,14 +180,15 @@ class TheJoker(object):
 
         # validate input data
         if not isinstance(data, RVData):
-            raise TypeError("Input data must be an RVData instance, not '{}'"
+            raise TypeError("Input data must be an RVData instance, not '{0}'"
                             .format(type(data)))
 
         if n_prior_samples is None and prior_cache_file is None:
-            raise ValueError("You either have to specify the number of prior samples "
-                             "to generate, or a path to a file containing cached prior "
-                             "samples in (TODO: what format?). If you want to try an "
-                             "experimental adaptive method, try .rejection_sample_adapt()")
+            raise ValueError("You either have to specify the number of prior "
+                             "samples to generate, or a path to a file "
+                             "containing cached prior samples in (TODO: what "
+                             "format?). If you want to try an experimental "
+                             "adaptive method, try .rejection_sample_adapt()")
 
         # compute full parameter vectors for all good samples
         if self._rnd_passed:
@@ -226,7 +229,6 @@ class TheJoker(object):
         Parameters
         ----------
         samples : `numpy.ndarray`
-            TODO
         t_offset : numeric TODO
         prior_units : list
             List of units for the prior samples.
@@ -236,28 +238,32 @@ class TheJoker(object):
         samples : `~thejoker.sampler.samples.JokerSamples`
 
         """
-        sample_dict = JokerSamples()
 
         n,n_params = samples.shape
+
+        joker_samples = JokerSamples(self.params.trend_cls)
 
         # TODO: need to keep track of this elsewhere...
         nonlin_params = ['P', 'phi0', 'ecc', 'omega', 'jitter']
         for k,key in enumerate(nonlin_params):
-            sample_dict[key] = samples[:,k] * prior_units[k]
+            joker_samples[key] = samples[:,k] * prior_units[k]
 
         k += 1
-        sample_dict['K'] = samples[:,k] * prior_units[-1] # jitter unit
+        joker_samples['K'] = samples[:,k] * prior_units[-1] # jitter unit
 
         k += 1
-        for j in range(self.params.trend.n_terms):
+
+        for j, par_name in enumerate(self.params.trend_cls.parameters):
             k += j
-            sample_dict['v{}'.format(j)] = samples[:,k] * prior_units[-1] / u.day**j
+            joker_samples[par_name] = samples[:,k] * prior_units[-1] / u.day**j
 
         # convert phi0 from relative to t=data.t_offset to relative to mjd=0
-        dphi = (2*np.pi*t_offset/sample_dict['P'].to(u.day).value * u.radian) % (2*np.pi*u.radian)
-        sample_dict['phi0'] = (sample_dict['phi0'] + dphi) % (2*np.pi*u.radian)
+        dphi = (2*np.pi*t_offset/joker_samples['P'].to(u.day).value * u.radian)
+        dphi %= (2*np.pi*u.radian)
 
-        return sample_dict
+        joker_samples['phi0'] = (joker_samples['phi0'] + dphi) % (2*np.pi*u.radian)
+
+        return joker_samples
 
     def iterative_rejection_sample(self, data, n_requested_samples,
                                    prior_cache_file, n_prior_samples=None,
@@ -286,16 +292,6 @@ class TheJoker(object):
 
             if n_prior_samples is None: # take all samples if not specified
                 n_prior_samples = len(f['samples'])
-
-        # TODO: here's where we need to do the iterative bullshit
-        # cache_path, _filename = path.split(prior_cache_file)
-        # prob_cache_tmpfile = path.join(cache_path, 'tmp_{0}'.format(_filename))
-
-        # if path.exists(prob_cache_tmpfile):
-        #     raise RuntimeError('SHIT!') # TODO: make this nicer or figure out what to do
-
-        # with h5py.File(prob_cache_tmpfile, 'a') as f:
-        #     f.create_dataset('probs', (0, 0), maxshape=(None, 2))
 
         # Start from the beginning of the prior cache file
         start_idx = 0
@@ -346,10 +342,16 @@ class TheJoker(object):
             # We should never get here!!
             raise RuntimeError("Hit maximum number of iterations!")
 
-        full_samples, ln_prior, ln_like = sample_indices_to_full_samples(
+        result = sample_indices_to_full_samples(
             good_samples_idx, prior_cache_file, data, self.params,
             pool=self.pool, global_seed=seed,
-            return_logprobs=True)
+            return_logprobs=return_logprobs)
+
+        if return_logprobs:
+            full_samples, ln_prior, ln_like = result
+
+        else:
+            full_samples = result
 
         samples_dict = self.unpack_full_samples(full_samples, data.t_offset,
                                                 prior_units)

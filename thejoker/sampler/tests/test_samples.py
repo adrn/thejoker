@@ -4,28 +4,33 @@ from astropy.tests.helper import quantity_allclose
 import h5py
 import numpy as np
 import pytest
+from twobody.celestial.trends import VelocityTrend1
 
 # Project
 from ..samples import JokerSamples
 
 def test_joker_samples(tmpdir):
     N = 100
+
+    # Generate some fake samples
     samples = JokerSamples(P=np.random.random(size=N)*u.day)
     assert 'P' in samples
     assert len(samples) == N
 
+    # Test slicing with a number
     s2 = samples[:10]
     assert len(s2) == 10
 
+    # Invalid name
     with pytest.raises(ValueError):
         samples = JokerSamples(derp=15.)
 
-    # length conflicts with previous length
+    # Length conflicts with previous length
     samples = JokerSamples(P=np.random.random(size=N)*u.day)
     with pytest.raises(ValueError):
         samples['v0'] = np.random.random(size=10)*u.km/u.s
 
-    # write to HDF5 file
+    # Write to HDF5 file
     samples = JokerSamples()
     samples['P'] = np.random.uniform(800, 1000, size=N)*u.day
     samples['phi0'] = 2*np.pi*np.random.random(size=N)*u.radian
@@ -41,3 +46,17 @@ def test_joker_samples(tmpdir):
 
     for k in samples.keys():
         assert quantity_allclose(samples[k], samples2[k])
+
+    # Trend class
+    samples = JokerSamples(VelocityTrend1)
+    samples['P'] = np.random.uniform(800, 1000, size=N)*u.day
+    samples['phi0'] = 2*np.pi*np.random.random(size=N)*u.radian
+    samples['ecc'] = np.random.random(size=N)
+    samples['omega'] = 2*np.pi*np.random.random(size=N)*u.radian
+    samples['v0'] = np.random.random(size=N) * u.km/u.s
+
+    with pytest.raises(ValueError):
+        samples['v1'] = np.random.random(size=N)
+
+    new_samples = samples[samples['P'].argmin()]
+    assert new_samples.trend_cls == samples.trend_cls

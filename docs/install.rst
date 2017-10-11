@@ -49,7 +49,8 @@ Dependencies
 - astropy
 - h5py
 - emcee
-- schwimmbad
+- `schwimmbad <https://github.com/adrn/schwimmbad>`_
+- `twobody <https://github.com/adrn/TwoBody>`_
 
 Optional Dependencies
 ---------------------

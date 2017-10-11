@@ -7,6 +7,7 @@ from ..log import log
 from .utils import get_ivar
 from .likelihood import (design_matrix, tensor_vector_scalar,
                          marginal_ln_likelihood)
+from .fast_likelihood import batch_marginal_ln_likelihood
 
 __all__ = ['compute_likelihoods', 'get_good_sample_indices',
            'sample_indices_to_full_samples']
@@ -31,6 +32,7 @@ def chunk_tasks(N, pool, arr=None, args=None, start_idx=0):
 
             if arr is None: # store indices
                 tasks.append([(i1, i2), i1] + args)
+
             else: # store sliced array
                 tasks.append([arr[i1:i2], i1] + args)
 
@@ -70,17 +72,11 @@ def _marginal_ll_worker(task):
     with h5py.File(prior_cache_file, 'r') as f:
         chunk = np.array(f['samples'][start_stop[0]:start_stop[1]])
 
-    n_chunk = len(chunk)
+    chunk = chunk.astype(np.float64)
 
-    ll = np.zeros(n_chunk)
-    for i in range(n_chunk):
-        try:
-            ll[i] = marginal_ln_likelihood(chunk[i], data, jparams)
-        except Exception as e:
-            log.error(e)
-            ll[i] = np.nan
-
-    return ll
+    # memoryview is returned
+    ll = batch_marginal_ln_likelihood(chunk, data, jparams)
+    return np.array(ll)
 
 def compute_likelihoods(n_prior_samples, prior_cache_file, start_idx, data,
                         joker_params, pool):
@@ -188,7 +184,7 @@ def _sample_vector_worker(task):
         # idx are the integer locations of the 'good' samples!
         for j,i in enumerate(idx):
             nonlinear_p = f['samples'][i]
-            P, phi0, ecc, omega, s = nonlinear_p
+            P, phi0, ecc, omega, s = np.array(nonlinear_p).astype(np.float64)
 
             ivar = get_ivar(data, s)
             A = design_matrix(nonlinear_p, data, joker_params)

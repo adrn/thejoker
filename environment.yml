@@ -13,3 +13,4 @@ dependencies:
   - emcee
   - pip:
     - schwimmbad
+    - git+https://github.com/adrn/TwoBody
