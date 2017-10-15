@@ -267,7 +267,7 @@ class TheJoker(object):
 
     def iterative_rejection_sample(self, data, n_requested_samples,
                                    prior_cache_file, n_prior_samples=None,
-                                   return_logprobs=False):
+                                   return_logprobs=False, magic_fudge=128):
         """ For now: prior_cache_file is required """
 
         # validate input data
@@ -297,7 +297,14 @@ class TheJoker(object):
         start_idx = 0
 
         safety_factor = 2 # MAGIC NUMBER
-        n_process = 128 * n_requested_samples # 32 = MAGIC NUMBER
+        n_process = magic_fudge * n_requested_samples # MAGIC NUMBER
+
+        if n_process > n_prior_samples:
+            raise ValueError("Prior sample library not big enough! For "
+                             "iterative sampling, you have to have at least "
+                             "magic_fudge * n_requested_samples samples in the "
+                             "prior samples cache file. You have {0}"
+                             .format(n_prior_samples))
 
         all_marg_lls = np.array([])
 
