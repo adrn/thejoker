@@ -17,6 +17,10 @@ class JokerSamples(OrderedDict):
 
         self._valid_keys = ['P', 'phi0', 'ecc', 'omega', 'jitter', 'K']
 
+        self.trend_cls = trend_cls
+        if trend_cls is not None:
+            self._valid_keys += trend_cls.parameters
+
         kw = kwargs.copy()
 
         self._n_samples = None
@@ -28,10 +32,6 @@ class JokerSamples(OrderedDict):
                 self._n_samples = len(val)
 
         super(JokerSamples, self).__init__(**kw)
-
-        self.trend_cls = trend_cls
-        if trend_cls is not None:
-            self._valid_keys += trend_cls.parameters
 
     def _validate_key(self, key):
         if key not in self._valid_keys:
