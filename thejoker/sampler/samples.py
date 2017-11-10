@@ -81,15 +81,18 @@ class JokerSamples(OrderedDict):
         return "<JokerSamples: n={}>".format()
 
     @classmethod
-    def from_hdf5(cls, f, n=None):
+    def from_hdf5(cls, f, n=None, **kwargs):
         """
         Parameters
         ----------
         f : :class:`h5py.File`, :class:`h5py.Group`
         n : int (optional)
             The number of samples to load.
+        **kwargs
+            All other keyword arguments are passed to the class initializer.
+            You may need to use this to pass in a ``trend_cls``.
         """
-        samples = cls()
+        samples = cls(**kwargs)
         for key in f.keys():
             samples[key] = quantity_from_hdf5(f, key, n=n)
 
