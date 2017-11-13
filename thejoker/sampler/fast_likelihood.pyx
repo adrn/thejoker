@@ -280,19 +280,34 @@ cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
         # likelihoodz
         double[::1] ll = np.full(n_samples, np.nan)
 
+        # lol
+        int _fixed_jitter
+        double jitter
+
+    # TODO: we need a test of this hack
+    if joker_params._fixed_jitter:
+        _fixed_jitter = 1
+        jitter = joker_params.jitter.to(data.rv.unit).value
+
+    else:
+        _fixed_jitter = 0
+
     for n in range(n_samples):
+        if _fixed_jitter == 0:
+            jitter = chunk[n,4]
+
         try:
             design_matrix(chunk[n,0], chunk[n,1], chunk[n,2], chunk[n,3],
                           t, A_T, n_trend, anomaly_tol, anomaly_maxiter)
 
             # jitter must be in same units as the data RV's / ivar!
-            get_ivar(ivar, chunk[n,4], jitter_ivar)
+            get_ivar(ivar, jitter, jitter_ivar)
 
             # compute things needed for the ln(likelihood)
             # - ATCinvA, p are populated by the function
-            chi2 = tensor_vector_scalar(A_T, ivar, rv, ATCinvA, p)
+            chi2 = tensor_vector_scalar(A_T, jitter_ivar, rv, ATCinvA, p)
 
-            logdet = logdet_term(ATCinvA, ivar)
+            logdet = logdet_term(ATCinvA, jitter_ivar)
 
         except Exception as e:
             ll[n] = np.nan
