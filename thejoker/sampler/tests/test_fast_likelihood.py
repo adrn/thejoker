@@ -10,6 +10,7 @@ from ..fast_likelihood import batch_marginal_ln_likelihood
 from .. import JokerParams, TheJoker
 from .helpers import FakeData
 
+
 def test_shit():
     joker_params = JokerParams(P_min=8*u.day, P_max=32768*u.day, jitter=0*u.m/u.s)
     joker = TheJoker(joker_params)
@@ -38,6 +39,7 @@ def test_shit():
     n_chunk = len(chunk)
     py_ll = np.zeros(n_chunk)
     for i in range(n_chunk):
+        py_ll[i] = marginal_ln_likelihood(chunk[i], data, joker_params)
         try:
             py_ll[i] = marginal_ln_likelihood(chunk[i], data, joker_params)
         except Exception as e:

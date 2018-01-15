@@ -4,6 +4,7 @@ import astropy.units as u
 # Package
 from .log import log as logger
 
+
 def quantity_from_hdf5(f, key, n=None):
     """
     Return an Astropy Quantity object from a key in an HDF5 file,
@@ -40,6 +41,7 @@ def quantity_from_hdf5(f, key, n=None):
             return f[key][:n] * unit
         else:
             return f[key][:] * unit
+
 
 def quantity_to_hdf5(f, name, q):
     """

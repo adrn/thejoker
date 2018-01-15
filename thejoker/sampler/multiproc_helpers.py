@@ -12,6 +12,7 @@ from .fast_likelihood import batch_marginal_ln_likelihood
 __all__ = ['compute_likelihoods', 'get_good_sample_indices',
            'sample_indices_to_full_samples']
 
+
 def chunk_tasks(N, pool, arr=None, args=None, start_idx=0):
     if args is None:
         args = []
@@ -47,6 +48,7 @@ def chunk_tasks(N, pool, arr=None, args=None, start_idx=0):
 
     return tasks
 
+
 def _marginal_ll_worker(task):
     """
     Compute the marginal log-likelihood, i.e. the likelihood integrated over
@@ -77,6 +79,7 @@ def _marginal_ll_worker(task):
     # memoryview is returned
     ll = batch_marginal_ln_likelihood(chunk, data, jparams)
     return np.array(ll)
+
 
 def compute_likelihoods(n_prior_samples, prior_cache_file, start_idx, data,
                         joker_params, pool):
@@ -130,6 +133,7 @@ def compute_likelihoods(n_prior_samples, prior_cache_file, start_idx, data,
 
     return marg_ll
 
+
 def get_good_sample_indices(marg_ll, seed=None):
     """Return the indices of 'good' samples from pre-computed values of the
     log-likelihood.
@@ -157,7 +161,6 @@ def get_good_sample_indices(marg_ll, seed=None):
 
     return good_samples_idx
 
-# ----------------------------------------------------------------------------
 
 def _sample_vector_worker(task):
     """
@@ -184,7 +187,7 @@ def _sample_vector_worker(task):
         # idx are the integer locations of the 'good' samples!
         for j,i in enumerate(idx):
             nonlinear_p = f['samples'][i]
-            P, phi0, ecc, omega, s = np.array(nonlinear_p).astype(np.float64)
+            P, M0, ecc, omega, s = np.array(nonlinear_p).astype(np.float64)
 
             ivar = get_ivar(data, s)
             A = design_matrix(nonlinear_p, data, joker_params)
@@ -199,7 +202,7 @@ def _sample_vector_worker(task):
                 omega += np.pi
                 omega = omega % (2*np.pi) # HACK: I think this is safe
 
-            row = [P, phi0, ecc, omega, s, K] + v_terms
+            row = [P, M0, ecc, omega, s, K] + v_terms
             if return_logprobs:
                 ln_prior = f['ln_prior_probs'][i]
                 ln_like = marginal_ln_likelihood(nonlinear_p, data,
@@ -210,6 +213,7 @@ def _sample_vector_worker(task):
             pars[j] = row
 
     return pars
+
 
 def sample_indices_to_full_samples(good_samples_idx, prior_cache_file, data,
                                    joker_params, pool, global_seed=None,

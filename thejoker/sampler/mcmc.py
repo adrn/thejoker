@@ -2,16 +2,18 @@
 import astropy.units as u
 import numpy as np
 from scipy.stats import beta, norm
-from twobody.celestial import rv_from_elements
+from twobody.wrap import cy_rv_from_elements
 
 # Project
 from .utils import get_ivar
 
 __all__ = ['to_mcmc_params', 'from_mcmc_params',
-           'pack_samples', 'pack_samples_mcmc', 'unpack_samples', 'unpack_samples_mcmc',
+           'pack_samples', 'pack_samples_mcmc', 'unpack_samples',
+           'unpack_samples_mcmc',
            'ln_likelihood', 'ln_prior', 'ln_posterior']
 
-log_2pi = np.log(2*np.pi)
+log_2pi = np.log(2 * np.pi)
+
 
 def to_mcmc_params(p):
     r"""
@@ -35,11 +37,12 @@ def to_mcmc_params(p):
         and long-term velocity trend parameters.
 
     """
-    P, phi0, ecc, omega, s, K, *v_terms = p
+    P, M0, ecc, omega, s, K, *v_terms = p
     return np.vstack([np.log(P),
-                      np.sqrt(K) * np.cos(phi0), np.sqrt(K) * np.sin(phi0),
+                      np.sqrt(K) * np.cos(M0), np.sqrt(K) * np.sin(M0),
                       np.sqrt(ecc) * np.cos(omega), np.sqrt(ecc) * np.sin(omega),
                       2*np.log(s)] + list(v_terms))
+
 
 def from_mcmc_params(p):
     """
@@ -57,16 +60,17 @@ def from_mcmc_params(p):
 
     """
     (ln_P,
-     sqrtK_cos_phi0, sqrtK_sin_phi0,
+     sqrtK_cos_M0, sqrtK_sin_M0,
      sqrte_cos_omega, sqrte_sin_omega,
      log_s2, *v_terms) = p
 
     return np.vstack([np.exp(ln_P),
-                      np.arctan2(sqrtK_sin_phi0, sqrtK_cos_phi0) % (2*np.pi),
+                      np.arctan2(sqrtK_sin_M0, sqrtK_cos_M0) % (2*np.pi),
                       sqrte_cos_omega**2 + sqrte_sin_omega**2,
                       np.arctan2(sqrte_sin_omega, sqrte_cos_omega) % (2*np.pi),
                       np.sqrt(np.exp(log_s2)),
-                      (sqrtK_cos_phi0**2 + sqrtK_sin_phi0**2)] + v_terms)
+                      (sqrtK_cos_M0**2 + sqrtK_sin_M0**2)] + v_terms)
+
 
 def pack_samples(samples, params, data):
     """
@@ -76,7 +80,7 @@ def pack_samples(samples, params, data):
     ----------
     samples : dict
         Dictionary of `~astropy.units.Quantity` objects for period,
-        phi0, etc.
+        M0, etc.
     params : `~thejoker.sampler.params.JokerParams`
         Object specifying hyper-parameters for The Joker.
     data : `~thejoker.data.RVData`
@@ -93,8 +97,8 @@ def pack_samples(samples, params, data):
         jitter = np.zeros_like(samples['P'].value)
 
     arr = [samples['P'].to(u.day).value,
-           samples['phi0'].to(u.radian).value,
-           np.asarray(samples['ecc']),
+           samples['M0'].to(u.radian).value,
+           np.asarray(samples['e']),
            samples['omega'].to(u.radian).value,
            jitter,
            samples['K'].to(data.rv.unit).value]
@@ -103,6 +107,7 @@ def pack_samples(samples, params, data):
     arr = arr + [samples['v{}'.format(i)].to(data.rv.unit/u.day**i).value
                  for i in range(params._n_trend)]
     return np.array(arr).T
+
 
 def pack_samples_mcmc(samples, params, data):
     """
@@ -113,7 +118,7 @@ def pack_samples_mcmc(samples, params, data):
     ----------
     samples : dict
         Dictionary of `~astropy.units.Quantity` objects for period,
-        phi0, etc.
+        M0, etc.
     params : `~thejoker.sampler.params.JokerParams`
         Object specifying hyper-parameters for The Joker.
     data : `~thejoker.data.RVData`
@@ -132,6 +137,7 @@ def pack_samples_mcmc(samples, params, data):
 
     return np.array(samples_mcmc).T
 
+
 def unpack_samples(samples_arr, params, data):
     """
     Unpack a 2D array of samples into a dictionary of samples as Quantity objects.
@@ -149,12 +155,12 @@ def unpack_samples(samples_arr, params, data):
     -------
     samples : dict
         Dictionary of `~astropy.units.Quantity` objects for period,
-        phi0, etc.
+        M0, etc.
     """
     samples = dict()
     samples['P'] = samples_arr.T[0] * u.day
-    samples['phi0'] = samples_arr.T[1] * u.radian
-    samples['ecc'] = samples_arr.T[2] * u.one
+    samples['M0'] = samples_arr.T[1] * u.radian
+    samples['e'] = samples_arr.T[2] * u.one
     samples['omega'] = samples_arr.T[3] * u.radian
 
     if not params._fixed_jitter:
@@ -171,6 +177,7 @@ def unpack_samples(samples_arr, params, data):
         samples['v{}'.format(i)] = samples_arr.T[5+shift+i] * data.rv.unit/u.day**i
 
     return samples
+
 
 def unpack_samples_mcmc(samples_arr, params, data):
     """
@@ -192,21 +199,23 @@ def unpack_samples_mcmc(samples_arr, params, data):
     -------
     samples : dict
         Dictionary of `~astropy.units.Quantity` objects for period,
-        phi0, etc.
+        M0, etc.
     """
     samples_arr = from_mcmc_params(samples_arr.T).T
     return unpack_samples(samples_arr, params, data)
 
+
 def ln_likelihood(p, joker_params, data):
-    P, phi0, ecc, omega, s, K, *v_terms = p
+    P, M0, ecc, omega, s, K, *v_terms = p
 
     # a little repeated code here...
 
-    # phi0 now is implicitly relative to data.t_offset, not mjd=0
+    # M0 now is implicitly relative to data.t_offset, not mjd=0
     t = data._t_bmjd
-    zdot = rv_from_elements(times=t, P=P, K=1., e=ecc,
-                            omega=omega, phi0=phi0,
-                            anomaly_tol=joker_params.anomaly_tol)
+    zdot = cy_rv_from_elements(t, P=P, K=1., e=ecc,
+                               omega=omega, M0=M0, t0=0.,
+                               anomaly_tol=joker_params.anomaly_tol,
+                               anomaly_maxiter=joker_params.anomaly_maxiter)
 
     # TODO: right now, we only support a single, global velocity trend!
     A1 = np.vander(t, N=joker_params._n_trend, increasing=True)
@@ -218,8 +227,9 @@ def ln_likelihood(p, joker_params, data):
 
     return 0.5 * (-dy**2 * ivar - log_2pi + np.log(ivar))
 
+
 def ln_prior(p, joker_params):
-    P, phi0, ecc, omega, s, K, *v_terms = p
+    P, M0, ecc, omega, s, K, *v_terms = p
 
     lnp = 0.
 
@@ -238,6 +248,7 @@ def ln_prior(p, joker_params):
         pass
 
     return lnp
+
 
 def ln_posterior(mcmc_p, joker_params, data):
     if joker_params._fixed_jitter:

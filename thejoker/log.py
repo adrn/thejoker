@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 # Standard library
 import logging
 
@@ -9,6 +7,7 @@ from astropy.logger import StreamHandler
 from astropy.utils import find_current_module
 
 __all__ = ['log']
+
 
 Logger = logging.getLoggerClass()
 class JokerLogger(Logger):
@@ -47,6 +46,7 @@ class JokerLogger(Logger):
         else:
             return Logger.makeRecord(self, name, level, pathname, lineno, msg,
                                      args, exc_info, func=func, extra=extra)
+
 
 logging.setLoggerClass(JokerLogger)
 log = logging.getLogger('thejoker')

@@ -10,21 +10,18 @@ from ..utils import quantity_to_hdf5, quantity_from_hdf5
 
 __all__ = ['JokerSamples']
 
+
 class JokerSamples(OrderedDict):
 
-    def __init__(self, trend_cls=None, **kwargs):
+    def __init__(self, **kwargs):
         """ """
 
-        self._valid_keys = ['P', 'phi0', 'ecc', 'omega', 'jitter', 'K']
-
-        self.trend_cls = trend_cls
-        if trend_cls is not None:
-            self._valid_keys += trend_cls.parameters
+        self._valid_keys = ['P', 'M0', 'e', 'omega', 'jitter', 'K', 'v0']
 
         kw = kwargs.copy()
 
         self._n_samples = None
-        for key,val in kw.items():
+        for key, val in kw.items():
             self._validate_key(key)
             kw[key] = self._validate_val(val)
 
@@ -90,7 +87,6 @@ class JokerSamples(OrderedDict):
             The number of samples to load.
         **kwargs
             All other keyword arguments are passed to the class initializer.
-            You may need to use this to pass in a ``trend_cls``.
         """
         samples = cls(**kwargs)
         for key in f.keys():

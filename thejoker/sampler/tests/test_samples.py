@@ -4,10 +4,10 @@ from astropy.tests.helper import quantity_allclose
 import h5py
 import numpy as np
 import pytest
-from twobody.celestial.trends import VelocityTrend1
 
 # Project
 from ..samples import JokerSamples
+
 
 def test_joker_samples(tmpdir):
     N = 100
@@ -33,8 +33,8 @@ def test_joker_samples(tmpdir):
     # Write to HDF5 file
     samples = JokerSamples()
     samples['P'] = np.random.uniform(800, 1000, size=N)*u.day
-    samples['phi0'] = 2*np.pi*np.random.random(size=N)*u.radian
-    samples['ecc'] = np.random.random(size=N)
+    samples['M0'] = 2*np.pi*np.random.random(size=N)*u.radian
+    samples['e'] = np.random.random(size=N)
     samples['omega'] = 2*np.pi*np.random.random(size=N)*u.radian
 
     fn = str(tmpdir / 'test.hdf5')
@@ -48,10 +48,10 @@ def test_joker_samples(tmpdir):
         assert quantity_allclose(samples[k], samples2[k])
 
     # Trend class
-    samples = JokerSamples(VelocityTrend1)
+    samples = JokerSamples()
     samples['P'] = np.random.uniform(800, 1000, size=N)*u.day
-    samples['phi0'] = 2*np.pi*np.random.random(size=N)*u.radian
-    samples['ecc'] = np.random.random(size=N)
+    samples['M0'] = 2*np.pi*np.random.random(size=N)*u.radian
+    samples['e'] = np.random.random(size=N)
     samples['omega'] = 2*np.pi*np.random.random(size=N)*u.radian
     samples['v0'] = np.random.random(size=N) * u.km/u.s
 

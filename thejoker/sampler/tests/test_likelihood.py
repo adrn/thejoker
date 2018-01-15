@@ -7,16 +7,17 @@ from ..likelihood import design_matrix, tensor_vector_scalar, marginal_ln_likeli
 
 from .helpers import FakeData
 
+
 class TestLikelihood(object):
 
     # TODO: repeated code
     def truths_to_nlp(self, truths):
-        # P, phi0, ecc, omega
+        # P, M0, ecc, omega
         P = truths['P'].to(u.day).value
-        phi0 = truths['phi0'].to(u.radian).value
-        ecc = truths['ecc']
+        M0 = truths['M0'].to(u.radian).value
+        ecc = truths['e']
         omega = truths['omega'].to(u.radian).value
-        return np.array([P, phi0, ecc, omega, 0.])
+        return np.array([P, M0, ecc, omega, 0.])
 
     def setup(self):
         d = FakeData()
@@ -33,11 +34,12 @@ class TestLikelihood(object):
         assert A.shape == (len(data), 2) # K, v0
         assert np.allclose(A[:,1], 1)
 
-        nlp = self.truths_to_nlp(self.truths['triple'])
-        A = design_matrix(nlp, data, self.joker_params['triple'])
-        assert A.shape == (len(data), 3) # K, v0, v1
-        assert np.allclose(A[:,1], 1)
-        assert np.allclose(A[:,2], data._t_bmjd)
+        # TODO: triple disabled
+        # nlp = self.truths_to_nlp(self.truths['triple'])
+        # A = design_matrix(nlp, data, self.joker_params['triple'])
+        # assert A.shape == (len(data), 3) # K, v0, v1
+        # assert np.allclose(A[:,1], 1)
+        # assert np.allclose(A[:,2], data._t_bmjd)
 
     def test_tensor_vector_scalar(self):
 
@@ -51,14 +53,15 @@ class TestLikelihood(object):
 
         # --
 
-        data = self.data['triple']
-        nlp = self.truths_to_nlp(self.truths['triple'])
-        A = design_matrix(nlp, data, self.joker_params['triple'])
-        ATCinvA, p, chi2 = tensor_vector_scalar(A, data.ivar.value,
-                                                data.rv.value)
-
-        true_p = [self.truths['triple']['K'].value, self.fd.v0.value, self.fd.v1.value]
-        assert np.allclose(p, true_p, rtol=1e-2)
+        # TODO: triple disabled
+        # data = self.data['triple']
+        # nlp = self.truths_to_nlp(self.truths['triple'])
+        # A = design_matrix(nlp, data, self.joker_params['triple'])
+        # ATCinvA, p, chi2 = tensor_vector_scalar(A, data.ivar.value,
+        #                                         data.rv.value)
+        #
+        # true_p = [self.truths['triple']['K'].value, self.fd.v0.value, self.fd.v1.value]
+        # assert np.allclose(p, true_p, rtol=1e-2)
 
     def test_marginal_ln_likelihood_P(self):
         """
@@ -80,7 +83,7 @@ class TestLikelihood(object):
 
     def test_marginal_ln_likelihood_P_samples(self):
         """
-        This test is a little crazy. We generate samples in P, phi0
+        This test is a little crazy. We generate samples in P, M0
         """
 
         data = self.data['circ_binary']
@@ -89,14 +92,14 @@ class TestLikelihood(object):
 
         n_samples = 16384
         P = np.random.uniform(true_nlp[0] - 2., true_nlp[0] + 2., size=n_samples)
-        phi0 = np.random.uniform(0, 2*np.pi, size=n_samples)
+        M0 = np.random.uniform(0, 2*np.pi, size=n_samples)
 
         lls = np.zeros_like(P)
         n_neg = 0
         for i in range(n_samples):
             nlp = true_nlp.copy()
             nlp[0] = P[i]
-            nlp[1] = phi0[i]
+            nlp[1] = M0[i]
             lls[i] = marginal_ln_likelihood(nlp, data, joker_params)
 
             A = design_matrix(nlp, data, joker_params)
@@ -122,8 +125,8 @@ class TestLikelihood(object):
 
         # plt.figure()
         # bins = np.linspace(0, 2*np.pi, 32)
-        # plt.hist(phi0, bins=bins, alpha=0.25, normed=True)
-        # plt.hist(phi0[idx], bins=bins, alpha=0.4, normed=True)
+        # plt.hist(M0, bins=bins, alpha=0.25, normed=True)
+        # plt.hist(M0[idx], bins=bins, alpha=0.4, normed=True)
         # plt.axvline(true_nlp[1], color='r')
 
         # plt.show()

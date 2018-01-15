@@ -8,6 +8,7 @@ from ..mcmc import (pack_samples, pack_samples_mcmc, to_mcmc_params, from_mcmc_p
 
 from .helpers import FakeData
 
+
 def test_roundtrip():
     # jitter = 0, no v_terms
     p = np.array([63.12, 1.952, 0.1, 0.249, 0., 1.5])
@@ -67,16 +68,17 @@ def test_roundtrip():
 #     plt.axvline(mcmc_p[idx], color='r', zorder=-100)
 #     plt.show()
 
+
 class TestMCMC(object):
 
     # TODO: repeated code!
     def truths_to_nlp(self, truths):
-        # P, phi0, ecc, omega
+        # P, M0, ecc, omega
         P = truths['P'].to(u.day).value
-        phi0 = truths['phi0'].to(u.radian).value
-        ecc = truths['ecc']
+        M0 = truths['M0'].to(u.radian).value
+        ecc = truths['e']
         omega = truths['omega'].to(u.radian).value
-        return np.array([P, phi0, ecc, omega, 0.])
+        return np.array([P, M0, ecc, omega, 0.])
 
     def setup(self):
         d = FakeData()

@@ -20,6 +20,7 @@ from .samples import JokerSamples
 
 __all__ = ['TheJoker']
 
+
 class TheJoker(object):
     """
     A custom Monte-Carlo sampler for two-body systems.
@@ -83,7 +84,7 @@ class TheJoker(object):
         Returns
         -------
         samples : `~thejoker.sampler.samples.JokerSamples`
-            Keys: `['P', 'phi0', 'ecc', 'omega']`, each as
+            Keys: `['P', 'M0', 'e', 'omega']`, each as
             `astropy.units.Quantity` objects (i.e. with units).
 
         TODO
@@ -94,7 +95,7 @@ class TheJoker(object):
         """
         rnd = self.random_state
 
-        samples = JokerSamples(self.params.trend_cls)
+        samples = JokerSamples()
 
         ln_prior_val = np.zeros(size)
 
@@ -104,12 +105,12 @@ class TheJoker(object):
         samples['P'] = np.exp(rnd.uniform(a, b, size=size)) * u.day
         ln_prior_val += -np.log(b-a) - np.log(samples['P'].value) # Jacobian
 
-        samples['phi0'] = rnd.uniform(0, 2*np.pi, size=size) * u.radian
+        samples['M0'] = rnd.uniform(0, 2*np.pi, size=size) * u.radian
         ln_prior_val += -np.log(2*np.pi)
 
         # MAGIC NUMBERS below: Kipping et al. 2013 (MNRAS 434 L51)
-        samples['ecc'] = rnd.beta(a=0.867, b=3.03, size=size)
-        ln_prior_val += beta.logpdf(samples['ecc'], 0.867, 3.03)
+        samples['e'] = rnd.beta(a=0.867, b=3.03, size=size)
+        ln_prior_val += beta.logpdf(samples['e'], 0.867, 3.03)
 
         samples['omega'] = rnd.uniform(0, 2*np.pi, size=size) * u.radian
         ln_prior_val += -np.log(2*np.pi)
@@ -241,10 +242,10 @@ class TheJoker(object):
 
         n,n_params = samples.shape
 
-        joker_samples = JokerSamples(self.params.trend_cls)
+        joker_samples = JokerSamples()
 
         # TODO: need to keep track of this elsewhere...
-        nonlin_params = ['P', 'phi0', 'ecc', 'omega', 'jitter']
+        nonlin_params = ['P', 'M0', 'e', 'omega', 'jitter']
         for k,key in enumerate(nonlin_params):
             joker_samples[key] = samples[:,k] * prior_units[k]
 
@@ -252,16 +253,13 @@ class TheJoker(object):
         joker_samples['K'] = samples[:,k] * prior_units[-1] # jitter unit
 
         k += 1
+        joker_samples['v0'] = samples[:,k] * prior_units[-1] # jitter unit
 
-        for j, par_name in enumerate(self.params.trend_cls.parameters):
-            k += j
-            joker_samples[par_name] = samples[:,k] * prior_units[-1] / u.day**j
-
-        # convert phi0 from relative to t=data.t_offset to relative to mjd=0
+        # convert M0 from relative to t=data.t_offset to relative to mjd=0
         dphi = (2*np.pi*t_offset/joker_samples['P'].to(u.day).value * u.radian)
         dphi %= (2*np.pi*u.radian)
 
-        joker_samples['phi0'] = (joker_samples['phi0'] + dphi) % (2*np.pi*u.radian)
+        joker_samples['M0'] = (joker_samples['M0'] + dphi) % (2*np.pi*u.radian)
 
         return joker_samples
 

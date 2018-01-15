@@ -3,9 +3,10 @@ import astropy.time as atime
 import astropy.units as u
 import matplotlib.pyplot as plt
 import numpy as np
-from twobody.celestial import RVOrbit
+from twobody import KeplerOrbit
 
 __all__ = ['plot_rv_curves']
+
 
 def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
                    ax=None, plot_kwargs=dict(), data_plot_kwargs=dict(),

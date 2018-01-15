@@ -19,7 +19,7 @@ def get_extensions():
     if twobody_path is not None:
         cfg['include_dirs'].append(twobody_path)
         cfg['sources'].append(path.join(twobody_path,
-                                        'celestial/src/twobody.c'))
+                                        'src/twobody.c'))
 
     cfg['extra_compile_args'].append('--std=gnu99')
     cfg['sources'].append('thejoker/sampler/fast_likelihood.pyx')

@@ -9,15 +9,16 @@ from ..params import JokerParams
 from ..sampler import TheJoker
 from .helpers import FakeData
 
+
 class TestSampler(object):
 
     def truths_to_nlp(self, truths):
-        # P, phi0, ecc, omega
+        # P, M0, ecc, omega
         P = truths['P'].to(u.day).value
-        phi0 = truths['phi0'].to(u.radian).value
-        ecc = truths['ecc']
+        M0 = truths['M0'].to(u.radian).value
+        ecc = truths['e']
         omega = truths['omega'].to(u.radian).value
-        return np.array([P, phi0, ecc, omega, 0.])
+        return np.array([P, M0, ecc, omega, 0.])
 
     def setup(self):
         d = FakeData()

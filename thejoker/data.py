@@ -8,7 +8,8 @@ from .log import log as logger
 
 __all__ = ['RVData']
 
-class RVData(object):
+
+class RVData:
     """
     Time-domain radial velocity measurements for a single target.
 
@@ -31,7 +32,8 @@ class RVData(object):
 
     """
     @u.quantity_input(rv=u.km/u.s)
-    def __init__(self, t, rv, ivar=None, stddev=None, metadata=None, t_offset=None):
+    def __init__(self, t, rv, ivar=None, stddev=None,
+                 metadata=None, t_offset=None):
 
         # For speed, many of the attributes are saved without units and only
         #   returned with units if asked for.
@@ -280,4 +282,3 @@ class RVData(object):
             f.close()
 
         return cls(t=t, rv=rv, stddev=stddev)
-

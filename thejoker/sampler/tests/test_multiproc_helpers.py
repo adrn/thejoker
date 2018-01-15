@@ -9,16 +9,17 @@ from ..multiproc_helpers import (get_good_sample_indices, compute_likelihoods,
                                  sample_indices_to_full_samples)
 from .helpers import FakeData
 
+
 class TestMultiproc(object):
 
     # TODO: this is bad to copy pasta from test_likelihood.py
     def truths_to_nlp(self, truths):
-        # P, phi0, ecc, omega
+        # P, M0, ecc, omega
         P = truths['P'].to(u.day).value
-        phi0 = truths['phi0'].to(u.radian).value
-        ecc = truths['ecc']
+        M0 = truths['M0'].to(u.radian).value
+        ecc = truths['e']
         omega = truths['omega'].to(u.radian).value
-        return np.array([P, phi0, ecc, omega, 0.])
+        return np.array([P, M0, ecc, omega, 0.])
 
     def setup(self):
         d = FakeData()
@@ -39,11 +40,11 @@ class TestMultiproc(object):
         # write some nonsense out to the prior file
         n = 8192
         P = np.random.uniform(nlp[0]-2., nlp[0]+2., n)
-        phi0 = np.random.uniform(0, 2*np.pi, n)
+        M0 = np.random.uniform(0, 2*np.pi, n)
         ecc = np.zeros(n)
         omega = np.zeros(n)
         jitter = np.zeros(n)
-        samples = np.vstack((P,phi0,ecc,omega,jitter)).T
+        samples = np.vstack((P,M0,ecc,omega,jitter)).T
 
         # TODO: use save_prior_samples here
 
@@ -58,4 +59,3 @@ class TestMultiproc(object):
         full_samples = sample_indices_to_full_samples(idx, prior_samples_file,
                                                       data, joker_params, pool)
         print(full_samples)
-
