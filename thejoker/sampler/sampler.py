@@ -22,8 +22,7 @@ __all__ = ['TheJoker']
 
 
 class TheJoker(object):
-    """
-    A custom Monte-Carlo sampler for two-body systems.
+    """A custom Monte-Carlo sampler for two-body systems.
 
     Parameters
     ----------
@@ -49,14 +48,15 @@ class TheJoker(object):
 
         self.pool = pool
 
-        # set the parent random state - child processes get different states based on the parent
+        # Set the parent random state - child processes get different states
+        # based on the parent
         if random_state is None:
             self._rnd_passed = False
             random_state = np.random.RandomState()
 
         elif not isinstance(random_state, np.random.RandomState):
-            raise TypeError("Random state object must be a numpy RandomState instance, "
-                            "not '{}'".format(type(random_state)))
+            raise TypeError("Random state object must be a numpy RandomState "
+                            "instance, not '{0}'".format(type(random_state)))
 
         else:
             self._rnd_passed = True
@@ -65,13 +65,12 @@ class TheJoker(object):
 
         # check if a JokerParams instance was passed in to specify the state
         if not isinstance(params, JokerParams):
-            raise TypeError("Parameter specification must be a JokerParams instance, "
-                            "not a '{}'".format(type(params)))
+            raise TypeError("Parameter specification must be a JokerParams "
+                            "instance, not a '{0}'".format(type(params)))
         self.params = params
 
     def sample_prior(self, size=1, return_logprobs=False):
-        """
-        Generate samples from the prior. Logarithmic in period, uniform in
+        """Generate samples from the prior. Logarithmic in period, uniform in
         phase and argument of pericenter, Beta distribution in eccentricity.
 
         Parameters
@@ -79,7 +78,8 @@ class TheJoker(object):
         size : int
             Number of samples to generate.
         return_logprobs : bool (optional)
-            If ``True``, will also return the log-value of the prior at each sample.
+            If ``True``, will also return the log-value of the prior at each
+            sample.
 
         Returns
         -------
@@ -89,41 +89,52 @@ class TheJoker(object):
 
         TODO
         ----
-        - All prior distributions are essentially fixed. These should be
-            customizable in some way...
-
+        - All prior distributions are fixed. These should be customizable.
         """
         rnd = self.random_state
 
+        # Create an empty, dictionary-like 'samples' object to fill
         samples = JokerSamples()
 
-        ln_prior_val = np.zeros(size)
-
         # sample from priors in nonlinear parameters
-        a,b = (np.log(self.params.P_min.to(u.day).value),
-               np.log(self.params.P_max.to(u.day).value))
+        a, b = (np.log(self.params.P_min.to(u.day).value),
+                np.log(self.params.P_max.to(u.day).value))
         samples['P'] = np.exp(rnd.uniform(a, b, size=size)) * u.day
-        ln_prior_val += -np.log(b-a) - np.log(samples['P'].value) # Jacobian
 
-        samples['M0'] = rnd.uniform(0, 2*np.pi, size=size) * u.radian
-        ln_prior_val += -np.log(2*np.pi)
+        samples['M0'] = rnd.uniform(0, 2 * np.pi, size=size) * u.radian
 
         # MAGIC NUMBERS below: Kipping et al. 2013 (MNRAS 434 L51)
         samples['e'] = rnd.beta(a=0.867, b=3.03, size=size)
-        ln_prior_val += beta.logpdf(samples['e'], 0.867, 3.03)
 
-        samples['omega'] = rnd.uniform(0, 2*np.pi, size=size) * u.radian
-        ln_prior_val += -np.log(2*np.pi)
+        samples['omega'] = rnd.uniform(0, 2 * np.pi, size=size) * u.radian
+
+        # Store the value of the prior at each prior sample
+        # TODO: should we store the value for each parameter independently?
+        if return_logprobs:
+            ln_prior_val = np.zeros(size)
+
+            # P
+            ln_prior_val += -np.log(b - a) - np.log(samples['P'].value)
+
+            # M0
+            ln_prior_val += -np.log(2 * np.pi)
+
+            # e - MAGIC NUMBERS below: Kipping et al. 2013 (MNRAS 434 L51)
+            ln_prior_val += beta.logpdf(samples['e'], 0.867, 3.03)
+
+            # omega
+            ln_prior_val += -np.log(2 * np.pi)
 
         if not self.params._fixed_jitter:
             # Gaussian prior in log(s^2)
             log_s2 = rnd.normal(*self.params.jitter, size=size)
             samples['jitter'] = np.sqrt(np.exp(log_s2)) * self.params._jitter_unit
 
-            Jac = (2 / samples['jitter'].value) # Jacobian
-            ln_prior_val += norm.logpdf(log_s2,
-                                        loc=self.params.jitter[0],
-                                        scale=self.params.jitter[1]) * Jac
+            if return_logprobs:
+                Jac = (2 / samples['jitter'].value) # Jacobian
+                ln_prior_val += norm.logpdf(log_s2,
+                                            loc=self.params.jitter[0],
+                                            scale=self.params.jitter[1]) * Jac
 
         else:
             samples['jitter'] = np.ones(size) * self.params.jitter
@@ -133,9 +144,42 @@ class TheJoker(object):
         else:
             return samples
 
+    def _unpack_full_samples(self, samples, prior_units):
+        """Unpack an array of The Joker samples into a dictionary-like object of
+        Astropy Quantity objects (with units). This is meant to be used
+        internally.
+
+        Parameters
+        ----------
+        samples : `numpy.ndarray`
+            A 2D array of posterior samples output from The Joker.
+        prior_units : list
+            List of units for the prior samples.
+
+        Returns
+        -------
+        samples : `~thejoker.sampler.samples.JokerSamples`
+
+        """
+
+        n, n_params = samples.shape
+
+        joker_samples = JokerSamples()
+
+        # TODO: need to keep track of this elsewhere...
+        nonlin_params = ['P', 'M0', 'e', 'omega', 'jitter']
+        for k, key in enumerate(nonlin_params):
+            joker_samples[key] = samples[:, k] * prior_units[k]
+
+        joker_samples['K'] = samples[:, k+1] * prior_units[-1] # jitter unit
+        joker_samples['v0'] = samples[:, k+2] * prior_units[-1] # jitter unit
+
+        return joker_samples
+
     def _rejection_sample_from_cache(self, data, n_prior_samples, cache_file,
                                      start_idx, seed, return_logprobs=False):
-        """
+        """Perform The Joker's rejection sampling on a cache file containing
+        prior samples. This is meant to be used internally.
         """
 
         # Get indices of good samples from the cache file
@@ -151,11 +195,15 @@ class TheJoker(object):
         if len(good_samples_idx) == 0:
             logger.error("Failed to find any good samples!")
             self.pool.close()
-            sys.exit(0)
+            sys.exit(1)
 
         n_good = len(good_samples_idx)
-        logger.info("{} good samples after rejection sampling".format(n_good))
+        s_or_not = 's' if n_good > 1 else ''
+        logger.info("{0} good sample{1} after rejection sampling"
+                    .format(n_good, s_or_not))
 
+        # For samples that pass the rejection step, we now have their indices
+        # in the prior cache file. Here, we read the actual values:
         full_samples = sample_indices_to_full_samples(
             good_samples_idx, cache_file, data, self.params,
             pool=self.pool, global_seed=seed, return_logprobs=return_logprobs)
@@ -164,16 +212,25 @@ class TheJoker(object):
 
     def rejection_sample(self, data, n_prior_samples=None,
                          prior_cache_file=None, start_idx=0):
-        """
-        Run The Joker's rejection sampling on prior samples to get
-        posterior samples for the input data.
+        """Run The Joker's rejection sampling on prior samples to get posterior
+        samples for the input data.
+
+        You must either specify the number of prior samples to generate and
+        use for rejection sampling, ``n_prior_samples``, or the path to a file
+        containing prior samples, ``prior_cache_file``.
 
         Parameters
         ----------
         data : `~thejoker.data.RVData`
             The radial velocity.
         n_prior_samples : int (optional)
+            If ``prior_cache_file`` is not specified, this sets the number of
+            prior samples to generate and use to do the rejection sampling. If
+            ``prior_cache_file`` is specified, this sets the number of prior
+            samples to load from the cache file.
         prior_cache_file : str (optional)
+            A path to an HDF5 cache file containing prior samples. TODO: more
+            information
         start_idx : int (optional)
             Index to start reading from in the prior cache file.
 
@@ -186,10 +243,10 @@ class TheJoker(object):
 
         if n_prior_samples is None and prior_cache_file is None:
             raise ValueError("You either have to specify the number of prior "
-                             "samples to generate, or a path to a file "
-                             "containing cached prior samples in (TODO: what "
-                             "format?). If you want to try an experimental "
-                             "adaptive method, try .rejection_sample_adapt()")
+                             "samples to generate, or a path to an HDF5 file "
+                             "containing cached prior samples. If you want to "
+                             "try an experimental adaptive method, use "
+                             ".iterative_rejection_sample() instead.")
 
         # compute full parameter vectors for all good samples
         if self._rnd_passed:
@@ -202,7 +259,6 @@ class TheJoker(object):
             with h5py.File(prior_cache_file, 'r') as f:
                 prior_units = [u.Unit(uu) for uu in f.attrs['units']]
 
-                # TODO: test this
                 if n_prior_samples is None:
                     n_prior_samples = len(f['samples'])
 
@@ -212,61 +268,31 @@ class TheJoker(object):
 
         else:
             with tempfile.NamedTemporaryFile(mode='r+') as f:
-                # first do prior sampling, cache to file
+                # first do prior sampling, cache to temporary file
                 prior_samples = self.sample_prior(size=n_prior_samples)
-                prior_units = save_prior_samples(f.name, prior_samples, data.rv.unit)
-                samples = self._rejection_sample_from_cache(data, n_prior_samples,
+                prior_units = save_prior_samples(f.name, prior_samples,
+                                                 data.rv.unit)
+                samples = self._rejection_sample_from_cache(data,
+                                                            n_prior_samples,
                                                             f.name, start_idx,
                                                             seed=seed)
 
-        return self.unpack_full_samples(samples, data.t_offset, prior_units)
-
-    def unpack_full_samples(self, samples, t_offset, prior_units):
-        """
-        Unpack an array of Joker samples into a dictionary of Astropy
-        Quantity objects (with units). Note that the phase of pericenter
-        returned here is now relative to BMJD = 0.
-
-        Parameters
-        ----------
-        samples : `numpy.ndarray`
-        t_offset : numeric TODO
-        prior_units : list
-            List of units for the prior samples.
-
-        Returns
-        -------
-        samples : `~thejoker.sampler.samples.JokerSamples`
-
-        """
-
-        n,n_params = samples.shape
-
-        joker_samples = JokerSamples()
-
-        # TODO: need to keep track of this elsewhere...
-        nonlin_params = ['P', 'M0', 'e', 'omega', 'jitter']
-        for k,key in enumerate(nonlin_params):
-            joker_samples[key] = samples[:,k] * prior_units[k]
-
-        k += 1
-        joker_samples['K'] = samples[:,k] * prior_units[-1] # jitter unit
-
-        k += 1
-        joker_samples['v0'] = samples[:,k] * prior_units[-1] # jitter unit
-
-        # convert M0 from relative to t=data.t_offset to relative to mjd=0
-        dphi = (2*np.pi*t_offset/joker_samples['P'].to(u.day).value * u.radian)
-        dphi %= (2*np.pi*u.radian)
-
-        joker_samples['M0'] = (joker_samples['M0'] + dphi) % (2*np.pi*u.radian)
-
-        return joker_samples
+        return self._unpack_full_samples(samples, prior_units)
 
     def iterative_rejection_sample(self, data, n_requested_samples,
                                    prior_cache_file, n_prior_samples=None,
                                    return_logprobs=False, magic_fudge=128):
-        """ For now: prior_cache_file is required """
+        """ For now: prior_cache_file is required
+
+        Parameters
+        ----------
+        data : `~thejoker.RVData`
+        n_requested_samples : int
+        prior_cache_file : str
+        n_prior_samples : int (optional)
+        return_logprobs : bool (optional)
+        magic_fudge : int (optional)
+        """
 
         # validate input data
         if not isinstance(data, RVData):
@@ -358,8 +384,7 @@ class TheJoker(object):
         else:
             full_samples = result
 
-        samples_dict = self.unpack_full_samples(full_samples, data.t_offset,
-                                                prior_units)
+        samples_dict = self._unpack_full_samples(full_samples, prior_units)
 
         if return_logprobs:
             return samples_dict, ln_prior
