@@ -3,6 +3,7 @@ from collections import OrderedDict
 import copy
 
 # Third-party
+from astropy.time import Time
 import numpy as np
 
 # Package
@@ -13,10 +14,22 @@ __all__ = ['JokerSamples']
 
 class JokerSamples(OrderedDict):
 
-    def __init__(self, **kwargs):
-        """ """
+    def __init__(self, t0=None, **kwargs):
+        """A dictionary-like object for storing posterior samples from
+        The Joker, with some extra functionality.
+
+        Parameters
+        ----------
+        t0 : `astropy.time.Time`, numeric (optional)
+            The reference time for the orbital parameters.
+        **kwargs
+            These are the orbital element names.
+        """
 
         self._valid_keys = ['P', 'M0', 'e', 'omega', 'jitter', 'K', 'v0']
+
+        # reference time
+        self.t0 = t0
 
         kw = kwargs.copy()
 
@@ -75,7 +88,8 @@ class JokerSamples(OrderedDict):
         return self.n_samples
 
     def __str__(self):
-        return "<JokerSamples: n={}>".format()
+        return ("<JokerSamples in [{0}], {1} samples>"
+                .format(','.join(self.keys(), len(self))))
 
     @classmethod
     def from_hdf5(cls, f, n=None, **kwargs):
@@ -88,7 +102,14 @@ class JokerSamples(OrderedDict):
         **kwargs
             All other keyword arguments are passed to the class initializer.
         """
-        samples = cls(**kwargs)
+
+        if 't0_bmjd' in f.attrs:
+            # Read the reference time:
+            t0 = Time(f.attrs['t0_bmjd'], format='mjd', scale='tcb')
+        else:
+            t0 = None
+
+        samples = cls(t0=t0, **kwargs)
         for key in f.keys():
             samples[key] = quantity_from_hdf5(f, key, n=n)
 
@@ -103,3 +124,6 @@ class JokerSamples(OrderedDict):
 
         for key in self.keys():
             quantity_to_hdf5(f, key, self[key])
+
+        if self.t0 is not None:
+            f.attrs['t0_bmjd'] = self.t0.tcb.mjd
