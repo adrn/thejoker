@@ -68,7 +68,7 @@ class TestSampler(object):
 
         # Now re-run with jitter set, check that it's always the fixed value
         jitter = 5.*u.m/u.s
-        params = JokerParams(P_min=8*u.day, P_max=1024*u.day, jitter=jitter)
+        params = JokerParams(P_min=8*u.day, P_max=128*u.day, jitter=jitter)
         joker = TheJoker(params)
 
         prior_samples = joker.sample_prior(128)
@@ -76,10 +76,3 @@ class TestSampler(object):
 
         full_samples = joker.rejection_sample(data, n_prior_samples=128)
         assert quantity_allclose(full_samples['jitter'], jitter)
-
-        # HACK:
-        orbit = full_samples.get_orbit(0)
-        import matplotlib.pyplot as plt
-        plt.errorbar(data.t.mjd, data.rv.value, data.stddev.value, marker='o',
-                     linestyle='none')
-        plt.show()

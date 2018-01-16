@@ -3,8 +3,11 @@ from collections import OrderedDict
 import copy
 
 # Third-party
+import astropy.coordinates as coord
+import astropy.units as u
 from astropy.time import Time
 import numpy as np
+from twobody import KeplerOrbit, Barycenter
 
 # Package
 from ..utils import quantity_to_hdf5, quantity_from_hdf5
@@ -141,13 +144,15 @@ class JokerSamples(OrderedDict):
             The index of the samples to turn into a `twobody.KeplerOrbit`
             instance.
         """
-        barycen = coord.ICRS(ra=0*u.deg, dec=0*u.dec,
-                             radial_velocity=self['v0'][index])
+        origin = coord.ICRS(ra=0*u.deg, dec=0*u.deg,
+                            distance=np.nan*u.pc,
+                            radial_velocity=self['v0'][index])
+        barycen = Barycenter(origin=origin)
 
         P = self['P'][index]
         e = self['e'][index]
         a_K = P * self['K'][index] / (2*np.pi) * np.sqrt(1 - e**2)
-        
+
         return KeplerOrbit(P=P, e=e, omega=self['omega'][index],
                            Omega=0*u.deg, i=90*u.deg, a=a_K,
                            M0=self['M0'][index], t0=self.t0,

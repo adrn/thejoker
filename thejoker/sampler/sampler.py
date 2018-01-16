@@ -144,7 +144,7 @@ class TheJoker(object):
         else:
             return samples
 
-    def _unpack_full_samples(self, samples, prior_units):
+    def _unpack_full_samples(self, samples, prior_units, t0=None):
         """Unpack an array of The Joker samples into a dictionary-like object of
         Astropy Quantity objects (with units). This is meant to be used
         internally.
@@ -155,6 +155,8 @@ class TheJoker(object):
             A 2D array of posterior samples output from The Joker.
         prior_units : list
             List of units for the prior samples.
+        t0 : `~astropy.time.Time` (optional)
+            Passed to `thejoker.JokerSamples`.
 
         Returns
         -------
@@ -164,7 +166,7 @@ class TheJoker(object):
 
         n, n_params = samples.shape
 
-        joker_samples = JokerSamples()
+        joker_samples = JokerSamples(t0=t0)
 
         # TODO: need to keep track of this elsewhere...
         nonlin_params = ['P', 'M0', 'e', 'omega', 'jitter']
@@ -277,7 +279,7 @@ class TheJoker(object):
                                                             f.name, start_idx,
                                                             seed=seed)
 
-        return self._unpack_full_samples(samples, prior_units)
+        return self._unpack_full_samples(samples, prior_units, t0=data.t0)
 
     def iterative_rejection_sample(self, data, n_requested_samples,
                                    prior_cache_file, n_prior_samples=None,
@@ -384,7 +386,8 @@ class TheJoker(object):
         else:
             full_samples = result
 
-        samples_dict = self._unpack_full_samples(full_samples, prior_units)
+        samples_dict = self._unpack_full_samples(full_samples,
+                                                 prior_units, t0=data.t0)
 
         if return_logprobs:
             return samples_dict, ln_prior
