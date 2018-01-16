@@ -5,7 +5,7 @@ from scipy.stats import beta, norm
 from twobody.wrap import cy_rv_from_elements
 
 # Project
-from .utils import get_ivar
+from .likelihood import get_ivar
 
 __all__ = ['to_mcmc_params', 'from_mcmc_params',
            'pack_samples', 'pack_samples_mcmc', 'unpack_samples',

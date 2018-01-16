@@ -3,10 +3,25 @@ import numpy as np
 from twobody.wrap import cy_rv_from_elements
 
 # Package
-from .utils import get_ivar
 from ..log import log as logger
 
-__all__ = ['design_matrix', 'tensor_vector_scalar', 'marginal_ln_likelihood']
+__all__ = ['get_ivar', 'design_matrix',
+           'tensor_vector_scalar', 'marginal_ln_likelihood']
+
+
+def get_ivar(data, s):
+    """Return a copy of the inverse variance array with jitter included.
+
+    This is safe for zero'd out inverse variances.
+
+    Parameters
+    ----------
+    data : `~thejoker.data.RVData`
+    s : numeric
+        Jitter in the same units as the RV data.
+
+    """
+    return data.ivar.value / (1 + s**2 * data.ivar.value)
 
 
 def design_matrix(nonlinear_p, data, joker_params):

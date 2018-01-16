@@ -4,8 +4,7 @@ import numpy as np
 
 # Project
 from ..log import log
-from .utils import get_ivar
-from .likelihood import (design_matrix, tensor_vector_scalar,
+from .likelihood import (get_ivar, design_matrix, tensor_vector_scalar,
                          marginal_ln_likelihood)
 from .fast_likelihood import batch_marginal_ln_likelihood
 
