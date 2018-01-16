@@ -74,7 +74,8 @@ def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
         if i >= n_plot:
             break
 
-        model_rv[i] = orbit.unscaled_radial_velocity(t_grid).to(rv_unit).value
+        model_rv[i] = orbit.radial_velocity(t_grid).to(rv_unit).value
+    model_rv = model_rv[:i]
 
     bmjd = t_grid.tcb.mjd
     ax.plot(bmjd, model_rv.T, **style)
