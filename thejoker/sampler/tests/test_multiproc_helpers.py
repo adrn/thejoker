@@ -23,9 +23,8 @@ class TestMultiproc(object):
 
     def setup(self):
         d = FakeData()
-        self.fd = d
-        self.data = d.data
-        self.joker_params = d.joker_params
+        self.data = d.datasets
+        self.joker_params = d.params
         self.truths = d.truths
 
     def test_multiproc_helpers(self, tmpdir):

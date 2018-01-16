@@ -82,9 +82,8 @@ class TestMCMC(object):
 
     def setup(self):
         d = FakeData()
-        self.fd = d
-        self.data = d.data
-        self.joker_params = d.joker_params
+        self.data = d.datasets
+        self.joker_params = d.params
         self.truths = d.truths
 
     def test_funcs(self):
@@ -93,7 +92,7 @@ class TestMCMC(object):
         nlp = self.truths_to_nlp(truth)
         params = self.joker_params['binary']
 
-        p = np.concatenate((nlp, [truth['K'].value], [self.fd.v0.value]))
+        p = np.concatenate((nlp, [truth['K'].value], [truth['v0'].value]))
         mcmc_p = to_mcmc_params(p)
         p2 = from_mcmc_params(mcmc_p)
         assert np.allclose(p, p2.reshape(p.shape)) # test roundtrip
