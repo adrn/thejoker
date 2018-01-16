@@ -32,9 +32,9 @@ def design_matrix(nonlinear_p, data, joker_params):
     """
     P, M0, ecc, omega = nonlinear_p[:4] # we don't need the jitter here
 
-    # M0 now is implicitly relative to data.t_offset, not mjd=0
     t = data._t_bmjd
-    zdot = cy_rv_from_elements(t, P, 1., ecc, omega, M0, 0.,
+    t0 = data._t0_bmjd
+    zdot = cy_rv_from_elements(t, P, 1., ecc, omega, M0, t0,
                                joker_params.anomaly_tol,
                                joker_params.anomaly_maxiter)
 
