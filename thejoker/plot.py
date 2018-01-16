@@ -10,7 +10,7 @@ __all__ = ['plot_rv_curves']
 
 def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
                    ax=None, plot_kwargs=dict(), data_plot_kwargs=dict(),
-                   add_labels=True, trend_t0=0.):
+                   add_labels=True):
     """
     Plot radial velocity curves for the input set of orbital parameter
     samples over the input grid of times.
@@ -36,7 +36,6 @@ def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
         Passed to `thejoker.data.RVData.plot()`.
     add_labels : bool, optional
         Add labels to the axes or not.
-    trend_t0 : numeric, optional
 
     Returns
     -------
@@ -71,21 +70,11 @@ def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
 
     # plot orbits over the data
     model_rv = np.zeros((n_plot, len(t_grid)))
-    for i in range(n_plot):
-        this_samples = dict()
-        for k in samples.keys():
-            this_samples[k] = samples[k][i]
-        this_samples.pop('jitter', None) # don't need jitter in there
+    for i, orbit in enumerate(samples.orbits):
+        if i >= n_plot:
+            break
 
-        # pop off linear parameters to manually create scaled RV
-        K = this_samples.pop('K')
-        v0 = this_samples.pop('v0')
-
-        # Create an orbit object to compute the RV curve. We have to arbitrarily
-        # set Omega and i
-        orbit = KeplerOrbit(Omega=0*u.deg, i=90*u.deg, **this_samples)
-        rv = K * orbit.unscaled_radial_velocity(t_grid) + v0
-        model_rv[i] = rv.to(rv_unit).value
+        model_rv[i] = orbit.unscaled_radial_velocity(t_grid).to(rv_unit).value
 
     bmjd = t_grid.tcb.mjd
     ax.plot(bmjd, model_rv.T, **style)
@@ -101,7 +90,7 @@ def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
         data.plot(ax=ax, **data_style)
 
         _rv = data.rv.to(rv_unit).value
-        drv = _rv.max()-_rv.min()
+        drv = _rv.max() - _rv.min()
         ax.set_ylim(_rv.min() - 0.2*drv, _rv.max() + 0.2*drv)
 
     ax.set_xlim(bmjd.min(), bmjd.max())
