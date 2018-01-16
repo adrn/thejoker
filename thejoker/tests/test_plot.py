@@ -30,4 +30,4 @@ def test_plot_rv_curves():
     t_grid.sort()
 
     fig, ax = plt.subplots(1, 1, figsize=(12,5))
-    plot_rv_curves(samples, t_grid, ax=ax, trend_t0=56000.)
+    plot_rv_curves(samples, t_grid, ax=ax)
