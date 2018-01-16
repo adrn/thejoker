@@ -21,34 +21,34 @@ class TestLikelihood(object):
 
     def setup(self):
         d = FakeData()
-        self.fd = d
-        self.data = d.data
-        self.joker_params = d.joker_params
+        self.datasets = d.datasets
+        self.params = d.params
         self.truths = d.truths
 
     def test_design_matrix(self):
 
-        data = self.data['binary']
+        data = self.datasets['binary']
         nlp = self.truths_to_nlp(self.truths['binary'])
-        A = design_matrix(nlp, data, self.joker_params['binary'])
+        A = design_matrix(nlp, data, self.params['binary'])
         assert A.shape == (len(data), 2) # K, v0
         assert np.allclose(A[:,1], 1)
 
         # TODO: triple disabled
         # nlp = self.truths_to_nlp(self.truths['triple'])
-        # A = design_matrix(nlp, data, self.joker_params['triple'])
+        # A = design_matrix(nlp, data, self.params['triple'])
         # assert A.shape == (len(data), 3) # K, v0, v1
         # assert np.allclose(A[:,1], 1)
         # assert np.allclose(A[:,2], data._t_bmjd)
 
     def test_tensor_vector_scalar(self):
 
-        data = self.data['binary']
+        data = self.datasets['binary']
         nlp = self.truths_to_nlp(self.truths['binary'])
-        A = design_matrix(nlp, data, self.joker_params['binary'])
+        A = design_matrix(nlp, data, self.params['binary'])
         ATCinvA, p, chi2 = tensor_vector_scalar(A, data.ivar.value,
                                                 data.rv.value)
-        true_p = [self.truths['binary']['K'].value, self.fd.v0.value]
+        true_p = [self.truths['binary']['K'].value,
+                  self.truths['binary']['v0'].value]
         assert np.allclose(p, true_p, rtol=1e-2)
 
         # --
@@ -56,7 +56,7 @@ class TestLikelihood(object):
         # TODO: triple disabled
         # data = self.data['triple']
         # nlp = self.truths_to_nlp(self.truths['triple'])
-        # A = design_matrix(nlp, data, self.joker_params['triple'])
+        # A = design_matrix(nlp, data, self.params['triple'])
         # ATCinvA, p, chi2 = tensor_vector_scalar(A, data.ivar.value,
         #                                         data.rv.value)
         #
@@ -67,17 +67,17 @@ class TestLikelihood(object):
         """
         Check that the true period is the maximum likelihood period
         """
-        data = self.data['circ_binary']
-        joker_params = self.joker_params['circ_binary']
+        data = self.datasets['circ_binary']
+        params = self.params['circ_binary']
         true_nlp = self.truths_to_nlp(self.truths['circ_binary'])
-        # print('ln_like', marginal_ln_likelihood(true_nlp, data, joker_params))
+        # print('ln_like', marginal_ln_likelihood(true_nlp, data, params))
 
         vals = np.linspace(true_nlp[0]-1., true_nlp[0]+1, 4096)
         lls = np.zeros_like(vals)
         for i,val in enumerate(vals):
             nlp = true_nlp.copy()
             nlp[0] = val
-            lls[i] = marginal_ln_likelihood(nlp, data, joker_params)
+            lls[i] = marginal_ln_likelihood(nlp, data, params)
 
         assert np.allclose(true_nlp[0], vals[lls.argmax()], rtol=1E-4)
 
@@ -86,8 +86,8 @@ class TestLikelihood(object):
         This test is a little crazy. We generate samples in P, M0
         """
 
-        data = self.data['circ_binary']
-        joker_params = self.joker_params['circ_binary']
+        data = self.datasets['circ_binary']
+        params = self.params['circ_binary']
         true_nlp = self.truths_to_nlp(self.truths['circ_binary'])
 
         n_samples = 16384
@@ -100,9 +100,9 @@ class TestLikelihood(object):
             nlp = true_nlp.copy()
             nlp[0] = P[i]
             nlp[1] = M0[i]
-            lls[i] = marginal_ln_likelihood(nlp, data, joker_params)
+            lls[i] = marginal_ln_likelihood(nlp, data, params)
 
-            A = design_matrix(nlp, data, joker_params)
+            A = design_matrix(nlp, data, params)
             _,p,_ = tensor_vector_scalar(A, data.ivar.value, data.rv.value)
             if p[0] < 0:
                 n_neg += 1
