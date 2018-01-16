@@ -94,7 +94,7 @@ class TheJoker(object):
         rnd = self.random_state
 
         # Create an empty, dictionary-like 'samples' object to fill
-        samples = JokerSamples(t0=self.data.t0)
+        samples = JokerSamples()
 
         # sample from priors in nonlinear parameters
         a, b = (np.log(self.params.P_min.to(u.day).value),

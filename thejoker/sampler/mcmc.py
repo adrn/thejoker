@@ -210,12 +210,11 @@ def ln_likelihood(p, joker_params, data):
 
     # a little repeated code here...
 
-    # M0 now is implicitly relative to data.t_offset, not mjd=0
     t = data._t_bmjd
-    zdot = cy_rv_from_elements(t, P=P, K=1., e=ecc,
-                               omega=omega, M0=M0, t0=0.,
-                               anomaly_tol=joker_params.anomaly_tol,
-                               anomaly_maxiter=joker_params.anomaly_maxiter)
+    zdot = cy_rv_from_elements(t, P, 1., ecc,
+                               omega, M0, data._t0_bmjd,
+                               joker_params.anomaly_tol,
+                               joker_params.anomaly_maxiter)
 
     # TODO: right now, we only support a single, global velocity trend!
     A1 = np.vander(t, N=joker_params._n_trend, increasing=True)

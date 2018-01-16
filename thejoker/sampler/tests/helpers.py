@@ -48,7 +48,6 @@ class FakeData(object):
         self.data['binary'] = data
         self.joker_params['binary'] = JokerParams(P_min=8*u.day, P_max=1024*u.day)
         self.truths['binary'] = truth.copy()
-        self.truths['binary']['M0'] = self.truths['binary']['M0'] - ((2*np.pi*data.t_offset/P.value))*u.radian
 
         # hierarchical triple - long term velocity trend
         # TODO: no longer works with TwoBody changes
@@ -81,4 +80,4 @@ class FakeData(object):
         self.data['circ_binary'] = data
         self.joker_params['circ_binary'] = JokerParams(P_min=8*u.day, P_max=1024*u.day)
         self.truths['circ_binary'] = truth.copy()
-        self.truths['circ_binary']['M0'] = self.truths['circ_binary']['M0'] - (2*np.pi*data.t_offset/P.value)*u.radian
+        self.truths['circ_binary']['M0'] = self.truths['circ_binary']['M0']

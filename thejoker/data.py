@@ -108,6 +108,7 @@ class RVData:
                             'be an astropy.time.Time object.')
 
         self.t0 = t0
+        self._t0_bmjd = self.t0.tcb.mjd
 
     @property
     def t(self):

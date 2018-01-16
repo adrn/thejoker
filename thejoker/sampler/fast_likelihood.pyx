@@ -26,7 +26,7 @@ cdef double LN_2PI = 1.8378770664093453
 
 
 cdef void design_matrix(double P, double phi0, double ecc, double omega,
-                        double[::1] t,
+                        double[::1] t, double t0,
                         double[:,::1] A_T,
                         int n_trend,
                         double anomaly_tol, int anomaly_maxiter):
@@ -44,6 +44,8 @@ cdef void design_matrix(double P, double phi0, double ecc, double omega,
         Argument of pericenter [radian].
     t : `numpy.ndarray`
         Data time array.
+    t0 : double
+        Reference time.
     n_trend : int
         Number of terms in the long-term velocity trend.
     anomaly_tol : double
@@ -62,10 +64,8 @@ cdef void design_matrix(double P, double phi0, double ecc, double omega,
         int i, j
         int n_times = t.shape[0]
 
-    # phi0 is implicitly relative to data.t_offset, not mjd=0
-    # TODO: should we really we pass in t0=0 here
     c_rv_from_elements(&t[0], &A_T[0,0], n_times,
-                       P, 1., ecc, omega, phi0, 0.,
+                       P, 1., ecc, omega, phi0, t0,
                        anomaly_tol, anomaly_maxiter)
 
     for j in range(n_times):
@@ -272,6 +272,7 @@ cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
         double[::1] t = np.ascontiguousarray(data._t_bmjd)
         double[::1] rv = np.ascontiguousarray(data.rv.value)
         double[::1] ivar = np.ascontiguousarray(data.ivar.value)
+        double t0 = data._t0_bmjd
 
         # inverse variance array with jitter included
         double[::1] jitter_ivar = np.zeros(data.ivar.value.shape)
@@ -305,7 +306,7 @@ cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
         try:
             # TODO: hard set n_trend=1 (v0) because removing support for that
             design_matrix(chunk[n,0], chunk[n,1], chunk[n,2], chunk[n,3],
-                          t, A_T, 1, anomaly_tol, anomaly_maxiter)
+                          t, t0, A_T, 1, anomaly_tol, anomaly_maxiter)
 
             # jitter must be in same units as the data RV's / ivar!
             get_ivar(ivar, jitter, jitter_ivar)

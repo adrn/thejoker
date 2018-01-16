@@ -1,5 +1,5 @@
 # Third-party
-import astropy.time as atime
+from astropy.time import Time
 import astropy.units as u
 import matplotlib.pyplot as plt
 import numpy as np
@@ -45,12 +45,12 @@ def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
     """
 
     if ax is None:
-        fig,ax = plt.subplots(1,1)
+        fig, ax = plt.subplots(1, 1)
     else:
         fig = ax.figure
 
-    if isinstance(t_grid, atime.Time):
-        t_grid = t_grid.tcb.mjd
+    if not isinstance(t_grid, Time): # Assume BMJD
+        t_grid = Time(t_grid, format='mjd', scale='tcb')
 
     if n_plot is None:
         n_plot = len(samples['P'])
@@ -75,17 +75,19 @@ def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
         this_samples = dict()
         for k in samples.keys():
             this_samples[k] = samples[k][i]
-        this_samples.pop('jitter', None)
+        this_samples.pop('jitter', None) # don't need jitter in there
 
-        # get the trend parameters out
-        trend_samples = dict()
-        for k in samples.trend_cls.parameters:
-            trend_samples[k] = this_samples.pop(k)
-        trend = samples.trend_cls(t0=trend_t0, **trend_samples)
+        # pop off linear parameters to manually create scaled RV
+        K = this_samples.pop('K')
+        v0 = this_samples.pop('v0')
 
-        orbit = RVOrbit(trend=trend, **this_samples)
-        model_rv[i] = orbit.generate_rv_curve(t_grid).to(rv_unit).value
-    ax.plot(t_grid, model_rv.T, **style)
+        # Create an orbit object to compute the RV curve. We have to arbitrarily
+        # set Omega and i
+        orbit = KeplerOrbit(Omega=0*u.deg, i=90*u.deg, **this_samples)
+        rv = orbit.unscaled_radial_velocity(t_grid)
+        model_rv[i] = rv.to(rv_unit).value
+
+    ax.plot(t_grid.tcb.mjd, model_rv.T, **style)
 
     if data is not None:
         data_style = data_plot_kwargs.copy()

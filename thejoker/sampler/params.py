@@ -14,9 +14,6 @@ class JokerParams(object):
         Lower bound on prior over period, the smallest period considered.
     P_max : `astropy.units.Quantity` [time]
         Upper bound on prior over period, the largest period considered.
-    trend_cls : class
-        The long-term velocity trend class to use. This must not be an
-        instantiated object, just the class!
     jitter : `~astropy.units.Quantity` [speed], tuple (optional)
         Represents additional Gaussian noise in the RV signal. Default
         is to fix the value of the jitter to 0. To fix the jitter to a
@@ -54,7 +51,7 @@ class JokerParams(object):
 
     """
     @u.quantity_input(P_min=u.day, P_max=u.day)
-    def __init__(self, P_min, P_max, trend_cls=None,
+    def __init__(self, P_min, P_max,
                  jitter=None, jitter_unit=None,
                  anomaly_tol=1E-10, anomaly_maxiter=128):
 
