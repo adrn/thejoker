@@ -84,10 +84,11 @@ def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
         # Create an orbit object to compute the RV curve. We have to arbitrarily
         # set Omega and i
         orbit = KeplerOrbit(Omega=0*u.deg, i=90*u.deg, **this_samples)
-        rv = orbit.unscaled_radial_velocity(t_grid)
+        rv = K * orbit.unscaled_radial_velocity(t_grid) + v0
         model_rv[i] = rv.to(rv_unit).value
 
-    ax.plot(t_grid.tcb.mjd, model_rv.T, **style)
+    bmjd = t_grid.tcb.mjd
+    ax.plot(bmjd, model_rv.T, **style)
 
     if data is not None:
         data_style = data_plot_kwargs.copy()
@@ -103,7 +104,7 @@ def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
         drv = _rv.max()-_rv.min()
         ax.set_ylim(_rv.min() - 0.2*drv, _rv.max() + 0.2*drv)
 
-    ax.set_xlim(t_grid.min(), t_grid.max())
+    ax.set_xlim(bmjd.min(), bmjd.max())
     if add_labels:
         ax.set_xlabel('BMJD')
         ax.set_ylabel('RV [{}]'.format(rv_unit.to_string(format='latex_inline')))

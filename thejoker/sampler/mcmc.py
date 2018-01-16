@@ -101,11 +101,10 @@ def pack_samples(samples, params, data):
            np.asarray(samples['e']),
            samples['omega'].to(u.radian).value,
            jitter,
-           samples['K'].to(data.rv.unit).value]
+           samples['K'].to(data.rv.unit).value,
+           samples['v0'].to(data.rv.unit).value]
+    # TODO: assumes only constant velocity offset
 
-    # TODO: assumes polynomial velocity trend
-    arr = arr + [samples['v{}'.format(i)].to(data.rv.unit/u.day**i).value
-                 for i in range(params._n_trend)]
     return np.array(arr).T
 
 
@@ -172,9 +171,8 @@ def unpack_samples(samples_arr, params, data):
 
     samples['K'] = samples_arr.T[4+shift] * data.rv.unit
 
-    # TODO: assumes polynomial velocity trend
-    for i in range(params._n_trend):
-        samples['v{}'.format(i)] = samples_arr.T[5+shift+i] * data.rv.unit/u.day**i
+    # TODO: assumes only constant velocity offset
+    samples['v0'] = samples_arr.T[5+shift] * data.rv.unit
 
     return samples
 
@@ -216,8 +214,8 @@ def ln_likelihood(p, joker_params, data):
                                joker_params.anomaly_tol,
                                joker_params.anomaly_maxiter)
 
-    # TODO: right now, we only support a single, global velocity trend!
-    A1 = np.vander(t, N=joker_params._n_trend, increasing=True)
+    # TODO: right now, we only support a constant systemic velocity
+    A1 = np.vander(t, N=1, increasing=True)
     A = np.hstack((zdot[:,None], A1))
     p = np.array([K] + v_terms)
     ivar = get_ivar(data, s)
