@@ -143,6 +143,12 @@ class JokerSamples(OrderedDict):
         index : int
             The index of the samples to turn into a `twobody.KeplerOrbit`
             instance.
+
+        Returns
+        -------
+        orbit : `twobody.KeplerOrbit`
+            The samples converted to an orbit object. The barycenter position
+            and distance are set to arbitrary values.
         """
         origin = coord.ICRS(ra=0*u.deg, dec=0*u.deg,
                             distance=np.nan*u.pc,
@@ -160,7 +166,9 @@ class JokerSamples(OrderedDict):
 
     @property
     def orbits(self):
-        """A generator ...
+        """A generator that successively returns `twobody.KeplerOrbit` objects
+        for each sample. See docstring for `thejoker.JokerSamples.get_orbit` for
+        more information.
 
         """
         for i in range(len(self)):
