@@ -206,14 +206,15 @@ class TheJoker(object):
 
         # For samples that pass the rejection step, we now have their indices
         # in the prior cache file. Here, we read the actual values:
-        full_samples = sample_indices_to_full_samples(
+        result = sample_indices_to_full_samples(
             good_samples_idx, cache_file, data, self.params,
             pool=self.pool, global_seed=seed, return_logprobs=return_logprobs)
 
-        return full_samples
+        return result
 
     def rejection_sample(self, data, n_prior_samples=None,
-                         prior_cache_file=None, start_idx=0):
+                         prior_cache_file=None, return_logprobs=False,
+                         start_idx=0):
         """Run The Joker's rejection sampling on prior samples to get posterior
         samples for the input data.
 
@@ -233,6 +234,8 @@ class TheJoker(object):
         prior_cache_file : str (optional)
             A path to an HDF5 cache file containing prior samples. TODO: more
             information
+        return_logprobs : bool (optional)
+            Also return the log-probabilities.
         start_idx : int (optional)
             Index to start reading from in the prior cache file.
 
@@ -264,9 +267,9 @@ class TheJoker(object):
                 if n_prior_samples is None:
                     n_prior_samples = len(f['samples'])
 
-            samples = self._rejection_sample_from_cache(data, n_prior_samples,
-                                                        prior_cache_file,
-                                                        start_idx, seed=seed)
+            result = self._rejection_sample_from_cache(
+                data, n_prior_samples, prior_cache_file, start_idx, seed=seed,
+                return_logprobs=return_logprobs)
 
         else:
             with tempfile.NamedTemporaryFile(mode='r+') as f:
@@ -274,12 +277,23 @@ class TheJoker(object):
                 prior_samples = self.sample_prior(size=n_prior_samples)
                 prior_units = save_prior_samples(f.name, prior_samples,
                                                  data.rv.unit)
-                samples = self._rejection_sample_from_cache(data,
-                                                            n_prior_samples,
-                                                            f.name, start_idx,
-                                                            seed=seed)
+                result = self._rejection_sample_from_cache(
+                    data, n_prior_samples, f.name, start_idx, seed=seed,
+                    return_logprobs=return_logprobs)
 
-        return self._unpack_full_samples(samples, prior_units, t0=data.t0)
+        if return_logprobs:
+            samples, ln_prior, ln_like = result
+
+        else:
+            samples = result
+
+        samples = self._unpack_full_samples(samples, prior_units, t0=data.t0)
+
+        if return_logprobs:
+            return samples, ln_prior
+
+        else:
+            return samples
 
     def iterative_rejection_sample(self, data, n_requested_samples,
                                    prior_cache_file, n_prior_samples=None,
