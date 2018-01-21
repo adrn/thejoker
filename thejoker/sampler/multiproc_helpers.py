@@ -149,7 +149,7 @@ def compute_likelihoods(n_prior_samples, prior_cache_file, start_idx, data,
     results = [r for r in pool.map(_marginal_ll_worker, tasks)]
     marg_ll = np.concatenate(results)
 
-    assert len(marg_ll) == (n_prior_samples-start_idx)
+    assert len(marg_ll) == n_prior_samples
 
     return marg_ll
 
