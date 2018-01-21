@@ -53,6 +53,7 @@ def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
 
     if n_plot is None:
         n_plot = len(samples['P'])
+    n_plot = min(n_plot, len(samples))
 
     # scale the transparency of the lines
     Q = 4. # HACK
@@ -70,12 +71,9 @@ def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
 
     # plot orbits over the data
     model_rv = np.zeros((n_plot, len(t_grid)))
-    for i, orbit in enumerate(samples.orbits):
-        if i >= n_plot:
-            break
-
+    for i in range(n_plot):
+        orbit = samples.get_orbit(i)
         model_rv[i] = orbit.radial_velocity(t_grid).to(rv_unit).value
-    model_rv = model_rv[:i]
 
     bmjd = t_grid.tcb.mjd
     ax.plot(bmjd, model_rv.T, **style)

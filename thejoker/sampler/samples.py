@@ -16,6 +16,7 @@ __all__ = ['JokerSamples']
 
 
 class JokerSamples(OrderedDict):
+    _valid_keys = ['P', 'M0', 'e', 'omega', 'jitter', 'K', 'v0']
 
     def __init__(self, t0=None, **kwargs):
         """A dictionary-like object for storing posterior samples from
@@ -28,8 +29,6 @@ class JokerSamples(OrderedDict):
         **kwargs
             These are the orbital element names.
         """
-
-        self._valid_keys = ['P', 'M0', 'e', 'omega', 'jitter', 'K', 'v0']
 
         # reference time
         self.t0 = t0
@@ -45,6 +44,8 @@ class JokerSamples(OrderedDict):
                 self._n_samples = len(val)
 
         super(JokerSamples, self).__init__(**kw)
+
+        self._cache = dict()
 
     def _validate_key(self, key):
         if key not in self._valid_keys:
@@ -92,7 +93,7 @@ class JokerSamples(OrderedDict):
 
     def __str__(self):
         return ("<JokerSamples in [{0}], {1} samples>"
-                .format(','.join(self.keys(), len(self))))
+                .format(','.join(self.keys()), len(self)))
 
     @classmethod
     def from_hdf5(cls, f, n=None, **kwargs):
@@ -113,8 +114,9 @@ class JokerSamples(OrderedDict):
             t0 = None
 
         samples = cls(t0=t0, **kwargs)
-        for key in f.keys():
-            samples[key] = quantity_from_hdf5(f, key, n=n)
+        for key in cls._valid_keys:
+            if key in f:
+                samples[key] = quantity_from_hdf5(f, key, n=n)
 
         return samples
 
@@ -150,19 +152,28 @@ class JokerSamples(OrderedDict):
             The samples converted to an orbit object. The barycenter position
             and distance are set to arbitrary values.
         """
-        origin = coord.ICRS(ra=0*u.deg, dec=0*u.deg,
-                            distance=np.nan*u.pc,
-                            radial_velocity=self['v0'][index])
-        barycen = Barycenter(origin=origin)
+        if 'orbit' not in self._cache:
+            self._cache['orbit'] = KeplerOrbit(P=1*u.yr, e=0., omega=0*u.deg,
+                                               Omega=0*u.deg, i=90*u.deg,
+                                               a=1*u.au, t0=self.t0)
+
+        # all of this to avoid the __init__ of KeplerOrbit / KeplerElements
+        orbit = copy.copy(self._cache['orbit'])
 
         P = self['P'][index]
         e = self['e'][index]
         a_K = P * self['K'][index] / (2*np.pi) * np.sqrt(1 - e**2)
 
-        return KeplerOrbit(P=P, e=e, omega=self['omega'][index],
-                           Omega=0*u.deg, i=90*u.deg, a=a_K,
-                           M0=self['M0'][index], t0=self.t0,
-                           barycenter=barycen)
+        orbit.elements._P = P
+        orbit.elements._e = e * u.dimensionless_unscaled
+        orbit.elements._a = a_K
+        orbit.elements._omega = self['omega'][index]
+        orbit.elements._M0 = self['M0'][index]
+
+        # TODO: slight abuse of the _v0 cache attribute on KeplerOrbit...
+        orbit._v0 = self['v0'][index]
+
+        return orbit
 
     @property
     def orbits(self):
