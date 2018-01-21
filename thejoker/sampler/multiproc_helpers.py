@@ -35,9 +35,6 @@ def chunk_tasks(n_tasks, n_batches, arr=None, args=None, start_idx=0):
         args = []
     args = list(args)
 
-    if start_idx > 0:
-        n_tasks = n_tasks - start_idx
-
     tasks = []
     if n_batches > 0 and n_tasks > n_batches:
         # chunk by the number of batches, often the pool size
@@ -152,7 +149,7 @@ def compute_likelihoods(n_prior_samples, prior_cache_file, start_idx, data,
     results = [r for r in pool.map(_marginal_ll_worker, tasks)]
     marg_ll = np.concatenate(results)
 
-    assert len(marg_ll) == n_prior_samples
+    assert len(marg_ll) == (n_prior_samples-start_idx)
 
     return marg_ll
 

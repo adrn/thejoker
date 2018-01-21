@@ -12,16 +12,16 @@ from .helpers import FakeData
 
 def test_chunk_tasks():
     N = 10000
-    tasks = chunk_tasks(N, n_batches=16, start_idx=1000)
-    assert tasks[0][0][0] == 1000
-    assert tasks[-1][0][1] == N
+    start_idx = 1103
+    tasks = chunk_tasks(N, n_batches=16, start_idx=start_idx)
+    assert tasks[0][0][0] == start_idx
+    assert tasks[-1][0][1] == N+start_idx
 
     # try with an array:
-    start_idx = 1103
     tasks = chunk_tasks(N, n_batches=16, start_idx=start_idx,
-                        arr=np.random.random(size=N))
+                        arr=np.random.random(size=8*N))
     n_tasks = sum([tasks[i][0].size for i in range(len(tasks))])
-    assert n_tasks == (N-start_idx)
+    assert n_tasks == N
 
 
 class TestMultiproc(object):
