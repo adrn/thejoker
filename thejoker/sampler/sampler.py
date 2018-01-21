@@ -34,8 +34,14 @@ class TheJoker(object):
         A ``RandomState`` instance to serve as a parent for the random
         number generators. See the :ref:`random numbers <random-numbers>` page
         for more information.
+    n_batches : int (optional)
+        When using multiprocessing to split the likelihood evaluations, this
+        sets the number of batches to split the work into. Defaults to
+        ``pool.size``, meaning equal work to each worker. For very large prior
+        sample caches, you may need to set this to a larger number (e.g.,
+        ``100*pool.size``) to avoid memory issues.
     """
-    def __init__(self, params, pool=None, random_state=None):
+    def __init__(self, params, pool=None, random_state=None, n_batches=None):
 
         # set the processing pool
         if pool is None:
@@ -68,6 +74,8 @@ class TheJoker(object):
             raise TypeError("Parameter specification must be a JokerParams "
                             "instance, not a '{0}'".format(type(params)))
         self.params = params
+
+        self.n_batches = n_batches
 
     def sample_prior(self, size=1, return_logprobs=False):
         """Generate samples from the prior. Logarithmic in period, uniform in
@@ -191,7 +199,8 @@ class TheJoker(object):
         #   _marginal_ll_worker has to return the values because we then compare
         #   with the maximum value of the likelihood
         marg_lls = compute_likelihoods(n_prior_samples, cache_file, start_idx,
-                                       data, self.params, pool=self.pool)
+                                       data, self.params, pool=self.pool,
+                                       n_batches=self.n_batches)
         good_samples_idx = get_good_sample_indices(marg_lls, seed=seed)
 
         if len(good_samples_idx) == 0:
@@ -354,7 +363,8 @@ class TheJoker(object):
                        .format(i, n_process))
             marg_lls = compute_likelihoods(n_process, prior_cache_file,
                                            start_idx, data, self.params,
-                                           pool=self.pool)
+                                           pool=self.pool,
+                                           n_batches=self.n_batches)
 
             all_marg_lls = np.concatenate((all_marg_lls, marg_lls))
 

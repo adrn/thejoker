@@ -6,8 +6,22 @@ import schwimmbad
 
 # Package
 from ..multiproc_helpers import (get_good_sample_indices, compute_likelihoods,
-                                 sample_indices_to_full_samples)
+                                 sample_indices_to_full_samples, chunk_tasks)
 from .helpers import FakeData
+
+
+def test_chunk_tasks():
+    N = 10000
+    tasks = chunk_tasks(N, n_batches=16, start_idx=1000)
+    assert tasks[0][0][0] == 1000
+    assert tasks[-1][0][1] == N
+
+    # try with an array:
+    start_idx = 1103
+    tasks = chunk_tasks(N, n_batches=16, start_idx=start_idx,
+                        arr=np.random.random(size=N))
+    n_tasks = sum([tasks[i][0].size for i in range(len(tasks))])
+    assert n_tasks == (N-start_idx)
 
 
 class TestMultiproc(object):

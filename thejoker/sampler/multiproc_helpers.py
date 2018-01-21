@@ -12,20 +12,40 @@ __all__ = ['compute_likelihoods', 'get_good_sample_indices',
            'sample_indices_to_full_samples']
 
 
-def chunk_tasks(N, pool, arr=None, args=None, start_idx=0):
+def chunk_tasks(n_tasks, n_batches, arr=None, args=None, start_idx=0):
+    """Split the tasks into some number of batches to sent out to MPI workers.
+
+    Parameters
+    ----------
+    n_tasks : int
+        The total number of tasks to divide.
+    n_batches : int
+        The number of batches to split the tasks into. Often, you may want to do
+        ``n_batches=pool.size`` for equal sharing amongst MPI workers.
+    arr : iterable (optional)
+        Instead of returning indices that specify the batches, you can also
+        directly split an array into batches.
+    args : iterable (optional)
+        Other arguments to add to each task.
+    start_idx : int (optional)
+        What index in the tasks to start from?
+
+    """
     if args is None:
         args = []
-
     args = list(args)
 
+    if start_idx > 0:
+        n_tasks = n_tasks - start_idx
+
     tasks = []
-    if pool.size > 0 and N > pool.size:
-        # chunk by the pool size
-        base_chunk_size = N // pool.size
-        rmdr = N % pool.size
+    if n_batches > 0 and n_tasks > n_batches:
+        # chunk by the number of batches, often the pool size
+        base_chunk_size = n_tasks // n_batches
+        rmdr = n_tasks % n_batches
 
         i1 = start_idx
-        for i in range(pool.size):
+        for i in range(n_batches):
             i2 = i1 + base_chunk_size
             if i < rmdr:
                 i2 += 1
@@ -40,10 +60,10 @@ def chunk_tasks(N, pool, arr=None, args=None, start_idx=0):
 
     else:
         if arr is None: # store indices
-            tasks.append([(start_idx,N+start_idx), start_idx] + args)
+            tasks.append([(start_idx, n_tasks+start_idx), start_idx] + args)
 
         else: # store sliced array
-            tasks.append([arr[start_idx:N+start_idx], start_idx] + args)
+            tasks.append([arr[start_idx:n_tasks+start_idx], start_idx] + args)
 
     return tasks
 
@@ -81,7 +101,7 @@ def _marginal_ll_worker(task):
 
 
 def compute_likelihoods(n_prior_samples, prior_cache_file, start_idx, data,
-                        joker_params, pool):
+                        joker_params, pool, n_batches=None):
     """
     Return the indices of 'good' samples by computing the log-likelihood
     for ``n_prior_samples`` prior samples and doing rejection sampling.
@@ -106,6 +126,8 @@ def compute_likelihoods(n_prior_samples, prior_cache_file, start_idx, data,
         A specification of the parameters to use.
     pool : `~schwimmbad.pool.BasePool` or subclass
         An instance of a processing pool - must have a ``.map()`` method.
+    n_batches : int (optional)
+        How many batches to divide the work into. Defaults to ``pool.size``.
 
     Returns
     -------
@@ -122,7 +144,9 @@ def compute_likelihoods(n_prior_samples, prior_cache_file, start_idx, data,
 
     """
     args = [prior_cache_file, data, joker_params]
-    tasks = chunk_tasks(n_prior_samples, pool=pool, args=args,
+    if n_batches is None:
+        n_batches = pool.size
+    tasks = chunk_tasks(n_prior_samples, n_batches=n_batches, args=args,
                         start_idx=start_idx)
 
     results = [r for r in pool.map(_marginal_ll_worker, tasks)]
@@ -216,7 +240,7 @@ def _sample_vector_worker(task):
 
 def sample_indices_to_full_samples(good_samples_idx, prior_cache_file, data,
                                    joker_params, pool, global_seed=None,
-                                   return_logprobs=False):
+                                   return_logprobs=False, n_batches=None):
     """
     Generate the full set of parameter values (linear + non-linear) for
     the nonlinear parameter prior samples that pass the rejection sampling.
@@ -243,12 +267,17 @@ def sample_indices_to_full_samples(good_samples_idx, prior_cache_file, data,
         The global level random number seed.
     return_logprobs : bool (optional)
         Also return the log-probabilities of the prior samples.
+    n_batches : int (optional)
+        How many batches to divide the work into. Defaults to ``pool.size``.
 
     """
 
     n_samples = len(good_samples_idx)
     args = [prior_cache_file, data, joker_params, global_seed, return_logprobs]
-    tasks = chunk_tasks(n_samples, arr=good_samples_idx, pool=pool, args=args)
+    if n_batches is None:
+        n_batches = pool.size
+    tasks = chunk_tasks(n_samples, n_batches=n_batches, arr=good_samples_idx,
+                        args=args)
 
     samples = [r for r in pool.map(_sample_vector_worker, tasks)]
     samples = np.concatenate(samples)
