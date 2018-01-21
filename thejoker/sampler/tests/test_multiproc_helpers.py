@@ -69,6 +69,11 @@ class TestMultiproc(object):
         idx = get_good_sample_indices(lls)
         assert len(idx) >= 1
 
+        lls = compute_likelihoods(n, prior_samples_file, 0, data,
+                                  joker_params, pool, n_batches=13)
+        idx = get_good_sample_indices(lls)
+        assert len(idx) >= 1
+
         full_samples = sample_indices_to_full_samples(idx, prior_samples_file,
                                                       data, joker_params, pool)
         print(full_samples)
