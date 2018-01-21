@@ -149,7 +149,10 @@ def compute_likelihoods(n_prior_samples, prior_cache_file, start_idx, data,
     results = [r for r in pool.map(_marginal_ll_worker, tasks)]
     marg_ll = np.concatenate(results)
 
-    assert len(marg_ll) == n_prior_samples
+    if len(marg_ll) != n_prior_samples:
+        raise RuntimeError("Unexpected failure: number of likelihoods "
+                           "returned from workers does not match number sent "
+                           "out to workers.")
 
     return marg_ll
 
