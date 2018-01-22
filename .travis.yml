@@ -34,7 +34,7 @@ env:
         - SETUP_CMD='test'
         # TODO: A lot of the dependencies are because of nbsphinx...we may want
         #   to drop the nbsphinx component of the build when on travis?
-        - PIP_DEPENDENCIES='emcee schwimmbad nbsphinx git+https://github.com/adrn/TwoBody'
+        - PIP_DEPENDENCIES='emcee schwimmbad nbsphinx twobody'
         - CONDA_CHANNELS='astropy-ci-extras astropy'
         - CONDA_DEPENDENCIES='cython scipy h5py matplotlib pandoc nbconvert ipykernel'
 
@@ -70,6 +70,10 @@ matrix:
         # Try older numpy versions
         - python: 3.5
           env: NUMPY_VERSION=1.11
+
+        # TODO: Test with development version of twobody
+        # - python: 3.6
+          # env: PIP_DEPENDENCIES=''
 
         # Do a PEP8 test with pycodestyle
         # - python: 3.6
