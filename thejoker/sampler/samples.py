@@ -1,6 +1,7 @@
 # Standard library
 from collections import OrderedDict
 import copy
+import warnings
 
 # Third-party
 import astropy.coordinates as coord
@@ -30,20 +31,16 @@ class JokerSamples(OrderedDict):
             These are the orbital element names.
         """
 
+        # initialize empty dictionary
+        super(JokerSamples, self).__init__()
+
         # reference time
         self.t0 = t0
 
-        kw = kwargs.copy()
-
-        self._n_samples = None
-        for key, val in kw.items():
-            self._validate_key(key)
-            kw[key] = self._validate_val(val)
-
-            if self._n_samples is None:
-                self._n_samples = len(val)
-
-        super(JokerSamples, self).__init__(**kw)
+        self._size = None
+        self._shape = None
+        for key, val in kwargs.items():
+            self[key] = val # calls __setitem__ below
 
         self._cache = dict()
 
@@ -52,11 +49,11 @@ class JokerSamples(OrderedDict):
             raise ValueError("Invalid key '{0}'.".format(key))
 
     def _validate_val(self, val):
-        val = np.atleast_1d(val)
-        if self._n_samples is not None and len(val) != self._n_samples:
-            raise ValueError("Length of new samples must match those already "
+        val = u.Quantity(val)
+        if self._shape is not None and val.shape != self.shape:
+            raise ValueError("Shape of new samples must match those already "
                              "stored! ({0}, expected {1})"
-                             .format(len(val), self._n_samples))
+                             .format(len(val), self.shape))
 
         return val
 
@@ -66,7 +63,8 @@ class JokerSamples(OrderedDict):
 
         else:
             new = copy.copy(self)
-            new._n_samples = None # reset number of samples
+            new._size = None # reset number of samples
+            new._shape = None # reset number of samples
 
             for k in self.keys():
                 new[k] = self[k][slc]
@@ -77,16 +75,29 @@ class JokerSamples(OrderedDict):
         self._validate_key(key)
         val = self._validate_val(val)
 
-        if self._n_samples is None:
-            self._n_samples = len(val)
+        if self._shape is None:
+            self._shape = val.shape
+            self._size = val.size
 
         super(JokerSamples, self).__setitem__(key, val)
 
     @property
     def n_samples(self):
-        if self._n_samples is None:
+        warnings.warn(".n_samples is deprecated in favor of .size",
+                      DeprecationWarning)
+        return self.size
+
+    @property
+    def size(self):
+        if self._size is None:
             raise ValueError("No samples stored!")
-        return self._n_samples
+        return self._size
+
+    @property
+    def shape(self):
+        if self._shape is None:
+            raise ValueError("No samples stored!")
+        return self._shape
 
     def __len__(self):
         return self.n_samples
@@ -184,3 +195,25 @@ class JokerSamples(OrderedDict):
         """
         for i in range(len(self)):
             yield self.get_orbit(i)
+
+    # Numpy reduce function
+    def _apply(self, func):
+        cls = self.__class__
+
+        kw = dict()
+        for k in self.keys():
+            kw[k] = func(self[k])
+
+        return cls(**kw)
+
+    def mean(self):
+        """Return a new scalar object by taking the mean across all samples"""
+        return self._apply(np.mean)
+
+    def median(self):
+        """Return a new scalar object by taking the medin across all samples"""
+        return self._apply(np.mean)
+
+    def std(self):
+        """Return a new scalar object by taking the medin across all samples"""
+        return self._apply(np.std)

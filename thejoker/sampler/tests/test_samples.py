@@ -68,3 +68,32 @@ def test_joker_samples(tmpdir):
 
     assert samples2.t0 is not None
     assert np.isclose(samples2.t0.mjd, Time('J2000').mjd)
+
+    # Check that scalar samples are supported:
+    samples = JokerSamples(t0=Time('J2000'))
+    samples['P'] = np.random.uniform(800, 1000, size=N)*u.day
+    samples['M0'] = 2*np.pi*np.random.random(size=N)*u.radian
+    samples['e'] = np.random.random(size=N)
+    samples['omega'] = 2*np.pi*np.random.random(size=N)*u.radian
+    new_samples = samples[0]
+
+    assert new_samples.shape == ()
+    assert new_samples.size == 1
+
+
+def test_apply_methods():
+    N = 100
+
+    # Test that samples objects reduce properly
+    samples = JokerSamples(t0=Time('J2000'))
+    samples['P'] = np.random.uniform(800, 1000, size=N)*u.day
+    samples['M0'] = 2*np.pi*np.random.random(size=N)*u.radian
+    samples['e'] = np.random.random(size=N)
+    samples['omega'] = 2*np.pi*np.random.random(size=N)*u.radian
+
+    new_samples = samples.mean()
+    assert quantity_allclose(new_samples['P'], np.mean(samples['P']))
+
+    # try just executing others:
+    new_samples = samples.median()
+    new_samples = samples.std()
