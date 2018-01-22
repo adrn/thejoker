@@ -21,4 +21,4 @@ dependencies:
     - schwimmbad
     - emcee
     - nbsphinx
-    - git+https://github.com/adrn/TwoBody
+    - twobody
