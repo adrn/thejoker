@@ -24,6 +24,7 @@ data.
     install
     random-numbers
     faq
+    update-0.2
 
 .. note::
 
