@@ -52,7 +52,7 @@ def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
         t_grid = Time(t_grid, format='mjd', scale='tcb')
 
     if n_plot is None:
-        n_plot = len(samples['P'])
+        n_plot = len(samples)
     n_plot = min(n_plot, len(samples))
 
     # scale the transparency of the lines
