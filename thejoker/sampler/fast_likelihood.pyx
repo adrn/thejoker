@@ -269,9 +269,9 @@ cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
         double anomaly_tol = 1E-10
         int anomaly_maxiter = 128
 
-        double[::1] t = np.ascontiguousarray(data._t_bmjd)
-        double[::1] rv = np.ascontiguousarray(data.rv.value)
-        double[::1] ivar = np.ascontiguousarray(data.ivar.value)
+        double[::1] t = np.ascontiguousarray(data._t_bmjd, dtype='f8')
+        double[::1] rv = np.ascontiguousarray(data.rv.value, dtype='f8')
+        double[::1] ivar = np.ascontiguousarray(data.ivar.value, dtype='f8')
         double t0 = data._t0_bmjd
 
         # inverse variance array with jitter included

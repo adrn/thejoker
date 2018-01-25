@@ -147,15 +147,15 @@ class JokerSamples(OrderedDict):
     ##########################################################################
     # Interaction with TwoBody
 
-    def get_orbit(self, index):
+    def get_orbit(self, index=None):
         """Get a `twobody.KeplerOrbit` object for the samples at the specified
         index.
 
         Parameters
         ----------
-        index : int
+        index : int (optional)
             The index of the samples to turn into a `twobody.KeplerOrbit`
-            instance.
+            instance. If the samples object is scalar, no index is necessary.
 
         Returns
         -------
@@ -171,18 +171,33 @@ class JokerSamples(OrderedDict):
         # all of this to avoid the __init__ of KeplerOrbit / KeplerElements
         orbit = copy.copy(self._cache['orbit'])
 
-        P = self['P'][index]
-        e = self['e'][index]
-        a_K = P * self['K'][index] / (2*np.pi) * np.sqrt(1 - e**2)
+        if len(self) == 1:
+            if index > 0:
+                raise ValueError('Samples are scalar-valued!')
+
+            P = self['P']
+            e = self['e']
+            a_K = P * self['K'] / (2*np.pi) * np.sqrt(1 - e**2)
+            omega = self['omega']
+            M0 = self['M0']
+            v0 = self['v0']
+
+        else:
+            P = self['P'][index]
+            e = self['e'][index]
+            a_K = P * self['K'][index] / (2*np.pi) * np.sqrt(1 - e**2)
+            omega = self['omega'][index]
+            M0 = self['M0'][index]
+            v0 = self['v0'][index]
 
         orbit.elements._P = P
         orbit.elements._e = e * u.dimensionless_unscaled
         orbit.elements._a = a_K
-        orbit.elements._omega = self['omega'][index]
-        orbit.elements._M0 = self['M0'][index]
+        orbit.elements._omega = omega
+        orbit.elements._M0 = M0
 
         # TODO: slight abuse of the _v0 cache attribute on KeplerOrbit...
-        orbit._v0 = self['v0'][index]
+        orbit._v0 = v0
 
         return orbit
 
