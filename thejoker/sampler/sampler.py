@@ -77,6 +77,17 @@ class TheJoker(object):
 
         self.n_batches = n_batches
 
+        # Used for caching
+        self._cache = dict()
+
+        # Files to be closed when _cleanup() is called
+        self._cache['tempfiles'] = []
+
+    def _cleanup(self):
+        # Close any temp. files:
+        for f in self._cache['tempfiles']:
+            f.close()
+
     def sample_prior(self, size=1, return_logprobs=False):
         """Generate samples from the prior. Logarithmic in period, uniform in
         phase and argument of pericenter, Beta distribution in eccentricity.
@@ -152,17 +163,23 @@ class TheJoker(object):
         else:
             return samples
 
-    def _unpack_full_samples(self, samples, prior_units, t0=None):
+    def _unpack_full_samples(self, result, prior_units, return_logprobs,
+                             t0=None):
         """Unpack an array of The Joker samples into a dictionary-like object of
         Astropy Quantity objects (with units). This is meant to be used
         internally.
 
         Parameters
         ----------
-        samples : `numpy.ndarray`
-            A 2D array of posterior samples output from The Joker.
+        result : tuple
+            A tuple of output directly from _rejection_sample_from_cache().
+            Depending on the value of ``return_logprobs``, this is either just
+            the sample values as a 2D array, or a lenth 3 tuple with the 2D
+            samples array, prior values, and likelihood values.
         prior_units : list
             List of units for the prior samples.
+        return_logprobs : bool
+            Are we also returning the log prior values?
         t0 : `~astropy.time.Time` (optional)
             Passed to `thejoker.JokerSamples`.
 
@@ -172,19 +189,29 @@ class TheJoker(object):
 
         """
 
-        n, n_params = samples.shape
+        if return_logprobs:
+            samples_arr, ln_prior, ln_like = result
 
-        joker_samples = JokerSamples(t0=t0)
+        else:
+            samples_arr = result
+
+        n, n_params = samples_arr.shape
+
+        samples = JokerSamples(t0=t0)
 
         # TODO: need to keep track of this elsewhere...
         nonlin_params = ['P', 'M0', 'e', 'omega', 'jitter']
         for k, key in enumerate(nonlin_params):
-            joker_samples[key] = samples[:, k] * prior_units[k]
+            samples[key] = samples_arr[:, k] * prior_units[k]
 
-        joker_samples['K'] = samples[:, k+1] * prior_units[-1] # jitter unit
-        joker_samples['v0'] = samples[:, k+2] * prior_units[-1] # jitter unit
+        samples['K'] = samples_arr[:, k+1] * prior_units[-1] # jitter unit
+        samples['v0'] = samples_arr[:, k+2] * prior_units[-1] # jitter unit
 
-        return joker_samples
+        if return_logprobs:
+            return samples, ln_prior
+
+        else:
+            return samples
 
     def _rejection_sample_from_cache(self, data, n_prior_samples, cache_file,
                                      start_idx, seed, return_logprobs=False):
@@ -221,6 +248,31 @@ class TheJoker(object):
 
         return result
 
+    def _validate_prior_cache(self, n_prior_samples, prior_cache_file):
+        """Internal method used to either validate the prior cache file, or
+        create one based on the number of samples input.
+        """
+
+        if n_prior_samples is None and prior_cache_file is None:
+            raise ValueError("You either have to specify the number of prior "
+                             "samples to generate, or a path to an HDF5 file "
+                             "containing cached prior samples.")
+
+        if prior_cache_file is not None:
+            # read prior units from cache file
+            with h5py.File(prior_cache_file, 'r') as f:
+                if n_prior_samples is None:
+                    n_prior_samples = len(f['samples'])
+
+                # TODO: also validate keys in cache?
+
+            cache_exists = True
+
+        else:
+            cache_exists = False
+
+        return n_prior_samples, cache_exists
+
     def rejection_sample(self, data, n_prior_samples=None,
                          prior_cache_file=None, return_logprobs=False,
                          start_idx=0):
@@ -255,26 +307,18 @@ class TheJoker(object):
             raise TypeError("Input data must be an RVData instance, not '{0}'"
                             .format(type(data)))
 
-        if n_prior_samples is None and prior_cache_file is None:
-            raise ValueError("You either have to specify the number of prior "
-                             "samples to generate, or a path to an HDF5 file "
-                             "containing cached prior samples. If you want to "
-                             "try an experimental adaptive method, use "
-                             ".iterative_rejection_sample() instead.")
-
         # compute full parameter vectors for all good samples
         if self._rnd_passed:
             seed = self.random_state.randint(np.random.randint(2**16))
         else:
             seed = None
 
-        if prior_cache_file is not None:
-            # read prior units from cache file
-            with h5py.File(prior_cache_file, 'r') as f:
-                prior_units = [u.Unit(uu) for uu in f.attrs['units']]
+        n_prior_samples, cache_exists = self._validate_prior_cache(
+            n_prior_samples, prior_cache_file)
 
-                if n_prior_samples is None:
-                    n_prior_samples = len(f['samples'])
+        if cache_exists:
+            with h5py.File(prior_cache_file) as f:
+                prior_units = [u.Unit(uu) for uu in f.attrs['units']]
 
             result = self._rejection_sample_from_cache(
                 data, n_prior_samples, prior_cache_file, start_idx, seed=seed,
@@ -282,32 +326,25 @@ class TheJoker(object):
 
         else:
             with tempfile.NamedTemporaryFile(mode='r+') as f:
+                prior_cache_file = f.name
+
                 # first do prior sampling, cache to temporary file
                 prior_samples = self.sample_prior(size=n_prior_samples)
-                prior_units = save_prior_samples(f.name, prior_samples,
+                prior_units = save_prior_samples(prior_cache_file,
+                                                 prior_samples,
                                                  data.rv.unit)
+
                 result = self._rejection_sample_from_cache(
-                    data, n_prior_samples, f.name, start_idx, seed=seed,
-                    return_logprobs=return_logprobs)
+                    data, n_prior_samples, prior_cache_file, start_idx,
+                    seed=seed, return_logprobs=return_logprobs)
 
-        if return_logprobs:
-            samples, ln_prior, ln_like = result
-
-        else:
-            samples = result
-
-        samples = self._unpack_full_samples(samples, prior_units, t0=data.t0)
-
-        if return_logprobs:
-            return samples, ln_prior
-
-        else:
-            return samples
+        return self._unpack_full_samples(result, prior_units, t0=data.t0,
+                                         return_logprobs=return_logprobs)
 
     def iterative_rejection_sample(self, data, n_requested_samples,
-                                   prior_cache_file, n_prior_samples=None,
+                                   prior_cache_file=None, n_prior_samples=None,
                                    return_logprobs=False, magic_fudge=128):
-        """ For now: prior_cache_file is required
+        """TODO: docstring For now: prior_cache_file is required
 
         Parameters
         ----------
@@ -324,27 +361,20 @@ class TheJoker(object):
             raise TypeError("Input data must be an RVData instance, not '{}'"
                             .format(type(data)))
 
-        if n_prior_samples is None and prior_cache_file is None:
-            raise ValueError("You either have to specify the number of prior "
-                             "samples to generate, or a path to a file "
-                             "containing cached prior samples.")
-
         # a bit of a hack to make the K, v0 samples deterministic
         if self._rnd_passed:
             seed = self.random_state.randint(np.random.randint(2**16))
         else:
             seed = None
 
-        # read prior units from cache file
-        with h5py.File(prior_cache_file, 'r') as f:
-            prior_units = [u.Unit(uu) for uu in f.attrs['units']]
-
-            if n_prior_samples is None: # take all samples if not specified
-                n_prior_samples = len(f['samples'])
-
-        # Start from the beginning of the prior cache file
+        # HACK: must start from 0
         start_idx = 0
 
+        n_prior_samples, cache_exists = self._validate_prior_cache(
+            n_prior_samples, prior_cache_file)
+
+        # There are some magic numbers below used to control how fast the
+        # iterative batches grow in size
         safety_factor = 2 # MAGIC NUMBER
         n_process = magic_fudge * n_requested_samples # MAGIC NUMBER
 
@@ -357,64 +387,68 @@ class TheJoker(object):
 
         all_marg_lls = np.array([])
 
-        maxiter = 128
-        for i in range(maxiter): # we just need to iterate for a long time
-            logger.log(1, "The Joker iteration {0}, computing {1} likelihoods"
-                       .format(i, n_process))
-            marg_lls = compute_likelihoods(n_process, prior_cache_file,
-                                           start_idx, data, self.params,
-                                           pool=self.pool,
-                                           n_batches=self.n_batches)
+        # TODO: it's a little...unclean to always make a tempfile
 
-            all_marg_lls = np.concatenate((all_marg_lls, marg_lls))
+        with tempfile.NamedTemporaryFile(mode='r+') as f:
+            if cache_exists:
+                with h5py.File(prior_cache_file) as f:
+                    prior_units = [u.Unit(uu) for uu in f.attrs['units']]
 
-            good_samples_idx = get_good_sample_indices(all_marg_lls, seed=seed)
+            else:
+                prior_cache_file = f.name
 
-            if len(good_samples_idx) == 0:
-                # self.pool.close()
-                raise RuntimeError("Failed to find any good samples!")
+                # first do prior sampling, cache to temporary file
+                prior_samples = self.sample_prior(size=n_prior_samples)
+                prior_units = save_prior_samples(f.name, prior_samples,
+                                                 data.rv.unit)
 
-            n_good = len(good_samples_idx)
-            logger.log(1, "{0} good samples after rejection sampling"
-                       .format(n_good))
+            maxiter = 128
+            for i in range(maxiter): # we just need to iterate for a long time
+                logger.log(1, "The Joker iteration {0}, computing {1} "
+                           "likelihoods".format(i, n_process))
+                marg_lls = compute_likelihoods(n_process, prior_cache_file,
+                                               start_idx, data, self.params,
+                                               pool=self.pool,
+                                               n_batches=self.n_batches)
 
-            if len(good_samples_idx) >= n_requested_samples:
-                logger.debug("Enough samples found! {0}"
-                             .format(len(good_samples_idx)))
-                break
+                all_marg_lls = np.concatenate((all_marg_lls, marg_lls))
 
-            start_idx += n_process
+                good_samples_idx = get_good_sample_indices(all_marg_lls,
+                                                           seed=seed)
 
-            n_ll_evals = len(all_marg_lls)
-            n_need = n_requested_samples - n_good
-            n_process = int(safety_factor * n_need / n_good * n_ll_evals)
+                if len(good_samples_idx) == 0:
+                    # self.pool.close()
+                    raise RuntimeError("Failed to find any good samples!")
 
-            if start_idx + n_process > n_prior_samples:
-                n_process = n_prior_samples - start_idx
+                n_good = len(good_samples_idx)
+                logger.log(1, "{0} good samples after rejection sampling"
+                           .format(n_good))
 
-            if n_process <= 0:
-                break
+                if len(good_samples_idx) >= n_requested_samples:
+                    logger.debug("Enough samples found! {0}"
+                                 .format(len(good_samples_idx)))
+                    break
 
-        else:
-            # We should never get here!!
-            raise RuntimeError("Hit maximum number of iterations!")
+                start_idx += n_process
 
-        result = sample_indices_to_full_samples(
-            good_samples_idx, prior_cache_file, data, self.params,
-            pool=self.pool, global_seed=seed,
-            return_logprobs=return_logprobs)
+                n_ll_evals = len(all_marg_lls)
+                n_need = n_requested_samples - n_good
+                n_process = int(safety_factor * n_need / n_good * n_ll_evals)
 
-        if return_logprobs:
-            full_samples, ln_prior, ln_like = result
+                if start_idx + n_process > n_prior_samples:
+                    n_process = n_prior_samples - start_idx
 
-        else:
-            full_samples = result
+                if n_process <= 0:
+                    break
 
-        samples_dict = self._unpack_full_samples(full_samples,
-                                                 prior_units, t0=data.t0)
+            else:
+                # We should never get here!!
+                raise RuntimeError("Hit maximum number of iterations!")
 
-        if return_logprobs:
-            return samples_dict, ln_prior
+            result = sample_indices_to_full_samples(
+                good_samples_idx, prior_cache_file, data, self.params,
+                pool=self.pool, global_seed=seed,
+                return_logprobs=return_logprobs)
 
-        else:
-            return samples_dict
+        return self._unpack_full_samples(result, prior_units, t0=data.t0,
+                                         return_logprobs=return_logprobs)
