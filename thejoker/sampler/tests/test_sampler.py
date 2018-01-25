@@ -76,3 +76,16 @@ class TestSampler(object):
 
         full_samples = joker.rejection_sample(data, n_prior_samples=128)
         assert quantity_allclose(full_samples['jitter'], jitter)
+
+    def test_iterative_rejection_sample(self):
+
+        # First, try just running rejection_sample()
+        data = self.data['binary']
+        jitter = 100*u.m/u.s
+        params = JokerParams(P_min=8*u.day, P_max=128*u.day, jitter=jitter)
+        joker = TheJoker(params)
+
+        samples = joker.iterative_rejection_sample(data, n_prior_samples=100000,
+                                                   n_requested_samples=2)
+
+        assert quantity_allclose(samples['jitter'], jitter)
