@@ -29,7 +29,8 @@ env:
         # overridden underneath. They are defined here in order to save having
         # to repeat them for all configurations.
         - NUMPY_VERSION=stable
-        - ASTROPY_VERSION=stable
+        # - ASTROPY_VERSION=stable
+        - ASTROPY_VERSION=development # TODO: until v3.0 is released
         - MAIN_CMD='python setup.py'
         - SETUP_CMD='test'
         # TODO: A lot of the dependencies are because of nbsphinx...we may want
