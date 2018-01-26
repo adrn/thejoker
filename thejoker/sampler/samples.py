@@ -147,7 +147,7 @@ class JokerSamples(OrderedDict):
     ##########################################################################
     # Interaction with TwoBody
 
-    def get_orbit(self, index=None):
+    def get_orbit(self, index=None, **kwargs):
         """Get a `twobody.KeplerOrbit` object for the samples at the specified
         index.
 
@@ -156,6 +156,11 @@ class JokerSamples(OrderedDict):
         index : int (optional)
             The index of the samples to turn into a `twobody.KeplerOrbit`
             instance. If the samples object is scalar, no index is necessary.
+        **kwargs
+            Other keyword arguments are passed to the `twobody.KeplerOrbit`
+            initializer. For example, you can specify the inclination by passing
+            ``i=...`, or  longitude of the ascending node by passing
+            ``Omega=...``.
 
         Returns
         -------
@@ -171,30 +176,39 @@ class JokerSamples(OrderedDict):
         # all of this to avoid the __init__ of KeplerOrbit / KeplerElements
         orbit = copy.copy(self._cache['orbit'])
 
-        if len(self) == 1:
+        P = self['P']
+        e = self['e']
+        K = self['K']
+        omega = self['omega']
+        M0 = self['M0']
+        v0 = self['v0']
+        a = kwargs.pop('a', P * K / (2*np.pi) * np.sqrt(1 - e**2))
+
+        if len(self) == 1 and len(self.shape) == 0:
             if index > 0:
                 raise ValueError('Samples are scalar-valued!')
 
-            P = self['P']
-            e = self['e']
-            a_K = P * self['K'] / (2*np.pi) * np.sqrt(1 - e**2)
-            omega = self['omega']
-            M0 = self['M0']
-            v0 = self['v0']
-
         else:
-            P = self['P'][index]
-            e = self['e'][index]
-            a_K = P * self['K'][index] / (2*np.pi) * np.sqrt(1 - e**2)
-            omega = self['omega'][index]
-            M0 = self['M0'][index]
-            v0 = self['v0'][index]
+            P = P[index]
+            e = e[index]
+            a = a[index]
+            omega = omega[index]
+            M0 = M0[index]
+            v0 = v0[index]
 
         orbit.elements._P = P
         orbit.elements._e = e * u.dimensionless_unscaled
-        orbit.elements._a = a_K
+        orbit.elements._a = a
         orbit.elements._omega = omega
         orbit.elements._M0 = M0
+        orbit.elements._Omega = kwargs.pop('Omega', 0*u.deg)
+        orbit.elements._i = kwargs.pop('i', 90*u.deg)
+
+        orbit._barycenter = kwargs.pop('barycenter', None)
+
+        if kwargs:
+            raise ValueError("Unrecognized arguments {0}"
+                             .format(', '.join(list(kwargs.keys()))))
 
         # TODO: slight abuse of the _v0 cache attribute on KeplerOrbit...
         orbit._v0 = v0
