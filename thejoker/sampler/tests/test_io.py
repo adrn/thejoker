@@ -7,6 +7,7 @@ import numpy as np
 from ...data import RVData
 from ..io import pack_prior_samples, save_prior_samples
 
+
 class TestIO(object):
 
     def setup(self):
@@ -17,9 +18,9 @@ class TestIO(object):
         n = 128
         samples = dict()
         samples['P'] = np.random.uniform(size=n) * u.day
-        samples['phi0'] = np.random.uniform(size=n) * u.radian
+        samples['M0'] = np.random.uniform(size=n) * u.radian
         samples['omega'] = np.random.uniform(size=n) * u.radian
-        samples['ecc'] = np.random.uniform(size=n) * u.one
+        samples['e'] = np.random.uniform(size=n) * u.one
         samples['jitter'] = np.random.uniform(size=n) * u.m/u.s
         self.samples = samples
         self.n = n

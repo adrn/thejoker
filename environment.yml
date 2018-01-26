@@ -14,4 +14,4 @@ dependencies:
   - cython
   - pip:
     - schwimmbad
-    - git+https://github.com/adrn/TwoBody
+    - twobody

@@ -1,15 +1,16 @@
 # Third-party
-import astropy.time as atime
+from astropy.time import Time
 import astropy.units as u
 import matplotlib.pyplot as plt
 import numpy as np
-from twobody.celestial import RVOrbit
+from twobody import KeplerOrbit
 
 __all__ = ['plot_rv_curves']
 
+
 def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
                    ax=None, plot_kwargs=dict(), data_plot_kwargs=dict(),
-                   add_labels=True, trend_t0=0.):
+                   add_labels=True):
     """
     Plot radial velocity curves for the input set of orbital parameter
     samples over the input grid of times.
@@ -35,7 +36,6 @@ def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
         Passed to `thejoker.data.RVData.plot()`.
     add_labels : bool, optional
         Add labels to the axes or not.
-    trend_t0 : numeric, optional
 
     Returns
     -------
@@ -44,15 +44,16 @@ def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
     """
 
     if ax is None:
-        fig,ax = plt.subplots(1,1)
+        fig, ax = plt.subplots(1, 1)
     else:
         fig = ax.figure
 
-    if isinstance(t_grid, atime.Time):
-        t_grid = t_grid.tcb.mjd
+    if not isinstance(t_grid, Time): # Assume BMJD
+        t_grid = Time(t_grid, format='mjd', scale='tcb')
 
     if n_plot is None:
-        n_plot = len(samples['P'])
+        n_plot = len(samples)
+    n_plot = min(n_plot, len(samples))
 
     # scale the transparency of the lines
     Q = 4. # HACK
@@ -71,20 +72,11 @@ def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
     # plot orbits over the data
     model_rv = np.zeros((n_plot, len(t_grid)))
     for i in range(n_plot):
-        this_samples = dict()
-        for k in samples.keys():
-            this_samples[k] = samples[k][i]
-        this_samples.pop('jitter', None)
+        orbit = samples.get_orbit(i)
+        model_rv[i] = orbit.radial_velocity(t_grid).to(rv_unit).value
 
-        # get the trend parameters out
-        trend_samples = dict()
-        for k in samples.trend_cls.parameters:
-            trend_samples[k] = this_samples.pop(k)
-        trend = samples.trend_cls(t0=trend_t0, **trend_samples)
-
-        orbit = RVOrbit(trend=trend, **this_samples)
-        model_rv[i] = orbit.generate_rv_curve(t_grid).to(rv_unit).value
-    ax.plot(t_grid, model_rv.T, **style)
+    bmjd = t_grid.tcb.mjd
+    ax.plot(bmjd, model_rv.T, **style)
 
     if data is not None:
         data_style = data_plot_kwargs.copy()
@@ -97,10 +89,10 @@ def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
         data.plot(ax=ax, **data_style)
 
         _rv = data.rv.to(rv_unit).value
-        drv = _rv.max()-_rv.min()
+        drv = _rv.max() - _rv.min()
         ax.set_ylim(_rv.min() - 0.2*drv, _rv.max() + 0.2*drv)
 
-    ax.set_xlim(t_grid.min(), t_grid.max())
+    ax.set_xlim(bmjd.min(), bmjd.max())
     if add_labels:
         ax.set_xlabel('BMJD')
         ax.set_ylabel('RV [{}]'.format(rv_unit.to_string(format='latex_inline')))

@@ -10,6 +10,7 @@ from ..fast_likelihood import batch_marginal_ln_likelihood
 from .. import JokerParams, TheJoker
 from .helpers import FakeData
 
+
 def test_shit():
     joker_params = JokerParams(P_min=8*u.day, P_max=32768*u.day, jitter=0*u.m/u.s)
     joker = TheJoker(joker_params)

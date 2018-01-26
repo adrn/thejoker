@@ -5,10 +5,10 @@ import pytest
 # Project
 from ..params import JokerParams
 
+
 def test_init():
 
     pars = JokerParams(P_min=8.*u.day, P_max=8192*u.day)
-    assert pars._n_trend == 1
     assert pars.jitter.value == 0
 
     # test invalid input

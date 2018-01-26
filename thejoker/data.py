@@ -1,5 +1,5 @@
 # Third-party
-import astropy.time as at
+from astropy.time import Time
 import astropy.units as u
 import numpy as np
 
@@ -8,7 +8,8 @@ from .log import log as logger
 
 __all__ = ['RVData']
 
-class RVData(object):
+
+class RVData:
     """
     Time-domain radial velocity measurements for a single target.
 
@@ -25,17 +26,18 @@ class RVData(object):
         Inverse variance for each RV measurement. Specify this or ``stddev``.
     metadata : any (optional)
         Any metadata associated with the object.
-    t_offset : numeric (optional) [day]
-        A time offset to apply before processing. Default is to subtract off
-        the minimum time in BMJD days.
+    t0 : numeric (optional) [day]
+        A reference time. Default is to use the minimum time in barycentric MJD
+        (days).
 
     """
     @u.quantity_input(rv=u.km/u.s)
-    def __init__(self, t, rv, ivar=None, stddev=None, metadata=None, t_offset=None):
+    def __init__(self, t, rv, ivar=None, stddev=None,
+                 metadata=None, t0=None):
 
         # For speed, many of the attributes are saved without units and only
         #   returned with units if asked for.
-        if isinstance(t, at.Time):
+        if isinstance(t, Time):
             _t_bmjd = t.tcb.mjd
         else:
             _t_bmjd = np.atleast_1d(t)
@@ -98,10 +100,15 @@ class RVData(object):
         self.metadata = metadata
 
         # if no offset is provided, subtract the minimum time
-        if t_offset is None:
-            t_offset = np.min(self._t_bmjd)
-        self._t_bmjd = self._t_bmjd - t_offset
-        self.t_offset = t_offset
+        if t0 is None:
+            t0 = self.t.min()
+
+        if not isinstance(t0, Time):
+            raise TypeError('If a reference time t0 is specified, it must '
+                            'be an astropy.time.Time object.')
+
+        self.t0 = t0
+        self._t0_bmjd = self.t0.tcb.mjd
 
     @property
     def t(self):
@@ -113,19 +120,22 @@ class RVData(object):
         t : `~astropy.time.Time`
             An Astropy Time object for all times.
         """
-        return at.Time(self._t_bmjd + self.t_offset, scale='tcb', format='mjd')
+        return Time(self._t_bmjd, scale='tcb', format='mjd')
 
-    def phase(self, t0, P):
+    def phase(self, P, t0=None):
         """
-        Convert time to a phase relative to the input epoch ``t0``
-        and period ``P``.
+        Convert time to a phase.
+
+        By default, the phase is relative to the internal reference epoch,
+        ``t0``, but a new epoch can also be specified to this method.
 
         Parameters
         ----------
-        t0 : `~astropy.time.Time`
-            The reference epoch.
         P : `~astropy.units.Quantity` [time]
             The period.
+        t0 : `~astropy.time.Time` (optional)
+            Default uses the internal reference epoch. Use this to compute the
+            phase relative to some other epoch
 
         Returns
         -------
@@ -133,6 +143,8 @@ class RVData(object):
             The dimensionless phase of each observation.
 
         """
+        if t0 is None:
+            t0 = self.t0
         return ((self.t - t0) / P) % 1.
 
     @property
@@ -280,4 +292,3 @@ class RVData(object):
             f.close()
 
         return cls(t=t, rv=rv, stddev=stddev)
-

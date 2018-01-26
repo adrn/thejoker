@@ -1,12 +1,28 @@
 # Third-party
 import numpy as np
-from twobody.celestial import rv_from_elements
+from twobody.wrap import cy_rv_from_elements
 
 # Package
-from .utils import get_ivar
 from ..log import log as logger
 
-__all__ = ['design_matrix', 'tensor_vector_scalar', 'marginal_ln_likelihood']
+__all__ = ['get_ivar', 'design_matrix',
+           'tensor_vector_scalar', 'marginal_ln_likelihood']
+
+
+def get_ivar(data, s):
+    """Return a copy of the inverse variance array with jitter included.
+
+    This is safe for zero'd out inverse variances.
+
+    Parameters
+    ----------
+    data : `~thejoker.data.RVData`
+    s : numeric
+        Jitter in the same units as the RV data.
+
+    """
+    return data.ivar.value / (1 + s**2 * data.ivar.value)
+
 
 def design_matrix(nonlinear_p, data, joker_params):
     """
@@ -15,7 +31,7 @@ def design_matrix(nonlinear_p, data, joker_params):
     ----------
     nonlinear_p : array_like
         Array of non-linear parameter values. For the default case,
-        these are P (period, day), phi0 (phase at pericenter, rad),
+        these are P (period, day), M0 (phase at pericenter, rad),
         ecc (eccentricity), omega (argument of perihelion, rad).
         May also contain log(jitter^2) as the last index.
     data : `~thejoker.data.RVData`
@@ -29,19 +45,20 @@ def design_matrix(nonlinear_p, data, joker_params):
         The design matrix with shape ``(n_times, n_params)``.
 
     """
-    P, phi0, ecc, omega = nonlinear_p[:4] # we don't need the jitter here
+    P, M0, ecc, omega = nonlinear_p[:4] # we don't need the jitter here
 
-    # phi0 now is implicitly relative to data.t_offset, not mjd=0
     t = data._t_bmjd
-    zdot = rv_from_elements(times=t, P=P, K=1., e=ecc,
-                            omega=omega, phi0=phi0,
-                            anomaly_tol=joker_params.anomaly_tol)
+    t0 = data._t0_bmjd
+    zdot = cy_rv_from_elements(t, P, 1., ecc, omega, M0, t0,
+                               joker_params.anomaly_tol,
+                               joker_params.anomaly_maxiter)
 
-    # TODO: right now, we only support a single, global velocity trend!
-    A1 = np.vander(t, N=joker_params._n_trend, increasing=True)
+    # TODO: right now, we only support a constant N=1 velocity trend!
+    A1 = np.vander(t, N=1, increasing=True)
     A = np.hstack((zdot[:,None], A1))
 
     return A
+
 
 def tensor_vector_scalar(A, ivar, y):
     """
@@ -90,6 +107,7 @@ def tensor_vector_scalar(A, ivar, y):
 
     return ATCinvA, p, chi2
 
+
 def marginal_ln_likelihood(nonlinear_p, data, joker_params, tvsi=None):
     """
     Internal function used to compute the likelihood marginalized
@@ -101,7 +119,7 @@ def marginal_ln_likelihood(nonlinear_p, data, joker_params, tvsi=None):
     ----------
     nonlinear_p : array_like
         Array of non-linear parameter values. For the default case,
-        these are P (period, day), phi0 (phase at pericenter, rad),
+        these are P (period, day), M0 (phase at pericenter, rad),
         ecc (eccentricity), omega (argument of perihelion, rad).
         May also contain jitter as the last index.
     data : `~thejoker.data.RVData`

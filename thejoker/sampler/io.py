@@ -10,9 +10,10 @@ __all__ = ['pack_prior_samples', 'save_prior_samples']
 # These units and the order are required for the likelihood code
 _name_to_unit = OrderedDict()
 _name_to_unit['P'] = u.day
-_name_to_unit['phi0'] = u.radian
-_name_to_unit['ecc'] = u.one
+_name_to_unit['M0'] = u.radian
+_name_to_unit['e'] = u.one
 _name_to_unit['omega'] = u.radian
+
 
 def pack_prior_samples(samples, rv_unit):
     """
@@ -21,8 +22,8 @@ def pack_prior_samples(samples, rv_unit):
     must contain keys for:
 
         - ``P``, period
-        - ``phi0``, phase at t=0
-        - ``ecc``, eccentricity
+        - ``M0``, phase at t=0
+        - ``e``, eccentricity
         - ``omega``, argument of periastron
         - ``jitter``, velocity jitter (optional)
 
@@ -64,6 +65,7 @@ def pack_prior_samples(samples, rv_unit):
 
     return np.vstack(arrs).T, units
 
+
 def save_prior_samples(f, samples, rv_unit, ln_prior_probs=None):
     """
     Save a dictionary of Astropy Quantity prior samples to
@@ -72,8 +74,8 @@ def save_prior_samples(f, samples, rv_unit, ln_prior_probs=None):
     must contain keys for:
 
         - ``P``, period
-        - ``phi0``, phase at pericenter
-        - ``ecc``, eccentricity
+        - ``M0``, phase at pericenter
+        - ``e``, eccentricity
         - ``omega``, argument of periastron
         - ``jitter``, velocity jitter (optional)
 

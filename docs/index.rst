@@ -24,6 +24,13 @@ data.
     install
     random-numbers
     faq
+    update-0.2
+
+.. note::
+
+    The Joker was recently updated with some API-breaking changes. To see a list
+    of these changes, and a guide on how to migrate to the new version, please
+    see :ref:`update-0.2-guide`.
 
 Getting started
 ===============
@@ -132,7 +139,8 @@ More examples / tutorials
     :maxdepth: 1
 
     examples/multiproc-example.ipynb
-    examples/velocity-trend.ipynb
+    examples/astrometric-orbit.ipynb
+..    examples/velocity-trend.ipynb
 
 .. examples/continue-mcmc.ipynb
 .. examples/mpi.rst

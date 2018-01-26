@@ -16,16 +16,17 @@ cimport scipy.linalg.cython_lapack as lapack
 # from libc.stdio cimport printf
 from libc.math cimport pow, log, fabs
 
-cdef extern from "celestial/src/twobody.h":
+cdef extern from "src/twobody.h":
     void c_rv_from_elements(double *t, double *rv, int N_t,
                             double P, double K, double e, double omega,
-                            double phi0, double tol, int maxiter)
+                            double phi0, double t0, double tol, int maxiter)
 
 # Log of 2π
 cdef double LN_2PI = 1.8378770664093453
 
+
 cdef void design_matrix(double P, double phi0, double ecc, double omega,
-                        double[::1] t,
+                        double[::1] t, double t0,
                         double[:,::1] A_T,
                         int n_trend,
                         double anomaly_tol, int anomaly_maxiter):
@@ -43,6 +44,8 @@ cdef void design_matrix(double P, double phi0, double ecc, double omega,
         Argument of pericenter [radian].
     t : `numpy.ndarray`
         Data time array.
+    t0 : double
+        Reference time.
     n_trend : int
         Number of terms in the long-term velocity trend.
     anomaly_tol : double
@@ -61,9 +64,8 @@ cdef void design_matrix(double P, double phi0, double ecc, double omega,
         int i, j
         int n_times = t.shape[0]
 
-    # phi0 is implicitly relative to data.t_offset, not mjd=0
     c_rv_from_elements(&t[0], &A_T[0,0], n_times,
-                       P, 1., ecc, omega, phi0,
+                       P, 1., ecc, omega, phi0, t0,
                        anomaly_tol, anomaly_maxiter)
 
     for j in range(n_times):
@@ -73,6 +75,7 @@ cdef void design_matrix(double P, double phi0, double ecc, double omega,
         for i in range(1, n_trend):
             for j in range(n_times):
                 A_T[1+i, j] = pow(t[j], i)
+
 
 cdef void get_ivar(double[::1] ivar, double s, double[::1] new_ivar):
     """Return new ivar values with the jitter incorporated.
@@ -95,6 +98,7 @@ cdef void get_ivar(double[::1] ivar, double s, double[::1] new_ivar):
 
     for i in range(n):
         new_ivar[i] = ivar[i] / (1 + s*s * ivar[i])
+
 
 cdef double tensor_vector_scalar(double[:,::1] A_T, double[::1] ivar,
                                  double[::1] y,
@@ -180,6 +184,7 @@ cdef double tensor_vector_scalar(double[:,::1] A_T, double[::1] ivar,
 
     return chi2
 
+
 cdef double logdet(double[:,::1] A):
     """Compute the log-determinant of the (assumed) square, symmetric matrix A.
 
@@ -219,6 +224,7 @@ cdef double logdet(double[:,::1] A):
 
     return log_det
 
+
 cdef double logdet_term(double[:,::1] ATCinvA, double[::1] ivar):
     """Compute the log-determinant term of the log-likelihood."""
     cdef:
@@ -235,6 +241,7 @@ cdef double logdet_term(double[:,::1] ATCinvA, double[::1] ivar):
     ld = ld - n_times * LN_2PI
 
     return ld
+
 
 cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
                                    data, joker_params):
@@ -257,15 +264,15 @@ cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
         int n
         int n_samples = chunk.shape[0]
         int n_times = len(data)
-        int n_trend = joker_params._n_trend # number of polynomial terms
-        int n_pars = 1 + n_trend # always have K, but v0, v1, etc. are variable
+        int n_pars = 2 # always have K, v0
 
         double anomaly_tol = 1E-10
         int anomaly_maxiter = 128
 
-        double[::1] t = np.ascontiguousarray(data._t_bmjd)
-        double[::1] rv = np.ascontiguousarray(data.rv.value)
-        double[::1] ivar = np.ascontiguousarray(data.ivar.value)
+        double[::1] t = np.ascontiguousarray(data._t_bmjd, dtype='f8')
+        double[::1] rv = np.ascontiguousarray(data.rv.value, dtype='f8')
+        double[::1] ivar = np.ascontiguousarray(data.ivar.value, dtype='f8')
+        double t0 = data._t0_bmjd
 
         # inverse variance array with jitter included
         double[::1] jitter_ivar = np.zeros(data.ivar.value.shape)
@@ -297,8 +304,9 @@ cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
             jitter = chunk[n,4]
 
         try:
+            # TODO: hard set n_trend=1 (v0) because removing support for that
             design_matrix(chunk[n,0], chunk[n,1], chunk[n,2], chunk[n,3],
-                          t, A_T, n_trend, anomaly_tol, anomaly_maxiter)
+                          t, t0, A_T, 1, anomaly_tol, anomaly_maxiter)
 
             # jitter must be in same units as the data RV's / ivar!
             get_ivar(ivar, jitter, jitter_ivar)
