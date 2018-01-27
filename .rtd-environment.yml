@@ -6,7 +6,7 @@ channels:
 
 dependencies:
   - python=3
-  - astropy
+  # - astropy
   - astropy-helpers
   - numpy
   - matplotlib
@@ -18,6 +18,7 @@ dependencies:
   - ipykernel
   - cython
   - pip:
+    - git+https://github.com/astropy/astropy
     - schwimmbad
     - emcee
     - nbsphinx
