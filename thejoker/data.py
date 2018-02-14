@@ -161,7 +161,8 @@ class RVData:
 
     # ---
 
-    def plot(self, ax=None, rv_unit=None, time_format='mjd', **kwargs):
+    def plot(self, ax=None, rv_unit=None, time_format='mjd', phase_fold=None,
+             **kwargs):
         """
         Plot the data points.
 
@@ -179,6 +180,10 @@ class RVData:
             the `~astropy.time.Time` object, or it can be a callable (e.g.,
             function) that does more complex things (for example:
             ``time_format=lambda t: t.datetime.day``).
+        phase_fold : bool (optional)
+            Plot the phase instead of the time by folding on the specified
+            period.
+        `~astropy.units.Quantity`
         **kwargs
             All other keyword arguments are passed to the
             `~matplotlib.pyplot.errorbar` (if errors were provided) or
