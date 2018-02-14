@@ -77,17 +77,6 @@ class TheJoker(object):
 
         self.n_batches = n_batches
 
-        # Used for caching
-        self._cache = dict()
-
-        # Files to be closed when _cleanup() is called
-        self._cache['tempfiles'] = []
-
-    def _cleanup(self):
-        # Close any temp. files:
-        for f in self._cache['tempfiles']:
-            f.close()
-
     def sample_prior(self, size=1, return_logprobs=False):
         """Generate samples from the prior. Logarithmic in period, uniform in
         phase and argument of pericenter, Beta distribution in eccentricity.
@@ -150,10 +139,10 @@ class TheJoker(object):
             samples['jitter'] = np.sqrt(np.exp(log_s2)) * self.params._jitter_unit
 
             if return_logprobs:
-                Jac = (2 / samples['jitter'].value) # Jacobian
+                Jac = np.log(2 / samples['jitter'].value) # Jacobian
                 ln_prior_val += norm.logpdf(log_s2,
                                             loc=self.params.jitter[0],
-                                            scale=self.params.jitter[1]) * Jac
+                                            scale=self.params.jitter[1]) + Jac
 
         else:
             samples['jitter'] = np.ones(size) * self.params.jitter
@@ -452,3 +441,10 @@ class TheJoker(object):
 
         return self._unpack_full_samples(result, prior_units, t0=data.t0,
                                          return_logprobs=return_logprobs)
+
+    # ========================================================================
+    # MCMC
+
+    def mcmc_sample(self, data, ):
+        """
+        """
