@@ -1,7 +1,7 @@
 # Third-party
 import astropy.units as u
 import numpy as np
-from scipy.stats import beta, norm
+from scipy.stats import beta
 from twobody.wrap import cy_rv_from_elements
 
 # Project
@@ -16,8 +16,7 @@ log_2pi = np.log(2 * np.pi)
 
 
 def to_mcmc_params(p):
-    r"""
-    MCMC internal function.
+    r"""MCMC internal function.
 
     Transform from linear orbital parameter values to standard
     variables for MCMC sampling:
@@ -37,10 +36,10 @@ def to_mcmc_params(p):
         and long-term velocity trend parameters.
 
     """
-    P, M0, ecc, omega, s, K, *v_terms = p
+    P, M0, e, omega, s, K, *v_terms = p
     return np.vstack([np.log(P),
                       np.sqrt(K) * np.cos(M0), np.sqrt(K) * np.sin(M0),
-                      np.sqrt(ecc) * np.cos(omega), np.sqrt(ecc) * np.sin(omega),
+                      np.sqrt(e) * np.cos(omega), np.sqrt(e) * np.sin(omega),
                       2*np.log(s)] + list(v_terms))
 
 
@@ -216,7 +215,7 @@ def ln_likelihood(p, joker_params, data):
 
     # TODO: right now, we only support a constant systemic velocity
     A1 = np.vander(t, N=1, increasing=True)
-    A = np.hstack((zdot[:,None], A1))
+    A = np.hstack((zdot[:, None], A1))
     p = np.array([K] + v_terms)
     ivar = get_ivar(data, s)
 
@@ -236,7 +235,7 @@ def ln_prior(p, joker_params):
 
     lnp += beta.logpdf(ecc, 0.867, 3.03) # Kipping et al. 2013
 
-    # TODO: do we need P_min, P_max here?
+    joker_params.P_min.to()
 
     if not joker_params._fixed_jitter:
         # DFM's idea: wide, Gaussian prior in log(s^2)
