@@ -492,7 +492,7 @@ class TheJoker(object):
             samples0 = samples0.mean()
 
         if self.params._fixed_jitter:
-            s = np.zeros_like(samples0['P'].to(u.day).value)
+            s = np.zeros(len(samples0))
         else:
             s = samples0['jitter'].to(self.params._jitter_unit)
 
@@ -511,6 +511,7 @@ class TheJoker(object):
         p0_walkers = emcee.utils.sample_ball(p0, std=np.ones_like(p0)*1E-4,
                                              size=n_walkers)
         p0_walkers[:, 4] = np.abs(p0_walkers[:, 4]) # jitter > 0
+        p0_walkers[:, 5] = np.abs(p0_walkers[:, 5]) # K > 0
         p0_walkers = model.to_mcmc_params(p0_walkers.T).T
 
         # Because jitter is always carried through in the transform above, now
@@ -531,9 +532,12 @@ class TheJoker(object):
 
         # now turn the chain into samples!
         # TODO: fix this shit!
-        flatchain = np.vstack(sampler.chain[:, ::32])
-        idx = np.random.choice(n_requested_samples, replace=False)
-        raw_samples = flatchain[idx]
+        raw_samples = np.vstack(sampler.chain[:, ::32])
+
+        if n_requested_samples is not None:
+            idx = np.random.choice(len(raw_samples), n_requested_samples,
+                                   replace=False)
+            raw_samples = raw_samples[idx]
 
         samples = model.unpack_samples_mcmc(raw_samples)
 
