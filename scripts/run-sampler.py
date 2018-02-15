@@ -3,7 +3,6 @@ import os
 import sys
 
 # Third-party
-from astropy import log as logger
 import astropy.units as u
 import h5py
 import numpy as np
@@ -11,14 +10,8 @@ import six
 from schwimmbad import choose_pool
 
 # Project
-from thejoker import Paths
-paths = Paths()
 from thejoker.data import RVData
-from thejoker.units import default_units
-# from thejoker.pool import choose_pool
-from thejoker.celestialmechanics import OrbitalParams
-from thejoker.sampler import get_good_samples, samples_to_orbital_params, sample_prior
-from thejoker import config
+from thejoker.log import log as logger
 
 def main(data_file, pool, tmp_prior_filename, n_samples=1, seed=42, hdf5_key=None,
          cache_filename=None, overwrite=False, continue_sampling=False,

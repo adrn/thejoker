@@ -17,6 +17,7 @@ from .multiproc_helpers import (get_good_sample_indices, compute_likelihoods,
                                 sample_indices_to_full_samples)
 from .io import save_prior_samples
 from .samples import JokerSamples
+from .mcmc import TheJokerMCMCModel
 
 __all__ = ['TheJoker']
 
@@ -41,6 +42,7 @@ class TheJoker(object):
         sample caches, you may need to set this to a larger number (e.g.,
         ``100*pool.size``) to avoid memory issues.
     """
+
     def __init__(self, params, pool=None, random_state=None, n_batches=None):
 
         # set the processing pool
@@ -76,17 +78,6 @@ class TheJoker(object):
         self.params = params
 
         self.n_batches = n_batches
-
-        # Used for caching
-        self._cache = dict()
-
-        # Files to be closed when _cleanup() is called
-        self._cache['tempfiles'] = []
-
-    def _cleanup(self):
-        # Close any temp. files:
-        for f in self._cache['tempfiles']:
-            f.close()
 
     def sample_prior(self, size=1, return_logprobs=False):
         """Generate samples from the prior. Logarithmic in period, uniform in
@@ -147,13 +138,14 @@ class TheJoker(object):
         if not self.params._fixed_jitter:
             # Gaussian prior in log(s^2)
             log_s2 = rnd.normal(*self.params.jitter, size=size)
-            samples['jitter'] = np.sqrt(np.exp(log_s2)) * self.params._jitter_unit
+            samples['jitter'] = np.sqrt(
+                np.exp(log_s2)) * self.params._jitter_unit
 
             if return_logprobs:
-                Jac = (2 / samples['jitter'].value) # Jacobian
+                Jac = np.log(2 / samples['jitter'].value)  # Jacobian
                 ln_prior_val += norm.logpdf(log_s2,
                                             loc=self.params.jitter[0],
-                                            scale=self.params.jitter[1]) * Jac
+                                            scale=self.params.jitter[1]) + Jac
 
         else:
             samples['jitter'] = np.ones(size) * self.params.jitter
@@ -204,8 +196,8 @@ class TheJoker(object):
         for k, key in enumerate(nonlin_params):
             samples[key] = samples_arr[:, k] * prior_units[k]
 
-        samples['K'] = samples_arr[:, k+1] * prior_units[-1] # jitter unit
-        samples['v0'] = samples_arr[:, k+2] * prior_units[-1] # jitter unit
+        samples['K'] = samples_arr[:, k + 1] * prior_units[-1]  # jitter unit
+        samples['v0'] = samples_arr[:, k + 2] * prior_units[-1]  # jitter unit
 
         if return_logprobs:
             return samples, ln_prior
@@ -375,8 +367,8 @@ class TheJoker(object):
 
         # There are some magic numbers below used to control how fast the
         # iterative batches grow in size
-        safety_factor = 2 # MAGIC NUMBER
-        n_process = magic_fudge * n_requested_samples # MAGIC NUMBER
+        safety_factor = 2  # MAGIC NUMBER
+        n_process = magic_fudge * n_requested_samples  # MAGIC NUMBER
 
         if n_process > n_prior_samples:
             raise ValueError("Prior sample library not big enough! For "
@@ -403,7 +395,7 @@ class TheJoker(object):
                                                  data.rv.unit)
 
             maxiter = 128
-            for i in range(maxiter): # we just need to iterate for a long time
+            for i in range(maxiter):  # we just need to iterate for a long time
                 logger.log(1, "The Joker iteration {0}, computing {1} "
                            "likelihoods".format(i, n_process))
                 marg_lls = compute_likelihoods(n_process, prior_cache_file,
@@ -452,3 +444,105 @@ class TheJoker(object):
 
         return self._unpack_full_samples(result, prior_units, t0=data.t0,
                                          return_logprobs=return_logprobs)
+
+    # ========================================================================
+    # MCMC
+
+    def mcmc_sample(self, data, samples0, n_steps=1024,
+                    n_requested_samples=None, n_walkers=128, n_burn=8192,
+                    return_sampler=False):
+        """Run standard MCMC (using `emcee <http://emcee.readthedocs.io/>`_) to
+        generate posterior samples in orbital parameters.
+
+        Parameters
+        ----------
+        data : `~thejoker.RVData`
+            The data to fit orbits to.
+        samples0 : `~thejoker.JokerSamples`
+            This can either be (a) a single sample to use as initial conditions
+            for the MCMC walkers, or (b) a set of samples, in which case the
+            mean of the samples will be used as initial conditions.
+        n_steps : int
+            The number of MCMC steps to run for.
+        n_requested_samples : int (optional)
+            If specified, the number of posterior samples to return. The MCMC
+            chains will be downsampled until this number of samples remain.
+        n_walkers : int (optional)
+            The number of walkers to use in the ``emcee`` ensemble.
+        n_burn : int (optional)
+            If specified, the number of steps to burn in for.
+        return_sampler : bool (optional)
+            Also return the sampler object.
+
+        Returns
+        -------
+        samples : `~thejoker.JokerSamples`
+            The posterior samples.
+        sampler : `emcee.EnsembleSampler`
+            If ``return_sampler == True``.
+        """
+        import emcee
+
+        if not isinstance(samples0, JokerSamples):
+            raise TypeError('Input samples initial position must be ')
+
+        model = TheJokerMCMCModel(joker_params=self.params, data=data)
+
+        if len(samples0) > 1:
+            samples0 = samples0.mean()
+
+        if self.params._fixed_jitter:
+            s = np.zeros(len(samples0))
+        else:
+            s = samples0['jitter'].to(self.params._jitter_unit)
+
+        # There's some weirdness here: the Model class to_mcmc_params method
+        # always expects a jitter, even if it is fixed:
+        p0 = np.squeeze([samples0['P'].to(u.day).value,
+                         samples0['M0'].to(u.radian).value,
+                         samples0['e'].value,
+                         samples0['omega'].to(u.radian).value,
+                         s,
+                         samples0['K'].value,
+                         samples0['v0'].value])
+
+        # Now we make a small ball of initial conditions:
+        # TODO: make the ball size customizable??
+        p0_walkers = emcee.utils.sample_ball(p0, std=np.ones_like(p0)*1E-4,
+                                             size=n_walkers)
+        p0_walkers[:, 4] = np.abs(p0_walkers[:, 4]) # jitter > 0
+        p0_walkers[:, 5] = np.abs(p0_walkers[:, 5]) # K > 0
+        p0_walkers = model.to_mcmc_params(p0_walkers.T).T
+
+        # Because jitter is always carried through in the transform above, now
+        # we have to remove the jitter parameter if it's fixed!
+        if self.params._fixed_jitter:
+            p0_walkers = np.delete(p0_walkers, 5, axis=1)
+
+        n_dim = p0_walkers.shape[1]
+        sampler = emcee.EnsembleSampler(n_walkers, n_dim, model.ln_posterior,
+                                        pool=self.pool)
+
+        if n_burn is not None and n_burn > 0:
+            pos, *_ = sampler.run_mcmc(p0_walkers, n_burn)
+            p0_walkers = pos
+            sampler.reset()
+
+        _ = sampler.run_mcmc(p0_walkers, n_steps)
+
+        # now turn the chain into samples!
+        # TODO: fix this shit!
+        raw_samples = np.vstack(sampler.chain[:, ::32])
+
+        if n_requested_samples is not None:
+            idx = np.random.choice(len(raw_samples), n_requested_samples,
+                                   replace=False)
+            raw_samples = raw_samples[idx]
+
+        samples = model.unpack_samples_mcmc(raw_samples)
+
+        if return_sampler:
+            return samples, sampler
+
+        else:
+            return samples
