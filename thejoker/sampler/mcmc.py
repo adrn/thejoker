@@ -6,6 +6,7 @@ from scipy.stats import beta, norm
 # Project
 from .likelihood import get_ivar, design_matrix
 from .params import JokerParams
+from .samples import JokerSamples
 from ..data import RVData
 
 __all__ = ['TheJokerMCMCModel']
@@ -167,7 +168,7 @@ class TheJokerMCMCModel:
             Dictionary of `~astropy.units.Quantity` objects for period,
             M0, etc.
         """
-        samples = dict()
+        samples = JokerSamples()
         samples['P'] = samples_arr.T[0] * u.day
         samples['M0'] = samples_arr.T[1] * u.radian
         samples['e'] = samples_arr.T[2] * u.one
@@ -200,9 +201,7 @@ class TheJokerMCMCModel:
 
         Returns
         -------
-        samples : dict
-            Dictionary of `~astropy.units.Quantity` objects for period,
-            M0, etc.
+        samples : `thejoker.JokerSamples`
         """
         samples_arr = self.from_mcmc_params(samples_arr.T).T
         return self.unpack_samples(samples_arr)

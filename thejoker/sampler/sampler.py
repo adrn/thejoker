@@ -448,10 +448,11 @@ class TheJoker(object):
     # ========================================================================
     # MCMC
 
-    def mcmc_sample(self, data, samples0, n_steps, n_requested_samples=None,
-                    n_walkers=128, n_burn=None, return_sampler=False):
-        """Run standard MCMC (using `emcee <>`_) to generate posterior samples
-        in orbital parameters.
+    def mcmc_sample(self, data, samples0, n_steps=1024,
+                    n_requested_samples=None, n_walkers=128, n_burn=8192,
+                    return_sampler=False):
+        """Run standard MCMC (using `emcee <http://emcee.readthedocs.io/>`_) to
+        generate posterior samples in orbital parameters.
 
         Parameters
         ----------
@@ -528,7 +529,13 @@ class TheJoker(object):
 
         _ = sampler.run_mcmc(p0_walkers, n_steps)
 
-        # TODO: now turn the chain into samples!
+        # now turn the chain into samples!
+        # TODO: fix this shit!
+        flatchain = np.vstack(sampler.chain[:, ::32])
+        idx = np.random.choice(n_requested_samples, replace=False)
+        raw_samples = flatchain[idx]
+
+        samples = model.unpack_samples_mcmc(raw_samples)
 
         if return_sampler:
             return samples, sampler
