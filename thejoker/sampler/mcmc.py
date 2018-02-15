@@ -1,13 +1,13 @@
 # Third-party
 import astropy.units as u
 import numpy as np
-from scipy.stats import beta, norm
 
 # Project
 from .likelihood import get_ivar, design_matrix
 from .params import JokerParams
 from .samples import JokerSamples
 from ..data import RVData
+from ..stats import beta_logpdf, norm_logpdf
 
 __all__ = ['TheJokerMCMCModel']
 
@@ -38,6 +38,7 @@ class TheJokerMCMCModel:
         # various cached things:
         self._P_min = self.params.P_min.to(u.day).value
         self._P_max = self.params.P_max.to(u.day).value
+        self._rv = self.data.rv.value
         self._rv_unit = self.data.rv.unit
         self._jitter_factor = self._rv_unit.to(self.params._jitter_unit)
 
@@ -96,7 +97,8 @@ class TheJokerMCMCModel:
         return np.vstack([np.exp(ln_P),
                           np.arctan2(sqrtK_sin_M0, sqrtK_cos_M0) % (2*np.pi),
                           sqrte_cos_omega**2 + sqrte_sin_omega**2,
-                          np.arctan2(sqrte_sin_omega, sqrte_cos_omega) % (2*np.pi),
+                          np.arctan2(sqrte_sin_omega,
+                                     sqrte_cos_omega) % (2*np.pi),
                           np.sqrt(np.exp(log_s2)),
                           (sqrtK_cos_M0**2 + sqrtK_sin_M0**2)] + v_terms)
 
@@ -214,7 +216,7 @@ class TheJokerMCMCModel:
         A = design_matrix([P, M0, ecc, omega], self.data, self.params)
         p2 = np.array([K] + v_terms)
         ivar = get_ivar(self.data, s)
-        dy = A.dot(p2) - self.data.rv.value
+        dy = A.dot(p2) - self._rv
 
         return 0.5 * (-dy**2 * ivar - log_2pi + np.log(ivar))
 
@@ -228,7 +230,7 @@ class TheJokerMCMCModel:
         if ecc < 0 or ecc > 1:
             return -np.inf
 
-        lnp += beta.logpdf(ecc, 0.867, 3.03) # Kipping et al. 2013
+        lnp += beta_logpdf(ecc, 0.867, 3.03) # Kipping et al. 2013
 
         # uniform in ln(P) - we don't need the jacobian because we sample in lnP
         if P < self._P_min or P > self._P_max:
@@ -240,8 +242,8 @@ class TheJokerMCMCModel:
             # actually sampling in y = ln(s^2)
             s_scaled = s * self._jitter_factor
             y = 2 * np.log(s_scaled)
-            lnp += norm.logpdf(y, loc=self.params.jitter[0],
-                               scale=self.params.jitter[1])
+            lnp += norm_logpdf(y, self.params.jitter[0],
+                               self.params.jitter[1])
 
         return lnp
 
@@ -263,3 +265,6 @@ class TheJokerMCMCModel:
             return -np.inf
 
         return lnprob
+
+    def __call__(self, mcmc_p):
+        return self.ln_posterior(mcmc_p)

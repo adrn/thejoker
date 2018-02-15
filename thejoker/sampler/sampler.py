@@ -6,11 +6,12 @@ import tempfile
 import astropy.units as u
 import h5py
 import numpy as np
-from scipy.stats import beta, norm, scoreatpercentile
+from scipy.stats import scoreatpercentile
 
 # Project
 from ..log import log as logger
 from ..data import RVData
+from ..stats import beta_logpdf, norm_logpdf
 from .params import JokerParams
 from .multiproc_helpers import (get_good_sample_indices, compute_likelihoods,
                                 sample_indices_to_full_samples)
@@ -129,7 +130,7 @@ class TheJoker(object):
             ln_prior_val += -np.log(2 * np.pi)
 
             # e - MAGIC NUMBERS below: Kipping et al. 2013 (MNRAS 434 L51)
-            ln_prior_val += beta.logpdf(samples['e'], 0.867, 3.03)
+            ln_prior_val += beta_logpdf(samples['e'], 0.867, 3.03)
 
             # omega
             ln_prior_val += -np.log(2 * np.pi)
@@ -142,9 +143,9 @@ class TheJoker(object):
 
             if return_logprobs:
                 Jac = np.log(2 / samples['jitter'].value)  # Jacobian
-                ln_prior_val += norm.logpdf(log_s2,
-                                            loc=self.params.jitter[0],
-                                            scale=self.params.jitter[1]) + Jac
+                ln_prior_val += norm_logpdf(log_s2,
+                                            self.params.jitter[0],
+                                            self.params.jitter[1]) + Jac
 
         else:
             samples['jitter'] = np.ones(size) * self.params.jitter
@@ -508,7 +509,7 @@ class TheJoker(object):
             p0 = np.delete(p0, 5, axis=1)
 
         n_dim = p0.shape[1]
-        sampler = emcee.EnsembleSampler(n_walkers, n_dim, model.ln_posterior,
+        sampler = emcee.EnsembleSampler(n_walkers, n_dim, model,
                                         pool=self.pool)
 
         if n_burn is not None and n_burn > 0:
@@ -520,11 +521,11 @@ class TheJoker(object):
         logger.debug('Running MCMC for {0} steps...'.format(n_steps))
         _ = sampler.run_mcmc(p0, n_steps)
 
-        if scoreatpercentile(sampler.acceptance, 10) < 0.1:
+        acc_frac = sampler.acceptance_fraction
+        if scoreatpercentile(acc_frac, 10) < 0.1:
             logger.warning('Walkers have low acceptance fractions: 10/50/90 '
                            'percentiles = {0:.2f}, {1:.2f}, {2:.2f}'
-                           .format(scoreatpercentile(sampler.acceptance,
-                                                     [10, 50, 90])))
+                           .format(scoreatpercentile(acc_frac, [10, 50, 90])))
 
         samples = model.unpack_samples_mcmc(sampler.chain[:, -1])
         samples.t0 = samples0.t0
