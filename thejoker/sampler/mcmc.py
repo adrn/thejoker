@@ -41,7 +41,8 @@ class TheJokerMCMCModel:
         self._jitter_factor = self._rv_unit.to(self.params._jitter_unit)
 
         if self.params._fixed_jitter:
-            self._jitter = self.params.jitter.to(self._rv_unit)
+            s = self.params.jitter
+            self._y_jitter = 2 * np.log(s.to(self._rv_unit).value)
 
     @classmethod
     def to_mcmc_params(cls, p):
@@ -248,7 +249,7 @@ class TheJokerMCMCModel:
     def ln_posterior(self, mcmc_p):
         if self.params._fixed_jitter:
             mcmc_p = list(mcmc_p)
-            mcmc_p.insert(5, self._jitter) # whoa, major hackage!
+            mcmc_p.insert(5, self._y_jitter) # whoa, major hackage!
 
         p = self.from_mcmc_params(mcmc_p).reshape(len(mcmc_p))
 
