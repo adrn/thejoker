@@ -525,7 +525,7 @@ class TheJoker(object):
         if scoreatpercentile(acc_frac, 10) < 0.1:
             logger.warning('Walkers have low acceptance fractions: 10/50/90 '
                            'percentiles = {0:.2f}, {1:.2f}, {2:.2f}'
-                           .format(scoreatpercentile(acc_frac, [10, 50, 90])))
+                           .format(*scoreatpercentile(acc_frac, [10, 50, 90])))
 
         samples = model.unpack_samples_mcmc(sampler.chain[:, -1])
         samples.t0 = samples0.t0
