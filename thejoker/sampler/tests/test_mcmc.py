@@ -3,23 +3,27 @@ import astropy.units as u
 import numpy as np
 
 # Package
-from ..mcmc import (pack_samples, pack_samples_mcmc, to_mcmc_params, from_mcmc_params,
-                    ln_likelihood, ln_prior, ln_posterior)
-
+from ..mcmc import TheJokerMCMCModel
+from ..params import JokerParams
 from .helpers import FakeData
 
 
 def test_roundtrip():
+    d = FakeData()
+    data = d.datasets['binary']
+    joker_params = d.params['binary']
+    model = TheJokerMCMCModel(joker_params, data)
+
     # jitter = 0, no v_terms
     p = np.array([63.12, 1.952, 0.1, 0.249, 0., 1.5])
-    mcmc_p = to_mcmc_params(p)
-    p2 = from_mcmc_params(mcmc_p)
+    mcmc_p = model.to_mcmc_params(p)
+    p2 = model.from_mcmc_params(mcmc_p)
     assert np.allclose(p, p2.reshape(p.shape))
 
     # with v_terms
     p = np.array([63.12, 1.952, 0.1, 0.249, 0., 1.5, -31.5, 1E-4])
-    mcmc_p = to_mcmc_params(p)
-    p2 = from_mcmc_params(mcmc_p)
+    mcmc_p = model.to_mcmc_params(p)
+    p2 = model.from_mcmc_params(mcmc_p)
     assert np.allclose(p, p2.reshape(p.shape))
 
 # def test_emcee_run():
@@ -91,22 +95,23 @@ class TestMCMC(object):
         truth = self.truths['binary']
         nlp = self.truths_to_nlp(truth)
         params = self.joker_params['binary']
+        model = TheJokerMCMCModel(params, data)
 
         p = np.concatenate((nlp, [truth['K'].value], [truth['v0'].value]))
-        mcmc_p = to_mcmc_params(p)
-        p2 = from_mcmc_params(mcmc_p)
+        mcmc_p = model.to_mcmc_params(p)
+        p2 = model.from_mcmc_params(mcmc_p)
         assert np.allclose(p, p2.reshape(p.shape)) # test roundtrip
 
-        lp = ln_prior(p, params)
+        lp = model.ln_prior(p)
         assert np.isfinite(lp)
 
-        ll = ln_likelihood(p, params, data)
+        ll = model.ln_likelihood(p)
         assert np.isfinite(ll).all()
 
         # remove jitter from params passed in to mcmc_p
         mcmc_p = list(mcmc_p)
         mcmc_p.pop(5) # log-jitter is 5th index in mcmc packed
-        lnpost = ln_posterior(mcmc_p, params, data)
+        lnpost = model.ln_posterior(mcmc_p)
 
         assert np.isfinite(lnpost)
         assert np.allclose(lnpost, lp+ll.sum())
