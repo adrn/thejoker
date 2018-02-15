@@ -86,6 +86,7 @@ class JokerParams(object):
 
         else:
             self._fixed_jitter = True
+            self._jitter_unit = jitter.unit
             self.jitter = jitter
 
     @property
