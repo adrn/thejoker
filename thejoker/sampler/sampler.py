@@ -1,5 +1,4 @@
 # Standard library
-from os import path
 import sys
 import tempfile
 
@@ -7,7 +6,7 @@ import tempfile
 import astropy.units as u
 import h5py
 import numpy as np
-from scipy.stats import beta, norm
+from scipy.stats import beta, norm, scoreatpercentile
 
 # Project
 from ..log import log as logger
@@ -449,8 +448,7 @@ class TheJoker(object):
     # MCMC
 
     def mcmc_sample(self, data, samples0, n_steps=1024,
-                    n_requested_samples=None, n_walkers=128, n_burn=8192,
-                    return_sampler=False):
+                    n_walkers=256, n_burn=8192, return_sampler=False):
         """Run standard MCMC (using `emcee <http://emcee.readthedocs.io/>`_) to
         generate posterior samples in orbital parameters.
 
@@ -464,9 +462,6 @@ class TheJoker(object):
             mean of the samples will be used as initial conditions.
         n_steps : int
             The number of MCMC steps to run for.
-        n_requested_samples : int (optional)
-            If specified, the number of posterior samples to return. The MCMC
-            chains will be downsampled until this number of samples remain.
         n_walkers : int (optional)
             The number of walkers to use in the ``emcee`` ensemble.
         n_burn : int (optional)
@@ -491,58 +486,51 @@ class TheJoker(object):
         if len(samples0) > 1:
             samples0 = samples0.mean()
 
-        if self.params._fixed_jitter:
-            s = np.zeros(len(samples0))
-        else:
-            s = samples0['jitter'].to(self.params._jitter_unit)
+        p0_mean = np.squeeze(model.pack_samples(samples0))
+        ball_std = 1E-3 # TODO: make this customizable?
 
-        # There's some weirdness here: the Model class to_mcmc_params method
-        # always expects a jitter, even if it is fixed:
-        p0 = np.squeeze([samples0['P'].to(u.day).value,
-                         samples0['M0'].to(u.radian).value,
-                         samples0['e'].value,
-                         samples0['omega'].to(u.radian).value,
-                         s,
-                         samples0['K'].value,
-                         samples0['v0'].value])
+        # P, M0, e, omega, jitter, K, v0
+        p0 = np.zeros((n_walkers, len(p0_mean)))
+        for i in range(p0.shape[1]):
+            if i in [2, 4]: # eccentricity, jitter
+                p0[:, i] = np.abs(np.random.normal(p0_mean[i], ball_std,
+                                                   size=n_walkers))
 
-        # Now we make a small ball of initial conditions:
-        # TODO: make the ball size customizable??
-        p0_walkers = emcee.utils.sample_ball(p0, std=np.ones_like(p0)*1E-4,
-                                             size=n_walkers)
-        p0_walkers[:, 4] = np.abs(p0_walkers[:, 4]) # jitter > 0
-        p0_walkers[:, 5] = np.abs(p0_walkers[:, 5]) # K > 0
-        p0_walkers = model.to_mcmc_params(p0_walkers.T).T
+            else:
+                p0[:, i] = np.random.normal(p0_mean[i], ball_std,
+                                            size=n_walkers)
+
+        p0 = model.to_mcmc_params(p0.T).T
 
         # Because jitter is always carried through in the transform above, now
         # we have to remove the jitter parameter if it's fixed!
         if self.params._fixed_jitter:
-            p0_walkers = np.delete(p0_walkers, 5, axis=1)
+            p0 = np.delete(p0, 5, axis=1)
 
-        n_dim = p0_walkers.shape[1]
+        n_dim = p0.shape[1]
         sampler = emcee.EnsembleSampler(n_walkers, n_dim, model.ln_posterior,
                                         pool=self.pool)
 
         if n_burn is not None and n_burn > 0:
-            pos, *_ = sampler.run_mcmc(p0_walkers, n_burn)
-            p0_walkers = pos
+            logger.debug('Burning in MCMC for {0} steps...'.format(n_burn))
+            pos, *_ = sampler.run_mcmc(p0, n_burn)
+            p0 = pos
             sampler.reset()
 
-        _ = sampler.run_mcmc(p0_walkers, n_steps)
+        logger.debug('Running MCMC for {0} steps...'.format(n_steps))
+        _ = sampler.run_mcmc(p0, n_steps)
 
-        # now turn the chain into samples!
-        # TODO: fix this shit!
-        raw_samples = np.vstack(sampler.chain[:, ::32])
+        if scoreatpercentile(sampler.acceptance, 10) < 0.1:
+            logger.warning('Walkers have low acceptance fractions: 10/50/90 '
+                           'percentiles = {0:.2f}, {1:.2f}, {2:.2f}'
+                           .format(scoreatpercentile(sampler.acceptance,
+                                                     [10, 50, 90])))
 
-        if n_requested_samples is not None:
-            idx = np.random.choice(len(raw_samples), n_requested_samples,
-                                   replace=False)
-            raw_samples = raw_samples[idx]
-
-        samples = model.unpack_samples_mcmc(raw_samples)
+        samples = model.unpack_samples_mcmc(sampler.chain[:, -1])
+        samples.t0 = samples0.t0
 
         if return_sampler:
-            return samples, sampler
+            return model, samples, sampler
 
         else:
-            return samples
+            return model, samples
