@@ -145,7 +145,7 @@ class TheJokerMCMCModel:
         arr : `numpy.ndarray`
             A 2D numpy array with shape `(nsamples, ndim)`.
         """
-        samples_vec = self.pack_samples(samples, self.params)
+        samples_vec = self.pack_samples(samples)
         samples_mcmc = self.to_mcmc_params(samples_vec.T)
 
         if self.params._fixed_jitter:
