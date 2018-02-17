@@ -221,21 +221,23 @@ class TheJokerMCMCModel:
         return 0.5 * (-dy**2 * ivar - log_2pi + np.log(ivar))
 
     def ln_prior(self, p):
-        # TODO: repeated code here and hard-coded priors
+        # TODO: hard-coded priors
 
         P, M0, ecc, omega, s, K, *v_terms = p
 
         lnp = 0.
 
-        if ecc < 0 or ecc > 1:
+        if ecc < 0 or ecc > 1 or K < 0:
             return -np.inf
-
-        lnp += beta_logpdf(ecc, 0.867, 3.03) # Kipping et al. 2013
 
         # uniform in ln(P) - we don't need the jacobian because we sample in lnP
+        # TODO: not normalized correctly
         if P < self._P_min or P > self._P_max:
             return -np.inf
-        # lnp += -np.log(P)
+
+        # TODO: priors on M0, omega not normalized properly (need 1/2pi?)
+
+        lnp += beta_logpdf(ecc, 0.867, 3.03) # Kipping et al. 2013
 
         if not self.params._fixed_jitter:
             # Gaussian prior in ln(s^2) - don't need Jacobian because we are
@@ -244,6 +246,11 @@ class TheJokerMCMCModel:
             y = 2 * np.log(s_scaled)
             lnp += norm_logpdf(y, self.params.jitter[0],
                                self.params.jitter[1])
+
+        # Wide, Gaussian priors on K, v0
+        # TODO: units here?
+        lnp += norm_logpdf(K, 0, 100.) # improper because half-gaussian (K>0)!
+        lnp += norm_logpdf(v_terms[0], 0, 100.) # arbitrary: halo-like
 
         return lnp
 

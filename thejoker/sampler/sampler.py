@@ -1,6 +1,7 @@
 # Standard library
 import sys
 import tempfile
+import time
 
 # Third-party
 import astropy.units as u
@@ -114,7 +115,7 @@ class TheJoker(object):
         samples['M0'] = rnd.uniform(0, 2 * np.pi, size=size) * u.radian
 
         # MAGIC NUMBERS below: Kipping et al. 2013 (MNRAS 434 L51)
-        samples['e'] = rnd.beta(a=0.867, b=3.03, size=size)
+        samples['e'] = rnd.beta(a=0.867, b=3.03, size=size) * u.one
 
         samples['omega'] = rnd.uniform(0, 2 * np.pi, size=size) * u.radian
 
@@ -514,12 +515,17 @@ class TheJoker(object):
 
         if n_burn is not None and n_burn > 0:
             logger.debug('Burning in MCMC for {0} steps...'.format(n_burn))
+            time0 = time.time()
             pos, *_ = sampler.run_mcmc(p0, n_burn)
+            logger.debug('...time spent burn-in: {0}'.format(time.time()-time0))
+
             p0 = pos
             sampler.reset()
 
         logger.debug('Running MCMC for {0} steps...'.format(n_steps))
+        time0 = time.time()
         _ = sampler.run_mcmc(p0, n_steps)
+        logger.debug('...time spent sampling: {0}'.format(time.time()-time0))
 
         acc_frac = sampler.acceptance_fraction
         if scoreatpercentile(acc_frac, 10) < 0.1:
