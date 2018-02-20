@@ -1,9 +1,7 @@
 # Third-party
 from astropy.time import Time
 import astropy.units as u
-import matplotlib.pyplot as plt
 import numpy as np
-from twobody import KeplerOrbit
 
 __all__ = ['plot_rv_curves']
 
@@ -44,6 +42,7 @@ def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
     """
 
     if ax is None:
+        import matplotlib.pyplot as plt
         fig, ax = plt.subplots(1, 1)
     else:
         fig = ax.figure
@@ -95,6 +94,7 @@ def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
     ax.set_xlim(bmjd.min(), bmjd.max())
     if add_labels:
         ax.set_xlabel('BMJD')
-        ax.set_ylabel('RV [{}]'.format(rv_unit.to_string(format='latex_inline')))
+        ax.set_ylabel('RV [{}]'
+                      .format(rv_unit.to_string(format='latex_inline')))
 
     return fig
