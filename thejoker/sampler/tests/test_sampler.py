@@ -98,9 +98,7 @@ class TestSampler(object):
         joker = TheJoker(self.joker_params['binary'], random_state=rnd)
 
         samples = joker.rejection_sample(data, n_prior_samples=16384)
-        _, samples = joker.mcmc_sample(data, samples, n_steps=8, n_burn=8,
-                                       n_walkers=128, return_sampler=False)
-        _, samples, sampler = joker.mcmc_sample(data, samples, n_steps=8,
-                                                n_burn=8,
-                                                n_walkers=128,
-                                                return_sampler=True)
+        joker.mcmc_sample(data, samples, n_steps=8, n_burn=8,
+                          n_walkers=128, return_sampler=False)
+        joker.mcmc_sample(data, samples, n_steps=8, n_burn=8, n_walkers=128,
+                          return_sampler=True)
