@@ -450,7 +450,8 @@ class TheJoker(object):
     # MCMC
 
     def mcmc_sample(self, data, samples0, n_steps=1024,
-                    n_walkers=256, n_burn=8192, return_sampler=False):
+                    n_walkers=256, n_burn=8192, return_sampler=False,
+                    ball_scale=1E-5):
         """Run standard MCMC (using `emcee <http://emcee.readthedocs.io/>`_) to
         generate posterior samples in orbital parameters.
 
@@ -489,17 +490,16 @@ class TheJoker(object):
             samples0 = samples0.mean()
 
         p0_mean = np.squeeze(model.pack_samples(samples0))
-        ball_std = 1E-3 # TODO: make this customizable?
 
         # P, M0, e, omega, jitter, K, v0
         p0 = np.zeros((n_walkers, len(p0_mean)))
         for i in range(p0.shape[1]):
             if i in [2, 4]: # eccentricity, jitter
-                p0[:, i] = np.abs(np.random.normal(p0_mean[i], ball_std,
+                p0[:, i] = np.abs(np.random.normal(p0_mean[i], ball_scale,
                                                    size=n_walkers))
 
             else:
-                p0[:, i] = np.random.normal(p0_mean[i], ball_std,
+                p0[:, i] = np.random.normal(p0_mean[i], ball_scale,
                                             size=n_walkers)
 
         p0 = model.to_mcmc_params(p0.T).T
