@@ -233,6 +233,7 @@ class JokerSamples(OrderedDict):
         for k in self.keys():
             kw[k] = func(self[k])
 
+        kw['t0'] = self.t0
         return cls(**kw)
 
     def mean(self):
