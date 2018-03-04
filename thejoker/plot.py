@@ -92,7 +92,7 @@ def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
         if data_style['rv_unit'] != rv_unit:
             raise u.UnitsError("Data plot units don't match rv_unit!")
 
-        data.plot(ax=ax, **data_style)
+        data.plot(ax=ax, relative_to_t0=relative_to_t0, **data_style)
 
         _rv = data.rv.to(rv_unit).value
         drv = _rv.max() - _rv.min()
