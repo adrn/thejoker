@@ -80,7 +80,7 @@ def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
     if relative_to_t0:
         if samples.t0 is None:
             raise ValueError('Input samples object has no epoch .t0')
-        bmjd = bmjd - samples.to.tcb.mjd
+        bmjd = bmjd - samples.t0.tcb.mjd
 
     ax.plot(bmjd, model_rv.T, **style)
 
