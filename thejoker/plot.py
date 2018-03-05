@@ -67,6 +67,7 @@ def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
     style.setdefault('alpha', line_alpha)
     style.setdefault('marker', '')
     style.setdefault('color', '#555555')
+    style.setdefault('rasterized', True)
 
     # plot orbits over the data
     model_rv = np.zeros((n_plot, len(t_grid)))
