@@ -8,7 +8,7 @@ __all__ = ['plot_rv_curves']
 
 def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
                    ax=None, plot_kwargs=dict(), data_plot_kwargs=dict(),
-                   add_labels=True):
+                   add_labels=True, relative_to_t0=False):
     """
     Plot radial velocity curves for the input set of orbital parameter
     samples over the input grid of times.
@@ -34,6 +34,8 @@ def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
         Passed to `thejoker.data.RVData.plot()`.
     add_labels : bool, optional
         Add labels to the axes or not.
+    relative_to_t0 : bool, optional
+        Plot the time axis relative to ``samples.t0``.
 
     Returns
     -------
@@ -76,6 +78,11 @@ def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
         model_rv[i] = orbit.radial_velocity(t_grid).to(rv_unit).value
 
     bmjd = t_grid.tcb.mjd
+    if relative_to_t0:
+        if samples.t0 is None:
+            raise ValueError('Input samples object has no epoch .t0')
+        bmjd = bmjd - samples.t0.tcb.mjd
+
     ax.plot(bmjd, model_rv.T, **style)
 
     if data is not None:
@@ -86,7 +93,7 @@ def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
         if data_style['rv_unit'] != rv_unit:
             raise u.UnitsError("Data plot units don't match rv_unit!")
 
-        data.plot(ax=ax, **data_style)
+        data.plot(ax=ax, relative_to_t0=relative_to_t0, **data_style)
 
         _rv = data.rv.to(rv_unit).value
         drv = _rv.max() - _rv.min()

@@ -162,7 +162,7 @@ class RVData:
     # ---
 
     def plot(self, ax=None, rv_unit=None, time_format='mjd', phase_fold=None,
-             **kwargs):
+             relative_to_t0=False, **kwargs):
         """
         Plot the data points.
 
@@ -183,7 +183,8 @@ class RVData:
         phase_fold : bool (optional)
             Plot the phase instead of the time by folding on the specified
             period.
-        `~astropy.units.Quantity`
+        relative_to_t0 : bool (optional)
+            Plot the time relative to the reference epoch, ``t0``.
         **kwargs
             All other keyword arguments are passed to the
             `~matplotlib.pyplot.errorbar` (if errors were provided) or
@@ -208,8 +209,13 @@ class RVData:
 
         if callable(time_format):
             t = time_format(self.t)
+            t0 = time_format(self.t0)
         else:
             t = getattr(self.t, time_format)
+            t0 = getattr(self.t0, time_format)
+
+        if relative_to_t0:
+            t = t - t0
 
         if self._has_err:
             ax.errorbar(t, self.rv.to(rv_unit).value,
