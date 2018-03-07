@@ -272,7 +272,6 @@ cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
         double[::1] t = np.ascontiguousarray(data._t_bmjd, dtype='f8')
         double[::1] rv = np.ascontiguousarray(data.rv.value, dtype='f8')
         double[::1] ivar = np.ascontiguousarray(data.ivar.value, dtype='f8')
-        double t0 = data._t0_bmjd
 
         # inverse variance array with jitter included
         double[::1] jitter_ivar = np.zeros(data.ivar.value.shape)
@@ -281,13 +280,13 @@ cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
         double[:,::1] A_T = np.zeros((n_pars, n_times))
         double[:,::1] ATCinvA = np.zeros((n_pars, n_pars))
         double[::1] p = np.zeros(n_pars)
-
         double logdet
 
         # likelihoodz
         double[::1] ll = np.full(n_samples, np.nan)
 
         # lol
+        double t0 = data._t0_bmjd
         int _fixed_jitter
         double jitter
 
@@ -325,3 +324,88 @@ cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
         ll[n] = 0.5*logdet - 0.5*chi2
 
     return ll
+
+
+cpdef batch_get_posterior_samples(double[:,::1] chunk,
+                                  data, joker_params, rnd, return_logprobs):
+    """TODO"
+
+    Parameters
+    ----------
+    chunk : numpy.ndarray
+        A chunk of nonlinear parameter prior samples. For the default case,
+        these are P (period, day), phi0 (phase at pericenter, rad), ecc
+        (eccentricity), omega (argument of perihelion, rad). May also contain
+        jitter as the last index.
+    data : `~thejoker.data.RVData`
+        The radial velocity data.
+    joker_params : `~thejoker.sampler.params.JokerParams`
+        The specification of parameters to infer with The Joker.
+    """
+
+    cdef:
+        int n
+        int n_samples = chunk.shape[0]
+        int n_times = len(data)
+        int n_pars = 2 # always have K, v0
+
+        double anomaly_tol = 1E-10
+        int anomaly_maxiter = 128
+
+        double[::1] t = np.ascontiguousarray(data._t_bmjd, dtype='f8')
+        double[::1] rv = np.ascontiguousarray(data.rv.value, dtype='f8')
+        double[::1] ivar = np.ascontiguousarray(data.ivar.value, dtype='f8')
+
+        # inverse variance array with jitter included
+        double[::1] jitter_ivar = np.zeros(data.ivar.value.shape)
+
+        # transpose of design matrix
+        double[:,::1] A_T = np.zeros((n_pars, n_times))
+        double[:,::1] ATCinvA = np.zeros((n_pars, n_pars))
+        double[::1] p = np.zeros(n_pars)
+        double logdet
+
+        # lol
+        double t0 = data._t0_bmjd
+        int _fixed_jitter
+        double jitter
+
+        double[:,::1] pars = np.zeros((n_samples,
+            joker_params.num_params + int(return_logprobs)))
+
+    for n in range(n_samples):
+        pars[n, 0] = chunk[n, 0] # P
+        pars[n, 1] = chunk[n, 1] # M0
+        pars[n, 2] = chunk[n, 2] # e
+        pars[n, 3] = chunk[n, 3] # omega
+        pars[n, 4] = chunk[n, 4] # jitter
+
+        # TODO: hard set n_trend=1 (v0) because removing support for that
+        design_matrix(chunk[n,0], chunk[n,1], chunk[n,2], chunk[n,3],
+                      t, t0, A_T, 1, anomaly_tol, anomaly_maxiter)
+
+        # jitter must be in same units as the data RV's / ivar!
+        get_ivar(ivar, chunk[n,4], jitter_ivar)
+
+        # compute things needed for the ln(likelihood)
+        # - ATCinvA, p are populated by the function
+        chi2 = tensor_vector_scalar(A_T, jitter_ivar, rv, ATCinvA, p)
+        logdet = logdet_term(ATCinvA, jitter_ivar)
+
+        cov = np.linalg.inv(ATCinvA)
+        K, *v_terms = rnd.multivariate_normal(p, cov)
+
+        if K < 0:
+            # log.warning("Swapping K")
+            K = np.abs(K)
+            pars[n, 3] += np.pi
+            pars[n, 3] = pars[n, 3] % (2*np.pi) # HACK: I think this is safe
+
+        pars[n, 5] = K
+        pars[n, 6] = v_terms[0] # HACK: we know it's just v0
+
+        if return_logprobs:
+            logdet = logdet_term(ATCinvA, jitter_ivar)
+            pars[n, 7] = 0.5*logdet - 0.5*chi2 # ln_likelihood
+
+    return np.array(pars)

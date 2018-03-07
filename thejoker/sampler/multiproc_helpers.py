@@ -6,7 +6,8 @@ import numpy as np
 from ..log import log
 from .likelihood import (get_ivar, design_matrix, tensor_vector_scalar,
                          marginal_ln_likelihood)
-from .fast_likelihood import batch_marginal_ln_likelihood
+from .fast_likelihood import (batch_marginal_ln_likelihood,
+                              batch_get_posterior_samples)
 
 __all__ = ['compute_likelihoods', 'get_good_sample_indices',
            'sample_indices_to_full_samples']
@@ -194,7 +195,6 @@ def _sample_vector_worker(task):
 
     (idx, chunk_index, prior_cache_file, data, joker_params, global_seed,
      return_logprobs) = task
-    n_chunk = len(idx)
 
     if global_seed is not None:
         seed = global_seed + chunk_index
@@ -205,36 +205,21 @@ def _sample_vector_worker(task):
         rnd = np.random.RandomState()
         log.debug("worker with chunk {} not seeded".format(idx[0]))
 
-    pars = np.zeros((n_chunk, joker_params.num_params + 2*int(return_logprobs)))
+    # read a chunk of the prior samples
     with h5py.File(prior_cache_file, 'r') as f:
-        # idx are the integer locations of the 'good' samples!
-        for j,i in enumerate(idx):
-            nonlinear_p = f['samples'][i]
-            P, M0, ecc, omega, s = np.array(nonlinear_p).astype(np.float64)
+        tmp = np.zeros(len(f['samples']), dtype=bool)
+        tmp[idx] = True
+        chunk = np.array(f['samples'][tmp, :])
 
-            ivar = get_ivar(data, s)
-            A = design_matrix(nonlinear_p, data, joker_params)
-            ATA, p, chi2 = tensor_vector_scalar(A, ivar, data.rv.value)
+        if return_logprobs:
+            ln_prior = np.array(f['ln_prior_probs'][tmp])
 
-            cov = np.linalg.inv(ATA)
-            K, *v_terms = rnd.multivariate_normal(p, cov)
+    chunk = chunk.astype(np.float64)
 
-            if K < 0:
-                # log.warning("Swapping K")
-                K = np.abs(K)
-                omega += np.pi
-                omega = omega % (2*np.pi) # HACK: I think this is safe
-
-            row = [P, M0, ecc, omega, s, K] + v_terms
-            if return_logprobs:
-                ln_prior = f['ln_prior_probs'][i]
-                ln_like = marginal_ln_likelihood(nonlinear_p, data,
-                                                 joker_params,
-                                                 tvsi=(ATA, p, chi2, ivar))
-                row = row + [ln_prior, ln_like]
-
-            pars[j] = row
-
+    pars = batch_get_posterior_samples(chunk, data, joker_params, rnd,
+                                       return_logprobs)
+    if return_logprobs:
+        pars = np.hstack((pars[:, :-1], ln_prior[:, None], pars[:, -1:]))
     return pars
 
 
