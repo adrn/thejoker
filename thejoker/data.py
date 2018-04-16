@@ -217,6 +217,9 @@ class RVData:
         if relative_to_t0:
             t = t - t0
 
+        if phase_fold:
+            t = (t / phase_fold.to(u.day).value) % 1
+
         if self._has_err:
             ax.errorbar(t, self.rv.to(rv_unit).value,
                         self.stddev.to(rv_unit).value,
