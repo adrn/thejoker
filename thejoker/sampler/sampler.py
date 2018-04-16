@@ -474,6 +474,7 @@ class TheJoker(object):
 
         Returns
         -------
+        model : `~thejoker.TheJokerMCMCModel`
         samples : `~thejoker.JokerSamples`
             The posterior samples.
         sampler : `emcee.EnsembleSampler`

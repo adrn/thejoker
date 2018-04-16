@@ -43,8 +43,8 @@ class TheJokerMCMCModel:
         self._jitter_factor = self._rv_unit.to(self.params._jitter_unit)
 
         if self.params._fixed_jitter:
-            s = self.params.jitter
-            self._y_jitter = 2 * np.log(s.to(self._rv_unit).value)
+            self._s_jitter = self.params.jitter.to(self._rv_unit).value
+            self._y_jitter = 2 * np.log(self._s_jitter)
 
     @classmethod
     def to_mcmc_params(cls, p):
@@ -180,7 +180,7 @@ class TheJokerMCMCModel:
         samples['e'] = samples_arr.T[2] * u.one
         samples['omega'] = samples_arr.T[3] * u.radian
 
-        if not self.params._fixed_jitter:
+        if not self.params._fixed_jitter or samples_arr.shape[1] > 6:
             samples['jitter'] = samples_arr.T[4] * self._rv_unit
             shift = 1
         else:
@@ -209,8 +209,15 @@ class TheJokerMCMCModel:
         -------
         samples : `thejoker.JokerSamples`
         """
-        samples_arr = self.from_mcmc_params(samples_arr.T).T
-        return self.unpack_samples(samples_arr)
+        arr = samples_arr
+
+        # HACK:
+        if self.params._fixed_jitter and samples_arr.shape[1] == 6:
+            s_arr = np.zeros(samples_arr.shape[0]) + self._y_jitter
+            arr = np.insert(arr, 5, s_arr, axis=1)
+
+        new_samples_arr = self.from_mcmc_params(arr.T).T
+        return self.unpack_samples(new_samples_arr)
 
     def ln_likelihood(self, p):
         P, M0, ecc, omega, s, K, *v_terms = p
