@@ -56,7 +56,7 @@ class TheJokerMCMCModel:
         .. math::
 
             \ln P \\
-            \sqrt{K}\,\cos\phi_0, \sqrt{K}\,\sin\phi_0 \\
+            \sqrt{K}\,\cos(M_0-\omega), \sqrt{K}\,\sin(M_0-\omega) \\
             \sqrt{e}\,\cos\omega, \sqrt{e}\,\sin\omega \\
             \ln s^2 \\
             v_0,..., v_n
@@ -70,8 +70,10 @@ class TheJokerMCMCModel:
         """
         P, M0, e, omega, s, K, *v_terms = p
         return np.vstack([np.log(P),
-                          np.sqrt(K) * np.cos(M0), np.sqrt(K) * np.sin(M0),
-                          np.sqrt(e) * np.cos(omega), np.sqrt(e) * np.sin(omega),
+                          np.sqrt(K) * np.cos(M0-omega),
+                          np.sqrt(K) * np.sin(M0-omega),
+                          np.sqrt(e) * np.cos(omega),
+                          np.sqrt(e) * np.sin(omega),
                           2*np.log(s)] + list(v_terms))
 
     @classmethod
@@ -94,11 +96,13 @@ class TheJokerMCMCModel:
          sqrte_cos_omega, sqrte_sin_omega,
          log_s2, *v_terms) = p
 
+        M0_minus_omega = np.arctan2(sqrtK_sin_M0, sqrtK_cos_M0)
+        omega = np.arctan2(sqrte_sin_omega, sqrte_cos_omega)
+        M0 = M0_minus_omega + omega
         return np.vstack([np.exp(ln_P),
-                          np.arctan2(sqrtK_sin_M0, sqrtK_cos_M0) % (2*np.pi),
+                          M0 % (2*np.pi),
                           sqrte_cos_omega**2 + sqrte_sin_omega**2,
-                          np.arctan2(sqrte_sin_omega,
-                                     sqrte_cos_omega) % (2*np.pi),
+                          omega % (2*np.pi),
                           np.sqrt(np.exp(log_s2)),
                           (sqrtK_cos_M0**2 + sqrtK_sin_M0**2)] + v_terms)
 
