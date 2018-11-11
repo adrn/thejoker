@@ -4,11 +4,10 @@ import copy
 import warnings
 
 # Third-party
-import astropy.coordinates as coord
 import astropy.units as u
 from astropy.time import Time
 import numpy as np
-from twobody import KeplerOrbit, Barycenter
+from twobody import KeplerOrbit
 
 # Package
 from ..utils import quantity_to_hdf5, quantity_from_hdf5

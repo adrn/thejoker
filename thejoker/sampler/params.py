@@ -5,7 +5,7 @@ import astropy.units as u
 __all__ = ['JokerParams']
 
 
-class JokerParams(object):
+class JokerParams:
     """
 
     Parameters

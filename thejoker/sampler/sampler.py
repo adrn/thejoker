@@ -23,7 +23,7 @@ from .mcmc import TheJokerMCMCModel
 __all__ = ['TheJoker']
 
 
-class TheJoker(object):
+class TheJoker:
     """A custom Monte-Carlo sampler for two-body systems.
 
     Parameters
