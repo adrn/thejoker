@@ -101,7 +101,10 @@ cdef void get_ivar(double[::1] ivar, double s, double[::1] new_ivar):
 cdef double tensor_vector_scalar(double[:,::1] A_T, double[::1] ivar,
                                  double[::1] y,
                                  double[::1] linear_pars,
-                                 int sample_linear_pars):
+                                 int sample_linear_pars,
+                                 double[:, ::1] ATCinvA, double[:, ::1] _A,
+                                 double[::1] p, int[:,::1] ipiv,
+                                 double[:,::1] work, int[:,::1] lwork):
     """Construct objects used to compute the marginal log-likelihood.
 
     Parameters
@@ -115,11 +118,16 @@ cdef double tensor_vector_scalar(double[:,::1] A_T, double[::1] ivar,
 
     Outputs
     -------
-    ATCinvA : `numpy.ndarray`
-        Value of A^T C^-1 A -- inverse of the covariance matrix
-        of the linear parameters.
-    p : `numpy.ndarray`
-        Optimal values of linear parameters.
+    linear_pars : `numpy.ndarray`
+        If ``sample_linear_pars==1``, this is the output array that contains the
+        linear (velocity amplitude and trend) parameters.
+    sample_linear_pars : int
+        Controls whether or not to generate the linear parameters (set to 1
+        for True).
+
+    Other parameters
+    ----------------
+
 
     Returns
     -------
@@ -133,20 +141,13 @@ cdef double tensor_vector_scalar(double[:,::1] A_T, double[::1] ivar,
         int n_times = A_T.shape[1]
         int n_pars = A_T.shape[0]
 
-        double[:, ::1] ATCinvA = np.zeros((n_pars, n_pars))
-        double[:, ::1] _A = np.zeros((n_pars, n_pars))
-        double[::1] p = np.zeros(n_pars)
-
         double chi2 = 0. # chi-squared
         double model_y, dy
 
         # Needed to LAPACK dsysv
         char* uplo = 'U' # store the upper triangle
         int nrhs = 1 # number of columns in b
-        int[:,::1] ipiv = np.zeros((n_pars, n_pars), dtype=np.int32) # ??
-        double[:,::1] work = np.zeros((n_pars, n_pars), dtype=np.float64) # ??
-        int[:,::1] lwork = np.ones((n_pars, n_pars), dtype=np.int32) # ??
-        int info = 0 # if 0, success, otherwise some whack shit hapnd
+        int info = 0 # if 0, success, otherwise some whack shit happened
 
     # first zero-out arrays
     for i in range(n_pars):
@@ -186,7 +187,7 @@ cdef double tensor_vector_scalar(double[:,::1] A_T, double[::1] ivar,
     if chi2 == INF:
         return -INF
 
-    logdet = logdet_term(ATCinvA, ivar)
+    logdet = logdet_term(ATCinvA, ivar, _A, ipiv)
 
     if sample_linear_pars == 1:
         cov = np.linalg.inv(ATCinvA)
@@ -198,7 +199,7 @@ cdef double tensor_vector_scalar(double[:,::1] A_T, double[::1] ivar,
     return 0.5*logdet - 0.5*chi2
 
 
-cdef double logdet(double[:,::1] A):
+cdef double logdet(double[:,::1] A, double[:,::1] B, int[:,::1] ipiv):
     """Compute the log-determinant of the (assumed) square, symmetric matrix A.
 
     Parameters
@@ -216,11 +217,11 @@ cdef double logdet(double[:,::1] A):
         int i
         int n_pars = A.shape[0] # A is assumed symmetric
         int info = 0 # if 0, success, otherwise some whack shit hapnd
-        int[:,::1] ipiv = np.ones((n_pars, n_pars), dtype=np.int32)
+        # int[:,::1] ipiv = np.ones((n_pars, n_pars), dtype=np.int32)
 
         double log_det = 0.
 
-        double[:,::1] B = np.zeros((A.shape[0], A.shape[1]))
+        # double[:,::1] B = np.zeros((A.shape[0], A.shape[1]))
 
     # Copy because factorization is done in place
     B[:,:] = A
@@ -238,7 +239,8 @@ cdef double logdet(double[:,::1] A):
     return log_det
 
 
-cdef double logdet_term(double[:,::1] ATCinvA, double[::1] ivar):
+cdef double logdet_term(double[:,::1] ATCinvA, double[::1] ivar,
+                        double[:,::1] B, int[:,::1] ipiv):
     """Compute the log-determinant term of the log-likelihood."""
     cdef:
         int i
@@ -246,7 +248,7 @@ cdef double logdet_term(double[:,::1] ATCinvA, double[::1] ivar):
         int n_times = ivar.shape[0]
         double ld
 
-    ld = logdet(ATCinvA)
+    ld = logdet(ATCinvA, B, ipiv)
     ld -= n_pars * LN_2PI
 
     for i in range(n_times):
@@ -288,8 +290,6 @@ cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
 
         # transpose of design matrix
         double[:,::1] A_T = np.zeros((n_pars, n_times))
-        double[:,::1] ATCinvA = np.zeros((n_pars, n_pars))
-        double[::1] p = np.zeros(n_pars)
         double logdet
 
         # likelihoodz
@@ -299,6 +299,14 @@ cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
         double t0 = data._t0_bmjd
         int _fixed_jitter
         double jitter
+
+        # needed for temporary storage in tensor_vector_scalar
+        double[:, ::1] ATCinvA = np.zeros((n_pars, n_pars))
+        double[:, ::1] _A = np.zeros((n_pars, n_pars))
+        double[::1] p = np.zeros(n_pars)
+        int[:,::1] ipiv = np.zeros((n_pars, n_pars), dtype=np.int32) # ??
+        double[:,::1] work = np.zeros((n_pars, n_pars), dtype=np.float64) # ??
+        int[:,::1] lwork = np.ones((n_pars, n_pars), dtype=np.int32) # ??
 
     if joker_params._fixed_jitter:
         _fixed_jitter = 1
@@ -320,8 +328,8 @@ cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
 
         # compute things needed for the ln(likelihood)
         ll[n] = tensor_vector_scalar(A_T, jitter_ivar, rv,
-                                     p, # IGNORED PLACEHOLDER
-                                     sample_linear_pars=0)
+                                     p, 0, # IGNORED PLACEHOLDER
+                                     ATCinvA, _A, p, ipiv, work, lwork)
 
     return ll
 
@@ -358,14 +366,20 @@ cpdef batch_get_posterior_samples(double[:,::1] chunk,
 
         # transpose of design matrix
         double[:,::1] A_T = np.zeros((n_pars, n_times))
-        double[:,::1] ATCinvA = np.zeros((n_pars, n_pars))
-        double[::1] p = np.zeros(n_pars)
         double ll
 
         # lol
         double t0 = data._t0_bmjd
         int _fixed_jitter
         double jitter
+
+        # needed for temporary storage in tensor_vector_scalar
+        double[:, ::1] ATCinvA = np.zeros((n_pars, n_pars))
+        double[:, ::1] _A = np.zeros((n_pars, n_pars))
+        double[::1] p = np.zeros(n_pars)
+        int[:,::1] ipiv = np.zeros((n_pars, n_pars), dtype=np.int32) # ??
+        double[:,::1] work = np.zeros((n_pars, n_pars), dtype=np.float64) # ??
+        int[:,::1] lwork = np.ones((n_pars, n_pars), dtype=np.int32) # ??
 
         double[:,::1] pars = np.zeros((n_samples,
             joker_params.num_params + int(return_logprobs)))
@@ -386,10 +400,8 @@ cpdef batch_get_posterior_samples(double[:,::1] chunk,
 
         # compute things needed for the ln(likelihood)
         ll = tensor_vector_scalar(A_T, jitter_ivar, rv,
-                                  p, sample_linear_pars=1)
-
-        if return_logprobs:
-            pars[n, 7] = ll
+                                  p, 1, # do make samples (1 = True)
+                                  ATCinvA, _A, p, ipiv, work, lwork)
 
         K = p[0]
         if K < 0:
@@ -400,5 +412,8 @@ cpdef batch_get_posterior_samples(double[:,::1] chunk,
 
         pars[n, 5] = K
         pars[n, 6] = p[1] # TODO: we assume it's just v0
+
+        if return_logprobs:
+            pars[n, 7] = ll
 
     return np.array(pars)
