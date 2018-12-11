@@ -53,7 +53,11 @@ class JokerParams:
     @u.quantity_input(P_min=u.day, P_max=u.day)
     def __init__(self, P_min, P_max,
                  jitter=None, jitter_unit=None,
+                 trend=None,
                  anomaly_tol=1E-10, anomaly_maxiter=128):
+
+        # TODO: if trend is a class, sample it, if it's an instance, fix vals?
+        # TODO: add trend classes back in...
 
         # the names of the default parameters
         self.default_params = ['P', 'M0', 'e', 'omega', 'jitter', 'K', 'v0']
