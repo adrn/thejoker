@@ -279,7 +279,7 @@ class TheJoker:
         Parameters
         ----------
         data : `~thejoker.data.RVData`
-            The radial velocity.
+            The radial velocity data.
         n_prior_samples : int (optional)
             If ``prior_cache_file`` is not specified, this sets the number of
             prior samples to generate and use to do the rejection sampling. If
@@ -337,16 +337,29 @@ class TheJoker:
     def iterative_rejection_sample(self, data, n_requested_samples,
                                    prior_cache_file=None, n_prior_samples=None,
                                    return_logprobs=False, magic_fudge=128):
-        """TODO: docstring For now: prior_cache_file is required
+        """This is an experimental sampling method that adaptively generates
+        posterior samples given a large library of prior samples. The advantage
+        of this function over the standard ``rejection_sample`` method is that
+        it will try to adaptively figure out how many prior samples it needs to
+        evaluate the likelihood at in order to return the desired number of
+        posterior samples.
 
         Parameters
         ----------
-        data : `~thejoker.RVData`
-        n_requested_samples : int
+        data : `~thejoker.data.RVData`
+            The radial velocity data.
+        n_requested_samples : int (optional)
+            The number of posterior samples desired.
         prior_cache_file : str
+            A path to an HDF5 cache file containing prior samples.
         n_prior_samples : int (optional)
+            The maximum number of prior samples to use.
         return_logprobs : bool (optional)
+            Also return the log-probabilities.
         magic_fudge : int (optional)
+            A magic fudge factor to use when adaptively determining the number
+            of prior samples to evaluate at. Larger numbers make the trial
+            batches larger more rapidly.
         """
 
         # validate input data
