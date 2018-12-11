@@ -22,14 +22,16 @@ cdef extern from "src/twobody.h":
                             double phi0, double t0, double tol, int maxiter)
 
 # Log of 2π
-cdef double LN_2PI = 1.8378770664093453
-
+cdef:
+    double LN_2PI = 1.8378770664093453
+    double INF = float('inf')
+    double anomaly_tol = 1E-10 # passed to c_rv_from_elements
+    int anomaly_maxiter = 128 # passed to c_rv_from_elements
 
 cdef void design_matrix(double P, double phi0, double ecc, double omega,
                         double[::1] t, double t0,
                         double[:,::1] A_T,
-                        int n_trend,
-                        double anomaly_tol, int anomaly_maxiter):
+                        int n_trend):
     """Construct the elements of the design matrix.
 
     Parameters
@@ -48,10 +50,6 @@ cdef void design_matrix(double P, double phi0, double ecc, double omega,
         Reference time.
     n_trend : int
         Number of terms in the long-term velocity trend.
-    anomaly_tol : double
-        Tolerance passed to c_rv_from_elements.
-    anomaly_maxiter : int
-        Max. number of iterations passed to c_rv_from_elements.
 
     Outputs
     -------
@@ -171,7 +169,7 @@ cdef double tensor_vector_scalar(double[:,::1] A_T, double[::1] ivar,
                  &info)
 
     if info != 0:
-        raise ValueError("Failed to 'solve'.")
+        return INF
 
     for k in range(n_times):
         y2 = 0.
@@ -220,7 +218,7 @@ cdef double logdet(double[:,::1] A):
         log_det += log(fabs(B[i,i]))
 
     if info != 0:
-        raise ValueError("Log-determinant function failed.")
+        return INF
 
     return log_det
 
@@ -266,9 +264,6 @@ cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
         int n_times = len(data)
         int n_pars = 2 # always have K, v0
 
-        double anomaly_tol = 1E-10
-        int anomaly_maxiter = 128
-
         double[::1] t = np.ascontiguousarray(data._t_bmjd, dtype='f8')
         double[::1] rv = np.ascontiguousarray(data.rv.value, dtype='f8')
         double[::1] ivar = np.ascontiguousarray(data.ivar.value, dtype='f8')
@@ -290,7 +285,6 @@ cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
         int _fixed_jitter
         double jitter
 
-    # TODO: we need a test of this hack
     if joker_params._fixed_jitter:
         _fixed_jitter = 1
         jitter = joker_params.jitter.to(data.rv.unit).value
@@ -300,26 +294,24 @@ cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
 
     for n in range(n_samples):
         if _fixed_jitter == 0:
-            jitter = chunk[n,4]
+            jitter = chunk[n, 4]
 
-        try:
-            # TODO: hard set n_trend=1 (v0) because removing support for that
-            design_matrix(chunk[n,0], chunk[n,1], chunk[n,2], chunk[n,3],
-                          t, t0, A_T, 1, anomaly_tol, anomaly_maxiter)
+        # TODO: n_trend is hard set to 1 here
+        design_matrix(chunk[n, 0], chunk[n, 1], chunk[n, 2], chunk[n, 3],
+                      t, t0, A_T, 1)
 
-            # jitter must be in same units as the data RV's / ivar!
-            get_ivar(ivar, jitter, jitter_ivar)
+        # Note: jitter must be in same units as the data RV's / ivar!
+        get_ivar(ivar, jitter, jitter_ivar)
 
-            # compute things needed for the ln(likelihood)
-            # - ATCinvA, p are populated by the function
-            chi2 = tensor_vector_scalar(A_T, jitter_ivar, rv, ATCinvA, p)
+        # compute things needed for the ln(likelihood)
+        # - ATCinvA, p are populated by the function
+        chi2 = tensor_vector_scalar(A_T, jitter_ivar, rv, ATCinvA, p)
 
-            logdet = logdet_term(ATCinvA, jitter_ivar)
-
-        except Exception as e:
+        if chi2 == INF:
             ll[n] = np.nan
-            # TODO: could output a log message here...
             continue
+
+        logdet = logdet_term(ATCinvA, jitter_ivar)
 
         ll[n] = 0.5*logdet - 0.5*chi2
 
@@ -348,9 +340,6 @@ cpdef batch_get_posterior_samples(double[:,::1] chunk,
         int n_samples = chunk.shape[0]
         int n_times = len(data)
         int n_pars = 2 # always have K, v0
-
-        double anomaly_tol = 1E-10
-        int anomaly_maxiter = 128
 
         double[::1] t = np.ascontiguousarray(data._t_bmjd, dtype='f8')
         double[::1] rv = np.ascontiguousarray(data.rv.value, dtype='f8')
@@ -382,7 +371,7 @@ cpdef batch_get_posterior_samples(double[:,::1] chunk,
 
         # TODO: hard set n_trend=1 (v0) because removing support for that
         design_matrix(chunk[n,0], chunk[n,1], chunk[n,2], chunk[n,3],
-                      t, t0, A_T, 1, anomaly_tol, anomaly_maxiter)
+                      t, t0, A_T, 1)
 
         # jitter must be in same units as the data RV's / ivar!
         get_ivar(ivar, chunk[n,4], jitter_ivar)
