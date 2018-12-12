@@ -68,9 +68,9 @@ matrix:
         - python: 3.6
           env: ASTROPY_VERSION=development
 
-        # Try older numpy versions
-        - python: 3.5
-          env: NUMPY_VERSION=1.11
+        # Try numpy development version
+        - python: 3.6
+          env: NUMPY_VERSION=development
 
         # TODO: Test with development version of twobody
         # - python: 3.6
