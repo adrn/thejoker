@@ -80,6 +80,25 @@ def test_joker_samples(tmpdir):
     assert new_samples.shape == ()
     assert new_samples.size == 1
 
+    # Check that polynomial trends work
+    samples = JokerSamples(t0=Time('J2015.5'),
+                           poly_trend=3)
+    samples['P'] = np.random.uniform(800, 1000, size=N)*u.day
+    samples['M0'] = 2*np.pi*np.random.random(size=N)*u.radian
+    samples['e'] = np.random.random(size=N)
+    samples['omega'] = 2*np.pi*np.random.random(size=N)*u.radian
+    samples['K'] = 100 * np.random.normal(size=N) * u.km/u.s
+    samples['v0'] = np.random.uniform(0, 10, size=N) * u.km/u.s
+    samples['v1'] = np.random.uniform(0, 1, size=N) * u.km/u.s/u.day
+    samples['v2'] = np.random.uniform(0, 1e-2, size=N) * u.km/u.s/u.day**2
+    new_samples = samples[0]
+
+    orb = samples.get_orbit(0)
+    orb.radial_velocity(Time('J2015.6'))
+
+    orb = new_samples.get_orbit(0)
+    orb.radial_velocity(Time('J2015.6'))
+
 
 def test_apply_methods():
     N = 100

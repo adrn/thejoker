@@ -7,7 +7,7 @@ import warnings
 import astropy.units as u
 from astropy.time import Time
 import numpy as np
-from twobody import KeplerOrbit
+from twobody import KeplerOrbit, PolynomialRVTrend
 
 # Package
 from ..utils import quantity_to_hdf5, quantity_from_hdf5
@@ -16,9 +16,9 @@ __all__ = ['JokerSamples']
 
 
 class JokerSamples(OrderedDict):
-    _valid_keys = ['P', 'M0', 'e', 'omega', 'jitter', 'K', 'v0']
+    _valid_keys = ['P', 'M0', 'e', 'omega', 'jitter', 'K']
 
-    def __init__(self, t0=None, **kwargs):
+    def __init__(self, t0=None, poly_trend=1, **kwargs):
         """A dictionary-like object for storing posterior samples from
         The Joker, with some extra functionality.
 
@@ -26,6 +26,11 @@ class JokerSamples(OrderedDict):
         ----------
         t0 : `astropy.time.Time`, numeric (optional)
             The reference time for the orbital parameters.
+        poly_trend : int, optional
+            If specified, sample over a polynomial velocity trend with the
+            specified number of coefficients. For example, ``poly_trend=3`` will
+            sample over parameters of a long-term quadratic velocity trend.
+            Default is 1, just a constant velocity shift.
         **kwargs
             These are the orbital element names.
         """
@@ -42,6 +47,11 @@ class JokerSamples(OrderedDict):
             self[key] = val # calls __setitem__ below
 
         self._cache = dict()
+
+        self.poly_trend = int(poly_trend)
+        self._trend_names = ['v{0}'.format(i)
+                             for i in range(self.poly_trend)]
+        self._valid_keys += self._trend_names
 
     def _validate_key(self, key):
         if key not in self._valid_keys:
@@ -180,12 +190,13 @@ class JokerSamples(OrderedDict):
         K = self['K']
         omega = self['omega']
         M0 = self['M0']
-        v0 = self['v0']
         a = kwargs.pop('a', P * K / (2*np.pi) * np.sqrt(1 - e**2))
 
         if len(self) == 1 and len(self.shape) == 0:
             if index > 0:
                 raise ValueError('Samples are scalar-valued!')
+
+            trend_coeffs = [self[x] for x in self._trend_names]
 
         else:
             P = P[index]
@@ -193,7 +204,7 @@ class JokerSamples(OrderedDict):
             a = a[index]
             omega = omega[index]
             M0 = M0[index]
-            v0 = v0[index]
+            trend_coeffs = [self[x][index] for x in self._trend_names]
 
         orbit.elements._P = P
         orbit.elements._e = e * u.dimensionless_unscaled
@@ -202,15 +213,12 @@ class JokerSamples(OrderedDict):
         orbit.elements._M0 = M0
         orbit.elements._Omega = kwargs.pop('Omega', 0*u.deg)
         orbit.elements._i = kwargs.pop('i', 90*u.deg)
-
+        orbit._vtrend = PolynomialRVTrend(trend_coeffs, t0=self.t0)
         orbit._barycenter = kwargs.pop('barycenter', None)
 
         if kwargs:
             raise ValueError("Unrecognized arguments {0}"
                              .format(', '.join(list(kwargs.keys()))))
-
-        # TODO: slight abuse of the _v0 cache attribute on KeplerOrbit...
-        orbit._v0 = v0
 
         return orbit
 
@@ -233,6 +241,7 @@ class JokerSamples(OrderedDict):
             kw[k] = func(self[k])
 
         kw['t0'] = self.t0
+        kw['poly_trend'] = self.poly_trend
         return cls(**kw)
 
     def mean(self):

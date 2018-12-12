@@ -31,6 +31,11 @@ class JokerParams:
         If sampling over the jitter as an extra non-linear parameter,
         you must also specify the units of the jitter prior. See note
         above about the ``jitter`` argument.
+    poly_trend : int, optional
+        If specified, sample over a polynomial velocity trend with the specified
+        number of coefficients. For example, ``poly_trend=3`` will sample over
+        parameters of a long-term quadratic velocity trend. Default is 1, just a
+        constant velocity shift.
     anomaly_tol : float (optional)
         Convergence tolerance passed to
         :func:`twobody.eccentric_anomaly_from_mean_anomaly`.
@@ -53,14 +58,15 @@ class JokerParams:
     @u.quantity_input(P_min=u.day, P_max=u.day)
     def __init__(self, P_min, P_max,
                  jitter=None, jitter_unit=None,
-                 trend=None,
+                 poly_trend=1,
                  anomaly_tol=1E-10, anomaly_maxiter=128):
 
-        # TODO: if trend is a class, sample it, if it's an instance, fix vals?
-        # TODO: add trend classes back in...
-
         # the names of the default parameters
-        self.default_params = ['P', 'M0', 'e', 'omega', 'jitter', 'K', 'v0']
+        self.default_params = ['P', 'M0', 'e', 'omega', 'jitter', 'K']
+
+        self.poly_trend = int(poly_trend)
+        self.default_params += ['v{0}'.format(i)
+                                for i in range(self.poly_trend)]
 
         self.P_min = P_min
         self.P_max = P_max
