@@ -22,14 +22,16 @@ cdef extern from "src/twobody.h":
                             double phi0, double t0, double tol, int maxiter)
 
 # Log of 2π
-cdef double LN_2PI = 1.8378770664093453
-
+cdef:
+    double LN_2PI = 1.8378770664093453
+    double INF = float('inf')
+    double anomaly_tol = 1E-10 # passed to c_rv_from_elements
+    int anomaly_maxiter = 128 # passed to c_rv_from_elements
 
 cdef void design_matrix(double P, double phi0, double ecc, double omega,
                         double[::1] t, double t0,
                         double[:,::1] A_T,
-                        int n_trend,
-                        double anomaly_tol, int anomaly_maxiter):
+                        int n_trend):
     """Construct the elements of the design matrix.
 
     Parameters
@@ -48,10 +50,6 @@ cdef void design_matrix(double P, double phi0, double ecc, double omega,
         Reference time.
     n_trend : int
         Number of terms in the long-term velocity trend.
-    anomaly_tol : double
-        Tolerance passed to c_rv_from_elements.
-    anomaly_maxiter : int
-        Max. number of iterations passed to c_rv_from_elements.
 
     Outputs
     -------
@@ -102,7 +100,11 @@ cdef void get_ivar(double[::1] ivar, double s, double[::1] new_ivar):
 
 cdef double tensor_vector_scalar(double[:,::1] A_T, double[::1] ivar,
                                  double[::1] y,
-                                 double[:,::1] ATCinvA, double[::1] p):
+                                 double[::1] linear_pars,
+                                 int sample_linear_pars,
+                                 double[:, ::1] ATCinvA, double[:, ::1] _A,
+                                 double[::1] p, int[:,::1] ipiv,
+                                 double[:,::1] work, int[:,::1] lwork):
     """Construct objects used to compute the marginal log-likelihood.
 
     Parameters
@@ -116,11 +118,16 @@ cdef double tensor_vector_scalar(double[:,::1] A_T, double[::1] ivar,
 
     Outputs
     -------
-    ATCinvA : `numpy.ndarray`
-        Value of A^T C^-1 A -- inverse of the covariance matrix
-        of the linear parameters.
-    p : `numpy.ndarray`
-        Optimal values of linear parameters.
+    linear_pars : `numpy.ndarray`
+        If ``sample_linear_pars==1``, this is the output array that contains the
+        linear (velocity amplitude and trend) parameters.
+    sample_linear_pars : int
+        Controls whether or not to generate the linear parameters (set to 1
+        for True).
+
+    Other parameters
+    ----------------
+
 
     Returns
     -------
@@ -133,35 +140,29 @@ cdef double tensor_vector_scalar(double[:,::1] A_T, double[::1] ivar,
         int i, j, k
         int n_times = A_T.shape[1]
         int n_pars = A_T.shape[0]
-        double[::1] ATCinvy = np.zeros(n_pars)
 
-        double[:,::1] _A = np.zeros((n_pars, n_pars))
         double chi2 = 0. # chi-squared
-        double y2, dy
+        double model_y, dy
 
         # Needed to LAPACK dsysv
         char* uplo = 'U' # store the upper triangle
         int nrhs = 1 # number of columns in b
-        int[:,::1] ipiv = np.zeros((n_pars, n_pars), dtype=np.int32) # ??
-        double[:,::1] work = np.zeros((n_pars, n_pars), dtype=np.float64) # ??
-        int[:,::1] lwork = np.ones((n_pars, n_pars), dtype=np.int32) # ??
-        int info = 0 # if 0, success, otherwise some whack shit hapnd
+        int info = 0 # if 0, success, otherwise some whack shit happened
 
     # first zero-out arrays
     for i in range(n_pars):
         p[i] = 0.
         for j in range(n_pars):
-            ATCinvA[i,j] = 0.
+            ATCinvA[i, j] = 0.
 
     for k in range(n_times):
         for i in range(n_pars):
-            ATCinvy[i] += A_T[i,k] * ivar[k] * y[k]
+            p[i] += A_T[i, k] * ivar[k] * y[k]
             for j in range(n_pars):
                 # implicit transpose of first A_T in the below
-                ATCinvA[i,j] += A_T[i,k] * ivar[k] * A_T[j,k]
+                ATCinvA[i, j] += A_T[i, k] * ivar[k] * A_T[j, k]
 
-    _A[:,:] = ATCinvA
-    p[:] = ATCinvy
+    _A[:, :] = ATCinvA
 
     # p = np.linalg.solve(ATCinvA, ATCinv.dot(y))
     lapack.dsysv(uplo, &n_pars, &nrhs,
@@ -171,21 +172,34 @@ cdef double tensor_vector_scalar(double[:,::1] A_T, double[::1] ivar,
                  &info)
 
     if info != 0:
-        raise ValueError("Failed to 'solve'.")
+        return INF
 
     for k in range(n_times):
-        y2 = 0.
+        # compute predicted RV at this timestep
+        model_y = 0.
         for i in range(n_pars):
-            y2 += A_T[i,k] * p[i]
+            model_y += A_T[i, k] * p[i]
 
         # don't need log term for the jitter b.c. in likelihood func
-        dy = y2 - y[k]
+        dy = model_y - y[k]
         chi2 += dy*dy * ivar[k]
 
-    return chi2
+    if chi2 == INF:
+        return -INF
+
+    logdet = logdet_term(ATCinvA, ivar, _A, ipiv)
+
+    if sample_linear_pars == 1:
+        cov = np.linalg.inv(ATCinvA)
+        # TODO: set np.random.set_state(state) outside of here to make deterministic
+        K, *v_terms = np.random.multivariate_normal(p, cov)
+        linear_pars[0] = K
+        linear_pars[1] = v_terms[0] # TODO: expects just 1 term
+
+    return 0.5*logdet - 0.5*chi2
 
 
-cdef double logdet(double[:,::1] A):
+cdef double logdet(double[:,::1] A, double[:,::1] B, int[:,::1] ipiv):
     """Compute the log-determinant of the (assumed) square, symmetric matrix A.
 
     Parameters
@@ -203,11 +217,11 @@ cdef double logdet(double[:,::1] A):
         int i
         int n_pars = A.shape[0] # A is assumed symmetric
         int info = 0 # if 0, success, otherwise some whack shit hapnd
-        int[:,::1] ipiv = np.ones((n_pars, n_pars), dtype=np.int32)
+        # int[:,::1] ipiv = np.ones((n_pars, n_pars), dtype=np.int32)
 
         double log_det = 0.
 
-        double[:,::1] B = np.zeros((A.shape[0], A.shape[1]))
+        # double[:,::1] B = np.zeros((A.shape[0], A.shape[1]))
 
     # Copy because factorization is done in place
     B[:,:] = A
@@ -220,12 +234,13 @@ cdef double logdet(double[:,::1] A):
         log_det += log(fabs(B[i,i]))
 
     if info != 0:
-        raise ValueError("Log-determinant function failed.")
+        return INF
 
     return log_det
 
 
-cdef double logdet_term(double[:,::1] ATCinvA, double[::1] ivar):
+cdef double logdet_term(double[:,::1] ATCinvA, double[::1] ivar,
+                        double[:,::1] B, int[:,::1] ipiv):
     """Compute the log-determinant term of the log-likelihood."""
     cdef:
         int i
@@ -233,7 +248,7 @@ cdef double logdet_term(double[:,::1] ATCinvA, double[::1] ivar):
         int n_times = ivar.shape[0]
         double ld
 
-    ld = logdet(ATCinvA)
+    ld = logdet(ATCinvA, B, ipiv)
     ld -= n_pars * LN_2PI
 
     for i in range(n_times):
@@ -266,9 +281,6 @@ cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
         int n_times = len(data)
         int n_pars = 2 # always have K, v0
 
-        double anomaly_tol = 1E-10
-        int anomaly_maxiter = 128
-
         double[::1] t = np.ascontiguousarray(data._t_bmjd, dtype='f8')
         double[::1] rv = np.ascontiguousarray(data.rv.value, dtype='f8')
         double[::1] ivar = np.ascontiguousarray(data.ivar.value, dtype='f8')
@@ -278,8 +290,6 @@ cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
 
         # transpose of design matrix
         double[:,::1] A_T = np.zeros((n_pars, n_times))
-        double[:,::1] ATCinvA = np.zeros((n_pars, n_pars))
-        double[::1] p = np.zeros(n_pars)
         double logdet
 
         # likelihoodz
@@ -290,7 +300,14 @@ cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
         int _fixed_jitter
         double jitter
 
-    # TODO: we need a test of this hack
+        # needed for temporary storage in tensor_vector_scalar
+        double[:, ::1] ATCinvA = np.zeros((n_pars, n_pars))
+        double[:, ::1] _A = np.zeros((n_pars, n_pars))
+        double[::1] p = np.zeros(n_pars)
+        int[:,::1] ipiv = np.zeros((n_pars, n_pars), dtype=np.int32) # ??
+        double[:,::1] work = np.zeros((n_pars, n_pars), dtype=np.float64) # ??
+        int[:,::1] lwork = np.ones((n_pars, n_pars), dtype=np.int32) # ??
+
     if joker_params._fixed_jitter:
         _fixed_jitter = 1
         jitter = joker_params.jitter.to(data.rv.unit).value
@@ -300,28 +317,19 @@ cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
 
     for n in range(n_samples):
         if _fixed_jitter == 0:
-            jitter = chunk[n,4]
+            jitter = chunk[n, 4]
 
-        try:
-            # TODO: hard set n_trend=1 (v0) because removing support for that
-            design_matrix(chunk[n,0], chunk[n,1], chunk[n,2], chunk[n,3],
-                          t, t0, A_T, 1, anomaly_tol, anomaly_maxiter)
+        # TODO: n_trend is hard set to 1 here
+        design_matrix(chunk[n, 0], chunk[n, 1], chunk[n, 2], chunk[n, 3],
+                      t, t0, A_T, 1)
 
-            # jitter must be in same units as the data RV's / ivar!
-            get_ivar(ivar, jitter, jitter_ivar)
+        # Note: jitter must be in same units as the data RV's / ivar!
+        get_ivar(ivar, jitter, jitter_ivar)
 
-            # compute things needed for the ln(likelihood)
-            # - ATCinvA, p are populated by the function
-            chi2 = tensor_vector_scalar(A_T, jitter_ivar, rv, ATCinvA, p)
-
-            logdet = logdet_term(ATCinvA, jitter_ivar)
-
-        except Exception as e:
-            ll[n] = np.nan
-            # TODO: could output a log message here...
-            continue
-
-        ll[n] = 0.5*logdet - 0.5*chi2
+        # compute things needed for the ln(likelihood)
+        ll[n] = tensor_vector_scalar(A_T, jitter_ivar, rv,
+                                     p, 0, # IGNORED PLACEHOLDER
+                                     ATCinvA, _A, p, ipiv, work, lwork)
 
     return ll
 
@@ -349,9 +357,6 @@ cpdef batch_get_posterior_samples(double[:,::1] chunk,
         int n_times = len(data)
         int n_pars = 2 # always have K, v0
 
-        double anomaly_tol = 1E-10
-        int anomaly_maxiter = 128
-
         double[::1] t = np.ascontiguousarray(data._t_bmjd, dtype='f8')
         double[::1] rv = np.ascontiguousarray(data.rv.value, dtype='f8')
         double[::1] ivar = np.ascontiguousarray(data.ivar.value, dtype='f8')
@@ -361,14 +366,20 @@ cpdef batch_get_posterior_samples(double[:,::1] chunk,
 
         # transpose of design matrix
         double[:,::1] A_T = np.zeros((n_pars, n_times))
-        double[:,::1] ATCinvA = np.zeros((n_pars, n_pars))
-        double[::1] p = np.zeros(n_pars)
-        double logdet
+        double ll
 
         # lol
         double t0 = data._t0_bmjd
         int _fixed_jitter
         double jitter
+
+        # needed for temporary storage in tensor_vector_scalar
+        double[:, ::1] ATCinvA = np.zeros((n_pars, n_pars))
+        double[:, ::1] _A = np.zeros((n_pars, n_pars))
+        double[::1] p = np.zeros(n_pars)
+        int[:,::1] ipiv = np.zeros((n_pars, n_pars), dtype=np.int32) # ??
+        double[:,::1] work = np.zeros((n_pars, n_pars), dtype=np.float64) # ??
+        int[:,::1] lwork = np.ones((n_pars, n_pars), dtype=np.int32) # ??
 
         double[:,::1] pars = np.zeros((n_samples,
             joker_params.num_params + int(return_logprobs)))
@@ -382,19 +393,17 @@ cpdef batch_get_posterior_samples(double[:,::1] chunk,
 
         # TODO: hard set n_trend=1 (v0) because removing support for that
         design_matrix(chunk[n,0], chunk[n,1], chunk[n,2], chunk[n,3],
-                      t, t0, A_T, 1, anomaly_tol, anomaly_maxiter)
+                      t, t0, A_T, 1)
 
         # jitter must be in same units as the data RV's / ivar!
-        get_ivar(ivar, chunk[n,4], jitter_ivar)
+        get_ivar(ivar, chunk[n, 4], jitter_ivar)
 
         # compute things needed for the ln(likelihood)
-        # - ATCinvA, p are populated by the function
-        chi2 = tensor_vector_scalar(A_T, jitter_ivar, rv, ATCinvA, p)
-        logdet = logdet_term(ATCinvA, jitter_ivar)
+        ll = tensor_vector_scalar(A_T, jitter_ivar, rv,
+                                  p, 1, # do make samples (1 = True)
+                                  ATCinvA, _A, p, ipiv, work, lwork)
 
-        cov = np.linalg.inv(ATCinvA)
-        K, *v_terms = rnd.multivariate_normal(p, cov)
-
+        K = p[0]
         if K < 0:
             # log.warning("Swapping K")
             K = np.abs(K)
@@ -402,10 +411,9 @@ cpdef batch_get_posterior_samples(double[:,::1] chunk,
             pars[n, 3] = pars[n, 3] % (2*np.pi) # HACK: I think this is safe
 
         pars[n, 5] = K
-        pars[n, 6] = v_terms[0] # HACK: we know it's just v0
+        pars[n, 6] = p[1] # TODO: we assume it's just v0
 
         if return_logprobs:
-            logdet = logdet_term(ATCinvA, jitter_ivar)
-            pars[n, 7] = 0.5*logdet - 0.5*chi2 # ln_likelihood
+            pars[n, 7] = ll
 
     return np.array(pars)
