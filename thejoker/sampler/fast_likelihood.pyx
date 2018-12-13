@@ -72,7 +72,7 @@ cdef void design_matrix(double P, double phi0, double ecc, double omega,
     if n_trend > 1: # only needed if more than constant trend
         for i in range(1, n_trend):
             for j in range(n_times):
-                A_T[1+i, j] = pow(t[j], i)
+                A_T[1+i, j] = pow(t[j] - t0, i)
 
 
 cdef void get_ivar(double[::1] ivar, double s, double[::1] new_ivar):
@@ -103,8 +103,9 @@ cdef double tensor_vector_scalar(double[:,::1] A_T, double[::1] ivar,
                                  double[::1] linear_pars,
                                  int sample_linear_pars,
                                  double[:, ::1] ATCinvA, double[:, ::1] _A,
-                                 double[::1] p, int[:,::1] ipiv,
-                                 double[:,::1] work, int[:,::1] lwork):
+                                 int[:,::1] ipiv,
+                                 double[:,::1] work, int[:,::1] lwork,
+                                 double[::1] p):
     """Construct objects used to compute the marginal log-likelihood.
 
     Parameters
@@ -192,9 +193,9 @@ cdef double tensor_vector_scalar(double[:,::1] A_T, double[::1] ivar,
     if sample_linear_pars == 1:
         cov = np.linalg.inv(ATCinvA)
         # TODO: set np.random.set_state(state) outside of here to make deterministic
-        K, *v_terms = np.random.multivariate_normal(p, cov)
-        linear_pars[0] = K
-        linear_pars[1] = v_terms[0] # TODO: expects just 1 term
+        v_terms = np.random.multivariate_normal(p, cov)
+        for k in range(n_pars):
+            linear_pars[k] = v_terms[k]
 
     return 0.5*logdet - 0.5*chi2
 
@@ -279,7 +280,8 @@ cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
         int n
         int n_samples = chunk.shape[0]
         int n_times = len(data)
-        int n_pars = 2 # always have K, v0
+        int n_poly = joker_params.poly_trend # polynomial trend terms
+        int n_pars = 1 + n_poly # always have K, v trend terms
 
         double[::1] t = np.ascontiguousarray(data._t_bmjd, dtype='f8')
         double[::1] rv = np.ascontiguousarray(data.rv.value, dtype='f8')
@@ -300,6 +302,8 @@ cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
         int _fixed_jitter
         double jitter
 
+        double[::1] linear_pars = np.zeros(n_pars)
+
         # needed for temporary storage in tensor_vector_scalar
         double[:, ::1] ATCinvA = np.zeros((n_pars, n_pars))
         double[:, ::1] _A = np.zeros((n_pars, n_pars))
@@ -319,17 +323,16 @@ cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
         if _fixed_jitter == 0:
             jitter = chunk[n, 4]
 
-        # TODO: n_trend is hard set to 1 here
         design_matrix(chunk[n, 0], chunk[n, 1], chunk[n, 2], chunk[n, 3],
-                      t, t0, A_T, 1)
+                      t, t0, A_T, n_poly)
 
         # Note: jitter must be in same units as the data RV's / ivar!
         get_ivar(ivar, jitter, jitter_ivar)
 
         # compute things needed for the ln(likelihood)
         ll[n] = tensor_vector_scalar(A_T, jitter_ivar, rv,
-                                     p, 0, # IGNORED PLACEHOLDER
-                                     ATCinvA, _A, p, ipiv, work, lwork)
+                                     linear_pars, 0, # IGNORED PLACEHOLDER
+                                     ATCinvA, _A, ipiv, work, lwork, p)
 
     return ll
 
@@ -352,10 +355,11 @@ cpdef batch_get_posterior_samples(double[:,::1] chunk,
     """
 
     cdef:
-        int n
+        int n, j
         int n_samples = chunk.shape[0]
         int n_times = len(data)
-        int n_pars = 2 # always have K, v0
+        int n_poly = joker_params.poly_trend # polynomial trend terms
+        int n_pars = 1 + n_poly # always have K, v trend terms
 
         double[::1] t = np.ascontiguousarray(data._t_bmjd, dtype='f8')
         double[::1] rv = np.ascontiguousarray(data.rv.value, dtype='f8')
@@ -372,6 +376,8 @@ cpdef batch_get_posterior_samples(double[:,::1] chunk,
         double t0 = data._t0_bmjd
         int _fixed_jitter
         double jitter
+
+        double[::1] linear_pars = np.zeros(n_pars)
 
         # needed for temporary storage in tensor_vector_scalar
         double[:, ::1] ATCinvA = np.zeros((n_pars, n_pars))
@@ -391,29 +397,29 @@ cpdef batch_get_posterior_samples(double[:,::1] chunk,
         pars[n, 3] = chunk[n, 3] # omega
         pars[n, 4] = chunk[n, 4] # jitter
 
-        # TODO: hard set n_trend=1 (v0) because removing support for that
-        design_matrix(chunk[n,0], chunk[n,1], chunk[n,2], chunk[n,3],
-                      t, t0, A_T, 1)
+        design_matrix(chunk[n, 0], chunk[n, 1], chunk[n, 2], chunk[n, 3],
+                      t, t0, A_T, n_poly)
 
         # jitter must be in same units as the data RV's / ivar!
         get_ivar(ivar, chunk[n, 4], jitter_ivar)
 
         # compute things needed for the ln(likelihood)
         ll = tensor_vector_scalar(A_T, jitter_ivar, rv,
-                                  p, 1, # do make samples (1 = True)
-                                  ATCinvA, _A, p, ipiv, work, lwork)
+                                  linear_pars, 1, # do make samples (1 = True)
+                                  ATCinvA, _A, ipiv, work, lwork, p)
 
-        K = p[0]
+        K = linear_pars[0]
         if K < 0:
-            # log.warning("Swapping K")
+            # Swapping sign of K!
             K = np.abs(K)
             pars[n, 3] += np.pi
             pars[n, 3] = pars[n, 3] % (2*np.pi) # HACK: I think this is safe
 
         pars[n, 5] = K
-        pars[n, 6] = p[1] # TODO: we assume it's just v0
+        for j in range(n_poly):
+            pars[n, 6+j] = linear_pars[1+j]
 
         if return_logprobs:
-            pars[n, 7] = ll
+            pars[n, 6+n_poly] = ll
 
     return np.array(pars)
