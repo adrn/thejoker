@@ -99,7 +99,7 @@ cdef void get_ivar(double[::1] ivar, double s, double[::1] new_ivar):
 
 
 cdef double tensor_vector_scalar(double[:,::1] A_T, double[::1] ivar,
-                                 double[::1] y,
+                                 double[::1] y, double[:, ::1] Lambda,
                                  double[::1] linear_pars,
                                  int sample_linear_pars,
                                  double[:, ::1] ATCinvA, double[:, ::1] _A,
@@ -116,6 +116,9 @@ cdef double tensor_vector_scalar(double[:,::1] A_T, double[::1] ivar,
         Inverse-variance matrix.
     y : `numpy.ndarray`
         Data (in this case, radial velocities).
+    Lambda : `numpy.ndarray`
+        Inverse variance matrix for a Gaussian prior applied to the linear
+        parameters.
 
     Outputs
     -------
@@ -162,6 +165,7 @@ cdef double tensor_vector_scalar(double[:,::1] A_T, double[::1] ivar,
             for j in range(n_pars):
                 # implicit transpose of first A_T in the below
                 ATCinvA[i, j] += A_T[i, k] * ivar[k] * A_T[j, k]
+                ATCinvA[i, j] += Lambda[i, j]
 
     _A[:, :] = ATCinvA
 
@@ -289,6 +293,7 @@ cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
 
         # inverse variance array with jitter included
         double[::1] jitter_ivar = np.zeros(data.ivar.value.shape)
+        double[:, ::1] Lambda = np.ascontiguousarray(joker_params.linear_par_Vinv)
 
         # transpose of design matrix
         double[:,::1] A_T = np.zeros((n_pars, n_times))
@@ -330,7 +335,7 @@ cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
         get_ivar(ivar, jitter, jitter_ivar)
 
         # compute things needed for the ln(likelihood)
-        ll[n] = tensor_vector_scalar(A_T, jitter_ivar, rv,
+        ll[n] = tensor_vector_scalar(A_T, jitter_ivar, rv, Lambda,
                                      linear_pars, 0, # IGNORED PLACEHOLDER
                                      ATCinvA, _A, ipiv, work, lwork, p)
 
@@ -367,6 +372,7 @@ cpdef batch_get_posterior_samples(double[:,::1] chunk,
 
         # inverse variance array with jitter included
         double[::1] jitter_ivar = np.zeros(data.ivar.value.shape)
+        double[:, ::1] Lambda = np.ascontiguousarray(joker_params.linear_par_Vinv)
 
         # transpose of design matrix
         double[:,::1] A_T = np.zeros((n_pars, n_times))
@@ -404,7 +410,7 @@ cpdef batch_get_posterior_samples(double[:,::1] chunk,
         get_ivar(ivar, chunk[n, 4], jitter_ivar)
 
         # compute things needed for the ln(likelihood)
-        ll = tensor_vector_scalar(A_T, jitter_ivar, rv,
+        ll = tensor_vector_scalar(A_T, jitter_ivar, rv, Lambda,
                                   linear_pars, 1, # do make samples (1 = True)
                                   ATCinvA, _A, ipiv, work, lwork, p)
 
