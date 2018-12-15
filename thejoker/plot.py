@@ -1,3 +1,6 @@
+# Standard library
+import warnings
+
 # Third-party
 from astropy.time import Time
 import astropy.units as u
@@ -6,7 +9,7 @@ import numpy as np
 __all__ = ['plot_rv_curves']
 
 
-def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
+def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
                    ax=None, plot_kwargs=dict(), data_plot_kwargs=dict(),
                    add_labels=True, relative_to_t0=False):
     """
@@ -17,10 +20,10 @@ def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
     ----------
     samples : :class:`~thejoker.sampler.JokerSamples`
         Posterior samples from The Joker.
-    t_grid : array_like, `~astropy.time.Time`
-        Array of times. Either in BMJD or as an Astropy time object.
-    n_plot : int, optional
-        The maximum number of samples to plot. Defaults to 128.
+    t_grid : array_like, `~astropy.time.Time`, optional
+        Array of times. Either in BMJD or as an Astropy Time object. If not
+        specified, the time grid will be set to the data range with a small
+        buffer.
     rv_unit : `~astropy.units.UnitBase`, optional
         The units to use when plotting RV's.
     data : `~thejoker.data.RVData`, optional
@@ -49,14 +52,24 @@ def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
     else:
         fig = ax.figure
 
-    if not isinstance(t_grid, Time): # Assume BMJD
+    if t_grid is None:
+        w = np.ptp(data.t.mjd)
+        dt = samples['P'].to(u.day).value.min() / 10
+        t_grid = np.arange(data.t.mjd.min() - w*0.05,
+                           data.t.mjd.max() + w*0.05 + dt,
+                           dt)
+
+        if len(t_grid) > 1e4:
+            warnings.warn("Time grid has more than 10000 grid points, so "
+                          "plotting orbits could be very slow! Set 't_grid' "
+                          "manually to decrease the number of grid points.",
+                          ResourceWarning)
+
+    elif not isinstance(t_grid, Time): # Assume BMJD
         t_grid = Time(t_grid, format='mjd', scale='tcb')
 
-    if n_plot is None:
-        n_plot = len(samples)
-    n_plot = min(n_plot, len(samples))
-
     # scale the transparency of the lines
+    n_plot = len(samples)
     Q = 4. # HACK
     line_alpha = 0.05 + Q / (n_plot + Q)
 
@@ -66,6 +79,7 @@ def plot_rv_curves(samples, t_grid, n_plot=None, rv_unit=None, data=None,
     # default plotting style
     style = plot_kwargs.copy()
     style.setdefault('linestyle', '-')
+    style.setdefault('linewidth', 0.5)
     style.setdefault('alpha', line_alpha)
     style.setdefault('marker', '')
     style.setdefault('color', '#555555')

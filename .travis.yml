@@ -29,13 +29,12 @@ env:
         # overridden underneath. They are defined here in order to save having
         # to repeat them for all configurations.
         - NUMPY_VERSION=stable
-        # - ASTROPY_VERSION=stable
-        - ASTROPY_VERSION=development # TODO: until v3.0 is released
+        - ASTROPY_VERSION=stable
         - MAIN_CMD='python setup.py'
         - SETUP_CMD='test'
-        # TODO: A lot of the dependencies are because of nbsphinx...we may want
-        #   to drop the nbsphinx component of the build when on travis?
-        - PIP_DEPENDENCIES='emcee schwimmbad nbsphinx twobody'
+        # - PIP_DEPENDENCIES='emcee schwimmbad nbsphinx twobody'
+        # Dev version of twobody!
+        - PIP_DEPENDENCIES='emcee schwimmbad nbsphinx git+https://github.com/adrn/twobody'
         - CONDA_CHANNELS='astropy-ci-extras astropy'
         - CONDA_DEPENDENCIES='cython scipy h5py matplotlib pandoc nbconvert ipykernel'
 
@@ -68,9 +67,9 @@ matrix:
         - python: 3.6
           env: ASTROPY_VERSION=development
 
-        # Try older numpy versions
-        - python: 3.5
-          env: NUMPY_VERSION=1.11
+        # Try numpy development version
+        - python: 3.6
+          env: NUMPY_VERSION=development
 
         # TODO: Test with development version of twobody
         # - python: 3.6

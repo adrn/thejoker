@@ -190,7 +190,7 @@ class TheJoker:
 
         n, n_params = samples_arr.shape
 
-        samples = JokerSamples(t0=t0)
+        samples = JokerSamples(t0=t0, poly_trend=self.params.poly_trend)
 
         # TODO: need to keep track of this elsewhere...
         nonlin_params = ['P', 'M0', 'e', 'omega', 'jitter']
@@ -198,7 +198,10 @@ class TheJoker:
             samples[key] = samples_arr[:, k] * prior_units[k]
 
         samples['K'] = samples_arr[:, k + 1] * prior_units[-1]  # jitter unit
-        samples['v0'] = samples_arr[:, k + 2] * prior_units[-1]  # jitter unit
+
+        for i in range(self.params.poly_trend):
+            _unit = prior_units[-1] / u.day**i  # HACK: jitter unit per day
+            samples['v'+str(i)] = samples_arr[:, k + 2 + i] * _unit
 
         if return_logprobs:
             return samples, ln_prior

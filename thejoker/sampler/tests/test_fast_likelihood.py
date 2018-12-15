@@ -12,7 +12,9 @@ from .helpers import FakeData
 
 
 def test_shit():
-    joker_params = JokerParams(P_min=8*u.day, P_max=32768*u.day, jitter=0*u.m/u.s)
+    joker_params = JokerParams(P_min=8*u.day, P_max=32768*u.day,
+                               jitter=0*u.m/u.s,
+                               linear_par_Vinv=np.diag(np.zeros(2)))
     joker = TheJoker(joker_params)
 
     t = np.random.uniform(0, 250, 16) + 56831.324

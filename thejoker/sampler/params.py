@@ -1,6 +1,7 @@
 # Third-party
 from astropy.utils.misc import isiterable
 import astropy.units as u
+import numpy as np
 
 __all__ = ['JokerParams']
 
@@ -31,6 +32,17 @@ class JokerParams:
         If sampling over the jitter as an extra non-linear parameter,
         you must also specify the units of the jitter prior. See note
         above about the ``jitter`` argument.
+    poly_trend : int, optional
+        If specified, sample over a polynomial velocity trend with the specified
+        number of coefficients. For example, ``poly_trend=3`` will sample over
+        parameters of a long-term quadratic velocity trend. Default is 1, just a
+        constant velocity shift.
+    linear_par_Vinv : array_like, optional
+        Inverse variance matrix that specifies the Gaussian prior on the linear
+        parameters, i.e., the semi-amplitude and velocity trend paramters. The
+        units must be in inverse, squared ``v_unit`` and ``v_unit/day^n`` where
+        ``v_unit`` is the jitter velocity unit, and ``day^n`` corresponds to
+        each polynomial trend coefficient.
     anomaly_tol : float (optional)
         Convergence tolerance passed to
         :func:`twobody.eccentric_anomaly_from_mean_anomaly`.
@@ -53,19 +65,29 @@ class JokerParams:
     @u.quantity_input(P_min=u.day, P_max=u.day)
     def __init__(self, P_min, P_max,
                  jitter=None, jitter_unit=None,
-                 trend=None,
+                 poly_trend=1, linear_par_Vinv=None,
                  anomaly_tol=1E-10, anomaly_maxiter=128):
 
-        # TODO: if trend is a class, sample it, if it's an instance, fix vals?
-        # TODO: add trend classes back in...
-
         # the names of the default parameters
-        self.default_params = ['P', 'M0', 'e', 'omega', 'jitter', 'K', 'v0']
+        self.default_params = ['P', 'M0', 'e', 'omega', 'jitter', 'K']
+
+        self.poly_trend = int(poly_trend)
+        self.default_params += ['v{0}'.format(i)
+                                for i in range(self.poly_trend)]
 
         self.P_min = P_min
         self.P_max = P_max
         self.anomaly_tol = float(anomaly_tol)
         self.anomaly_maxiter = int(anomaly_maxiter)
+
+        _n_linear = 1 + self.poly_trend
+        if linear_par_Vinv is None:
+            self.linear_par_Vinv = 1e-10 * np.eye(_n_linear)
+        else:
+            self.linear_par_Vinv = np.array(linear_par_Vinv)
+            if self.linear_par_Vinv.shape != (_n_linear, _n_linear):
+                raise ValueError("Linear parameter inverse variance prior must "
+                                 "have shape ({0}, {0})".format(_n_linear))
 
         # validate the input jitter specification
         if jitter is None:
