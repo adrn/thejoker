@@ -403,7 +403,9 @@ class TheJoker:
         with tempfile.NamedTemporaryFile(mode='r+') as f:
             if cache_exists:
                 with h5py.File(prior_cache_file) as f:
-                    prior_units = [u.Unit(uu) for uu in f.attrs['units']]
+                    prior_units = []
+                    for k in f['samples'].keys():
+                        prior_units.append(u.Unit(f['samples'][k].attrs['unit']))
 
             else:
                 prior_cache_file = f.name
