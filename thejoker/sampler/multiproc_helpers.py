@@ -89,8 +89,12 @@ def _marginal_ll_worker(task):
 
     # read a chunk of the prior samples
     with h5py.File(prior_cache_file, 'r') as f:
-        chunk = np.array(f['samples'][start_stop[0]:start_stop[1]])
-
+        chunk = np.stack((f['samples/P'][start_stop[0]:start_stop[1]],
+                          f['samples/M0'][start_stop[0]:start_stop[1]],
+                          f['samples/e'][start_stop[0]:start_stop[1]],
+                          f['samples/omega'][start_stop[0]:start_stop[1]],
+                          f['samples/jitter'][start_stop[0]:start_stop[1]]),
+                         axis=1)
     chunk = chunk.astype(np.float64)
 
     # memoryview is returned
@@ -207,9 +211,14 @@ def _sample_vector_worker(task):
 
     # read a chunk of the prior samples
     with h5py.File(prior_cache_file, 'r') as f:
-        tmp = np.zeros(len(f['samples']), dtype=bool)
+        tmp = np.zeros(len(f['samples/P']), dtype=bool)
         tmp[idx] = True
-        chunk = np.array(f['samples'][tmp, :])
+        chunk = np.stack((f['samples/P'][tmp],
+                          f['samples/M0'][tmp],
+                          f['samples/e'][tmp],
+                          f['samples/omega'][tmp],
+                          f['samples/jitter'][tmp]),
+                         axis=1)
 
         if return_logprobs:
             ln_prior = np.array(f['ln_prior_probs'][tmp])

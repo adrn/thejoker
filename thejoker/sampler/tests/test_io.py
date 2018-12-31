@@ -5,7 +5,7 @@ import numpy as np
 
 # Package
 from ...data import RVData
-from ..io import pack_prior_samples, save_prior_samples
+from ..io import save_prior_samples
 
 
 class TestIO(object):
@@ -25,29 +25,18 @@ class TestIO(object):
         self.samples = samples
         self.n = n
 
-    def test_pack_prior_samples(self):
-        samples = self.samples.copy()
-
-        M,units = pack_prior_samples(samples, self.data.rv.unit)
-        assert units[-1] == u.km/u.s
-        assert M.shape == (self.n, 5)
-
-        samples.pop('jitter')
-        assert 'jitter' not in samples
-        M,units = pack_prior_samples(samples, self.data.rv.unit)
-        assert units[-1] == u.km/u.s
-        assert M.shape == (self.n, 5)
-
     def test_save_prior_samples(self, tmpdir):
 
         path = str(tmpdir.join('io-test1.hdf5'))
         save_prior_samples(path, self.samples, self.data.rv.unit)
         with h5py.File(path, 'r') as f:
-            assert f['samples'][:].shape == (self.n, 5)
+            for k in self.samples.keys():
+                assert f['samples/'+k][:].shape == (self.n, )
 
         path = str(tmpdir.join('io-test2.hdf5'))
         with h5py.File(path, 'w') as f:
             save_prior_samples(f, self.samples, self.data.rv.unit)
 
         with h5py.File(path, 'r') as f:
-            assert f['samples'][:].shape == (self.n, 5)
+            for k in self.samples.keys():
+                assert f['samples/'+k][:].shape == (self.n, )

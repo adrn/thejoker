@@ -8,6 +8,8 @@ import schwimmbad
 from ..multiproc_helpers import (get_good_sample_indices, compute_likelihoods,
                                  sample_indices_to_full_samples, chunk_tasks)
 from .helpers import FakeData
+from ..io import save_prior_samples
+from ..samples import JokerSamples
 
 
 def test_chunk_tasks():
@@ -52,17 +54,13 @@ class TestMultiproc(object):
 
         # write some nonsense out to the prior file
         n = 8192
-        P = np.random.uniform(nlp[0]-2., nlp[0]+2., n)
-        M0 = np.random.uniform(0, 2*np.pi, n)
-        ecc = np.zeros(n)
-        omega = np.zeros(n)
-        jitter = np.zeros(n)
-        samples = np.vstack((P,M0,ecc,omega,jitter)).T
-
-        # TODO: use save_prior_samples here
-
-        with h5py.File(prior_samples_file) as f:
-            f['samples'] = samples
+        samples = JokerSamples()
+        samples['P'] = np.random.uniform(nlp[0]-2., nlp[0]+2., n) * u.day
+        samples['M0'] = np.random.uniform(0, 2*np.pi, n) * u.radian
+        samples['e'] = np.zeros(n) * u.one
+        samples['omega'] = np.zeros(n) * u.radian
+        samples['jitter'] = np.zeros(n) * u.km/u.s
+        save_prior_samples(prior_samples_file, samples, u.km/u.s)
 
         lls = compute_likelihoods(n, prior_samples_file, 0, data,
                                   joker_params, pool)

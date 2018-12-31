@@ -1,77 +1,15 @@
-# Standard library
-from collections import OrderedDict
-
 # Third-party
 import astropy.units as u
-import numpy as np
 
-__all__ = ['pack_prior_samples', 'save_prior_samples']
+# Package
+from ..utils import quantity_to_hdf5
 
-# These units and the order are required for the likelihood code
-_name_to_unit = OrderedDict()
-_name_to_unit['P'] = u.day
-_name_to_unit['M0'] = u.radian
-_name_to_unit['e'] = u.one
-_name_to_unit['omega'] = u.radian
-
-
-def pack_prior_samples(samples, rv_unit):
-    """
-    Pack a dictionary of prior samples as Astropy Quantity
-    objects into a single 2D array. The prior samples dictionary
-    must contain keys for:
-
-        - ``P``, period
-        - ``M0``, phase at t=0
-        - ``e``, eccentricity
-        - ``omega``, argument of periastron
-        - ``jitter``, velocity jitter (optional)
-
-    Parameters
-    ----------
-    samples : dict
-        A dictionary of prior samples as `~astropy.units.Quantity` objects.
-    rv_unit : `~astropy.units.UnitBase`
-        The radial velocity data unit.
-
-    Returns
-    -------
-    arr_samples : `numpy.ndarray`
-        An array of ``n`` prior samples with shape ``(n, 5)``. If jitter was not
-        passed in, all jitter values will be automatically set to 0.
-    units : list
-        A list of `~astropy.units.UnitBase` objects specifying the units for
-        each column.
-
-    """
-
-    arrs = []
-    units = []
-    for name, unit in _name_to_unit.items():
-        if unit == u.one:
-            arr = np.asarray(samples[name])
-        else:
-            arr = samples[name].to(unit).value
-        arrs.append(arr)
-        units.append(unit)
-
-    if 'jitter' not in samples:
-        jitter = np.zeros_like(arrs[0])
-
-    else:
-        jitter = samples['jitter'].to(rv_unit).value
-    arrs.append(jitter)
-    units.append(rv_unit)
-
-    return np.vstack(arrs).T, units
-
+__all__ = ['save_prior_samples']
 
 def save_prior_samples(f, samples, rv_unit, ln_prior_probs=None):
-    """
-    Save a dictionary of Astropy Quantity prior samples to
-    an HDF5 file in a format expected and used by
-    `thejoker.sampler.TheJoker`. The prior samples dictionary
-    must contain keys for:
+    """Save a dictionary of Astropy Quantity prior samples to an HDF5 file in a
+    format expected and used by `thejoker.sampler.TheJoker`. The prior samples
+    dictionary must contain keys for:
 
         - ``P``, period
         - ``M0``, phase at pericenter
@@ -84,35 +22,42 @@ def save_prior_samples(f, samples, rv_unit, ln_prior_probs=None):
     f : str, :class:`h5py.File`, :class:`h5py.Group`, :class:`h5py.DataSet`
         A string filename, or an instantiated `h5py` class.
     samples : dict
-        A dictionary of prior samples as `~astropy.units.Quantity`
-        objects.
+        A dictionary of prior samples as `~astropy.units.Quantity` objects.
     rv_unit : `~astropy.units.UnitBase`
         The radial velocity data unit.
 
     Returns
     -------
     units : list
-        A list of `~astropy.units.UnitBase` objects specifying the
-        units for each column.
+        A list of `~astropy.units.UnitBase` objects specifying the units for
+        each column.
 
     """
-
-    packed_samples, units = pack_prior_samples(samples, rv_unit)
+    _units = {'P': u.day,
+              'M0': u.radian,
+              'e': u.one,
+              'omega': u.radian,
+              'jitter': rv_unit}
 
     if isinstance(f, str):
         import h5py
-        with h5py.File(f, 'a') as g:
-            g.attrs['units'] = np.array([str(x) for x in units]).astype('|S6')
-            g['samples'] = packed_samples
-
-            if ln_prior_probs is not None:
-                g['ln_prior_probs'] = ln_prior_probs
+        close = True
+        f_ = h5py.File(f, 'a')
 
     else:
-        f.attrs['units'] = np.array([str(x) for x in units]).astype('|S6')
-        f['samples'] = packed_samples
+        f_ = f
+        close = False
 
-        if ln_prior_probs is not None:
-            f['ln_prior_probs'] = ln_prior_probs
+    g = f_.create_group('samples')
+    units = []
+    for name in samples.keys():
+        quantity_to_hdf5(g, name, samples[name].to(_units[name]))
+        units.append(_units[name])
+
+    if ln_prior_probs is not None:
+        f_['ln_prior_probs'] = ln_prior_probs
+
+    if close:
+        f_.close()
 
     return units
