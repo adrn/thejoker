@@ -316,7 +316,7 @@ class TheJoker:
             with h5py.File(prior_cache_file, 'r') as f:
                 prior_units = []
                 for k in f['samples'].keys():
-                    prior_units.append(u.Unit(f['samples'][k].attrs['units']))
+                    prior_units.append(u.Unit(f['samples'][k].attrs['unit']))
 
             result = self._rejection_sample_from_cache(
                 data, n_prior_samples, prior_cache_file, start_idx, seed=seed,
