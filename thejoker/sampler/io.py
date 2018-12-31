@@ -49,10 +49,10 @@ def save_prior_samples(f, samples, rv_unit, ln_prior_probs=None):
         close = False
 
     g = f_.create_group('samples')
-    units = []
+    units = dict()
     for name in samples.keys():
         quantity_to_hdf5(g, name, samples[name].to(_units[name]))
-        units.append(_units[name])
+        units[name] = _units[name]
 
     if ln_prior_probs is not None:
         f_['ln_prior_probs'] = ln_prior_probs

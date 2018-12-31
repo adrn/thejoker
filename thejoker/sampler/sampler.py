@@ -195,12 +195,12 @@ class TheJoker:
         # TODO: need to keep track of this elsewhere...
         nonlin_params = ['P', 'M0', 'e', 'omega', 'jitter']
         for k, key in enumerate(nonlin_params):
-            samples[key] = samples_arr[:, k] * prior_units[k]
+            samples[key] = samples_arr[:, k] * prior_units[key]
 
-        samples['K'] = samples_arr[:, k + 1] * prior_units[-1]  # jitter unit
+        samples['K'] = samples_arr[:, k + 1] * prior_units['jitter']
 
         for i in range(self.params.poly_trend):
-            _unit = prior_units[-1] / u.day**i  # HACK: jitter unit per day
+            _unit = prior_units['jitter'] / u.day**i  # HACK: jitter unit per day
             samples['v'+str(i)] = samples_arr[:, k + 2 + i] * _unit
 
         if return_logprobs:
@@ -314,9 +314,9 @@ class TheJoker:
 
         if cache_exists:
             with h5py.File(prior_cache_file, 'r') as f:
-                prior_units = []
+                prior_units = dict()
                 for k in f['samples'].keys():
-                    prior_units.append(u.Unit(f['samples'][k].attrs['unit']))
+                    prior_units[k] = u.Unit(f['samples'][k].attrs['unit'])
 
             result = self._rejection_sample_from_cache(
                 data, n_prior_samples, prior_cache_file, start_idx, seed=seed,
@@ -403,9 +403,9 @@ class TheJoker:
         with tempfile.NamedTemporaryFile(mode='r+') as f:
             if cache_exists:
                 with h5py.File(prior_cache_file) as f:
-                    prior_units = []
+                    prior_units = dict()
                     for k in f['samples'].keys():
-                        prior_units.append(u.Unit(f['samples'][k].attrs['unit']))
+                        prior_units[k] = u.Unit(f['samples'][k].attrs['unit'])
 
             else:
                 prior_cache_file = f.name
