@@ -455,8 +455,8 @@ class TheJoker:
                 raise RuntimeError("Hit maximum number of iterations!")
 
             result = sample_indices_to_full_samples(
-                good_samples_idx, prior_cache_file, data, self.params,
-                pool=self.pool, global_seed=seed,
+                good_samples_idx[:n_requested_samples], prior_cache_file, data,
+                self.params, pool=self.pool, global_seed=seed,
                 return_logprobs=return_logprobs)
 
         return self._unpack_full_samples(result, prior_units, t0=data.t0,
