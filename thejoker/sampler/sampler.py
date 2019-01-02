@@ -263,9 +263,11 @@ class TheJoker:
                 # TODO: also validate keys in cache?
 
             cache_exists = True
+            logger.log(1, "Prior cache file found and validated.")
 
         else:
             cache_exists = False
+            logger.log(1, "Prior cache file not found or invalid.")
 
         return n_prior_samples, cache_exists
 
@@ -400,11 +402,15 @@ class TheJoker:
 
         with tempfile.NamedTemporaryFile(mode='r+') as f:
             if cache_exists:
+                logger.log(1, "Cache file exists at: {0}"
+                           .format(prior_cache_file))
                 with h5py.File(prior_cache_file) as f:
                     prior_units = [u.Unit(uu) for uu in f.attrs['units']]
 
             else:
                 prior_cache_file = f.name
+                logger.log(1, "Cache file not found - creating prior samples "
+                           "and saving them to: {0}".format(prior_cache_file))
 
                 # first do prior sampling, cache to temporary file
                 prior_samples = self.sample_prior(size=n_prior_samples)
