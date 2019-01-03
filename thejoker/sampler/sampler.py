@@ -400,70 +400,76 @@ class TheJoker:
 
         # TODO: it's a little...unclean to always make a tempfile
 
-        with tempfile.NamedTemporaryFile(mode='r+') as f:
-            if cache_exists:
-                logger.log(1, "Cache file exists at: {0}"
-                           .format(prior_cache_file))
-                with h5py.File(prior_cache_file) as f:
-                    prior_units = [u.Unit(uu) for uu in f.attrs['units']]
+        if cache_exists:
+            logger.log(1, "Cache file exists at: {0}"
+                       .format(prior_cache_file))
+            with h5py.File(prior_cache_file) as f:
+                prior_units = [u.Unit(uu) for uu in f.attrs['units']]
+            close_f = False
 
-            else:
-                prior_cache_file = f.name
-                logger.log(1, "Cache file not found - creating prior samples "
-                           "and saving them to: {0}".format(prior_cache_file))
+        else:
+            f = tempfile.NamedTemporaryFile(mode='r+')
+            close_f = True
+            prior_cache_file = f.name
+            logger.log(1, "Cache file not found - creating prior samples "
+                       "and saving them to: {0}".format(prior_cache_file))
 
-                # first do prior sampling, cache to temporary file
-                prior_samples = self.sample_prior(size=n_prior_samples)
-                prior_units = save_prior_samples(f.name, prior_samples,
-                                                 data.rv.unit)
+            # first do prior sampling, cache to temporary file
+            prior_samples = self.sample_prior(size=n_prior_samples)
+            prior_units = save_prior_samples(f.name, prior_samples,
+                                             data.rv.unit)
 
-            maxiter = 128
-            for i in range(maxiter):  # we just need to iterate for a long time
-                logger.log(1, "The Joker iteration {0}, computing {1} "
-                           "likelihoods".format(i, n_process))
-                marg_lls = compute_likelihoods(n_process, prior_cache_file,
-                                               start_idx, data, self.params,
-                                               pool=self.pool,
-                                               n_batches=self.n_batches)
+        maxiter = 128
+        for i in range(maxiter):  # we just need to iterate for a long time
+            logger.log(1, "The Joker iteration {0}, computing {1} "
+                       "likelihoods".format(i, n_process))
+            marg_lls = compute_likelihoods(n_process, prior_cache_file,
+                                           start_idx, data, self.params,
+                                           pool=self.pool,
+                                           n_batches=self.n_batches)
 
-                all_marg_lls = np.concatenate((all_marg_lls, marg_lls))
+            all_marg_lls = np.concatenate((all_marg_lls, marg_lls))
 
-                good_samples_idx = get_good_sample_indices(all_marg_lls,
-                                                           seed=seed)
+            good_samples_idx = get_good_sample_indices(all_marg_lls,
+                                                       seed=seed)
 
-                if len(good_samples_idx) == 0:
-                    # self.pool.close()
-                    raise RuntimeError("Failed to find any good samples!")
+            if len(good_samples_idx) == 0:
+                # self.pool.close()
+                raise RuntimeError("Failed to find any good samples!")
 
-                n_good = len(good_samples_idx)
-                logger.log(1, "{0} good samples after rejection sampling"
-                           .format(n_good))
+            n_good = len(good_samples_idx)
+            logger.log(1, "{0} good samples after rejection sampling"
+                       .format(n_good))
 
-                if len(good_samples_idx) >= n_requested_samples:
-                    logger.debug("Enough samples found! {0}"
-                                 .format(len(good_samples_idx)))
-                    break
+            if len(good_samples_idx) >= n_requested_samples:
+                logger.debug("Enough samples found! {0}"
+                             .format(len(good_samples_idx)))
+                break
 
-                start_idx += n_process
+            start_idx += n_process
 
-                n_ll_evals = len(all_marg_lls)
-                n_need = n_requested_samples - n_good
-                n_process = int(safety_factor * n_need / n_good * n_ll_evals)
+            n_ll_evals = len(all_marg_lls)
+            n_need = n_requested_samples - n_good
+            n_process = int(safety_factor * n_need / n_good * n_ll_evals)
 
-                if start_idx + n_process > n_prior_samples:
-                    n_process = n_prior_samples - start_idx
+            if start_idx + n_process > n_prior_samples:
+                n_process = n_prior_samples - start_idx
 
-                if n_process <= 0:
-                    break
+            if n_process <= 0:
+                break
 
-            else:
-                # We should never get here!!
-                raise RuntimeError("Hit maximum number of iterations!")
+        else:
+            # We should never get here!!
+            raise RuntimeError("Hit maximum number of iterations!")
 
-            result = sample_indices_to_full_samples(
-                good_samples_idx[:n_requested_samples], prior_cache_file, data,
-                self.params, pool=self.pool, global_seed=seed,
-                return_logprobs=return_logprobs)
+        if close_f:
+            logger.log(1, "Closing prior cache tempfile")
+            f.close()
+
+        result = sample_indices_to_full_samples(
+            good_samples_idx[:n_requested_samples], prior_cache_file, data,
+            self.params, pool=self.pool, global_seed=seed,
+            return_logprobs=return_logprobs)
 
         return self._unpack_full_samples(result, prior_units, t0=data.t0,
                                          return_logprobs=return_logprobs)
