@@ -315,7 +315,7 @@ class TheJoker:
             n_prior_samples, prior_cache_file)
 
         if cache_exists:
-            with h5py.File(prior_cache_file) as f:
+            with h5py.File(prior_cache_file, 'r') as f:
                 prior_units = [u.Unit(uu) for uu in f.attrs['units']]
 
             result = self._rejection_sample_from_cache(
@@ -403,7 +403,7 @@ class TheJoker:
         if cache_exists:
             logger.log(1, "Cache file exists at: {0}"
                        .format(prior_cache_file))
-            with h5py.File(prior_cache_file) as f:
+            with h5py.File(prior_cache_file, 'r') as f:
                 prior_units = [u.Unit(uu) for uu in f.attrs['units']]
             close_f = False
 
