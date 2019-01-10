@@ -65,7 +65,7 @@ def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
                           "manually to decrease the number of grid points.",
                           ResourceWarning)
 
-    elif not isinstance(t_grid, Time): # Assume BMJD
+    if not isinstance(t_grid, Time): # Assume BMJD
         t_grid = Time(t_grid, format='mjd', scale='tcb')
 
     # scale the transparency of the lines
