@@ -37,21 +37,37 @@ class JokerSamples(OrderedDict):
 
         # initialize empty dictionary
         super(JokerSamples, self).__init__()
+        self._setup(poly_trend, t0)
 
+        for key, val in kwargs.items():
+            self[key] = val # calls __setitem__ below
+
+    def _setup(self, poly_trend, t0):
         # reference time
         self.t0 = t0
 
         self._size = None
         self._shape = None
-        for key, val in kwargs.items():
-            self[key] = val # calls __setitem__ below
 
         self._cache = dict()
 
         self.poly_trend = int(poly_trend)
         self._trend_names = ['v{0}'.format(i)
                              for i in range(self.poly_trend)]
-        self._valid_keys += self._trend_names
+        for name in self._trend_names:
+            if name not in self._valid_keys:
+                self._valid_keys.append(name)
+
+    def __getstate__(self):
+        return (self.poly_trend, self.t0, dict(self))
+
+    def __setstate__(self, state):
+        poly_trend, t0, data = state
+        self._setup(poly_trend, t0)
+        self.update(data)
+
+    def __reduce__(self):
+        return (JokerSamples, (), self.__getstate__())
 
     def _validate_key(self, key):
         if key not in self._valid_keys:
