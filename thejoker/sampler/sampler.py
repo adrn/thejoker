@@ -42,9 +42,13 @@ class TheJoker:
         ``pool.size``, meaning equal work to each worker. For very large prior
         sample caches, you may need to set this to a larger number (e.g.,
         ``100*pool.size``) to avoid memory issues.
+    tempfile_path : str (optional)
+        Path to create temporary files needed for executing the sampler.
+        Defaults to whatever ``tempfile`` thinks is a good temporary directory.
     """
 
-    def __init__(self, params, pool=None, random_state=None, n_batches=None):
+    def __init__(self, params, pool=None, random_state=None, n_batches=None,
+                 tempfile_path=None):
 
         # set the processing pool
         if pool is None:
@@ -79,6 +83,7 @@ class TheJoker:
         self.params = params
 
         self.n_batches = n_batches
+        self.tempfile_path = tempfile_path
 
     def sample_prior(self, size=1, return_logprobs=False):
         """Generate samples from the prior. Logarithmic in period, uniform in
@@ -323,7 +328,8 @@ class TheJoker:
                 return_logprobs=return_logprobs)
 
         else:
-            with tempfile.NamedTemporaryFile(mode='r+') as f:
+            with tempfile.NamedTemporaryFile(mode='r+',
+                                             dir=self.tempfile_path) as f:
                 prior_cache_file = f.name
 
                 # first do prior sampling, cache to temporary file
@@ -408,7 +414,7 @@ class TheJoker:
             close_f = False
 
         else:
-            f = tempfile.NamedTemporaryFile(mode='r+')
+            f = tempfile.NamedTemporaryFile(mode='r+', dir=self.tempfile_path)
             close_f = True
             prior_cache_file = f.name
             logger.log(1, "Cache file not found - creating prior samples "

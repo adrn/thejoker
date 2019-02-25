@@ -1,3 +1,6 @@
+# Standard library
+from os import path
+
 # Third-party
 import astropy.units as u
 from astropy.tests.helper import quantity_allclose
@@ -47,6 +50,9 @@ class TestSampler(object):
         with pytest.raises(TypeError):
             TheJoker(pars)
 
+        j = TheJoker(self.joker_params['binary'],
+                     tempfile_path=path.abspath('.'))
+
     def test_sample_prior(self):
         rnd = np.random.RandomState(42)
         joker = TheJoker(self.joker_params['binary'], random_state=rnd)
@@ -65,6 +71,16 @@ class TestSampler(object):
             joker.rejection_sample(data)
 
         joker.rejection_sample(data, n_prior_samples=128)
+
+        # Now try specifying the tempfile path
+        data = self.data['binary']
+        joker = TheJoker(self.joker_params['binary'],
+                         random_state=rnd, tempfile_path=path.abspath('.'))
+
+        with pytest.raises(ValueError):
+            joker.rejection_sample(data)
+
+        _ = joker.rejection_sample(data, n_prior_samples=128)
 
         # Now re-run with jitter set, check that it's always the fixed value
         jitter = 5.*u.m/u.s
