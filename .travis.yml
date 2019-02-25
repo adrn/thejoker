@@ -33,8 +33,7 @@ env:
         - MAIN_CMD='python setup.py'
         - SETUP_CMD='test'
         # - PIP_DEPENDENCIES='emcee schwimmbad nbsphinx twobody'
-        # Dev version of twobody!
-        - PIP_DEPENDENCIES='emcee schwimmbad nbsphinx git+https://github.com/adrn/twobody'
+        - PIP_DEPENDENCIES='emcee schwimmbad nbsphinx twobody>=0.4'
         - CONDA_CHANNELS='astropy-ci-extras astropy'
         - CONDA_DEPENDENCIES='cython scipy h5py matplotlib pandoc nbconvert ipykernel'
 
