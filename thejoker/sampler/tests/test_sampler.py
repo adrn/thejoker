@@ -77,9 +77,6 @@ class TestSampler(object):
         joker = TheJoker(self.joker_params['binary'],
                          random_state=rnd, tempfile_path=path.abspath('.'))
 
-        with pytest.raises(ValueError):
-            joker.rejection_sample(data)
-
         _ = joker.rejection_sample(data, n_prior_samples=128)
 
         # Now re-run with jitter set, check that it's always the fixed value
