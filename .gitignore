@@ -30,7 +30,7 @@ docs/*/_*
 .idea
 
 # Packages/installer info
-*.egg
+*.egg*
 *.egg-info
 dist
 build
