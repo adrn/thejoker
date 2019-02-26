@@ -468,14 +468,14 @@ class TheJoker:
             # We should never get here!!
             raise RuntimeError("Hit maximum number of iterations!")
 
-        if close_f:
-            logger.log(1, "Closing prior cache tempfile")
-            f.close()
-
         result = sample_indices_to_full_samples(
             good_samples_idx[:n_requested_samples], prior_cache_file, data,
             self.params, pool=self.pool, global_seed=seed,
             return_logprobs=return_logprobs)
+
+        if close_f:
+            logger.log(1, "Closing prior cache tempfile")
+            f.close()
 
         return self._unpack_full_samples(result, prior_units, t0=data.t0,
                                          return_logprobs=return_logprobs)
