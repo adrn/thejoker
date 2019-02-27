@@ -57,8 +57,7 @@ def design_matrix(nonlinear_p, data, joker_params):
                                joker_params.anomaly_tol,
                                joker_params.anomaly_maxiter)
 
-    # here we only support a constant N=1 velocity trend!
-    A1 = np.vander(t, N=1, increasing=True)
+    A1 = np.vander(t, N=joker_params.poly_trend, increasing=True)
     A = np.hstack((zdot[:, None], A1))
 
     return A
