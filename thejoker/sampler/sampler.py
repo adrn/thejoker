@@ -5,9 +5,9 @@ import time
 
 # Third-party
 import astropy.units as u
+from astropy.utils.misc import isiterable
 import h5py
 import numpy as np
-from scipy.stats import scoreatpercentile
 
 # Project
 from ..log import log as logger
@@ -526,15 +526,18 @@ class TheJoker:
 
         p0_mean = np.squeeze(model.pack_samples(samples0))
 
-        # P, M0, e, omega, jitter, K, v0
+        if not isiterable(ball_scale):
+            ball_scale = np.full(len(p0_mean), ball_scale)
+
+        # P, M0, e, omega, jitter, K, v0, ... etc
         p0 = np.zeros((n_walkers, len(p0_mean)))
         for i in range(p0.shape[1]):
             if i in [2, 4]: # eccentricity, jitter
-                p0[:, i] = np.abs(np.random.normal(p0_mean[i], ball_scale,
+                p0[:, i] = np.abs(np.random.normal(p0_mean[i], ball_scale[i],
                                                    size=n_walkers))
 
             else:
-                p0[:, i] = np.random.normal(p0_mean[i], ball_scale,
+                p0[:, i] = np.random.normal(p0_mean[i], ball_scale[i],
                                             size=n_walkers)
 
         p0 = model.to_mcmc_params(p0.T).T
@@ -563,10 +566,10 @@ class TheJoker:
         logger.debug('...time spent sampling: {0}'.format(time.time()-time0))
 
         acc_frac = sampler.acceptance_fraction
-        if scoreatpercentile(acc_frac, 10) < 0.1:
+        if np.percentile(acc_frac, 10) < 0.1:
             logger.warning('Walkers have low acceptance fractions: 10/50/90 '
                            'percentiles = {0:.2f}, {1:.2f}, {2:.2f}'
-                           .format(*scoreatpercentile(acc_frac, [10, 50, 90])))
+                           .format(*np.percentile(acc_frac, [10, 50, 90])))
 
         samples = model.unpack_samples_mcmc(sampler.chain[:, -1])
         samples.t0 = samples0.t0
