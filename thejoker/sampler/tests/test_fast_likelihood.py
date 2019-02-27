@@ -11,7 +11,7 @@ from .. import JokerParams, TheJoker
 from .helpers import FakeData
 
 
-def test_shit():
+def test_against_py():
     joker_params = JokerParams(P_min=8*u.day, P_max=32768*u.day,
                                jitter=0*u.m/u.s,
                                linear_par_Vinv=np.diag(np.zeros(2)))
