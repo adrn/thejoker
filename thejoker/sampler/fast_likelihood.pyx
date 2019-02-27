@@ -66,8 +66,9 @@ cdef void design_matrix(double P, double phi0, double ecc, double omega,
                        P, 1., ecc, omega, phi0, t0,
                        anomaly_tol, anomaly_maxiter)
 
-    for j in range(n_times):
-        A_T[1, j] = 1.
+    if n_trend > 0: # only needed if we are fitting for a constant trend
+        for j in range(n_times):
+            A_T[1, j] = 1.
 
     if n_trend > 1: # only needed if more than constant trend
         for i in range(1, n_trend):
