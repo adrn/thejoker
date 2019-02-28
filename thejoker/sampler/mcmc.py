@@ -124,8 +124,7 @@ class TheJokerMCMCModel:
         return lnp
 
     def ln_posterior(self, mcmc_p):
-        p = self.unpack_samples(mcmc_p)
-        p = self._strip_units(p)
+        p = self.unpack_samples(mcmc_p, add_units=False)
 
         lnp = self.ln_prior(p)
         if not np.isfinite(lnp):
@@ -168,6 +167,27 @@ class TheJokerMCMCModel:
 
         return new_p
 
+    def _add_units(self, p):
+        """Add units to the input samples from the standard unit system.
+        """
+        new_p = JokerSamples()
+
+        new_p['P'] = p['P'] * self.units['time']
+        new_p['M0'] = p['M0'] * self.units['angle']
+        new_p['e'] = np.asarray(p['e'])
+        new_p['omega'] = p['omega'] * self.units['angle']
+        new_p['K'] = p['K'] * self.units['speed']
+
+        if 'jitter' in p:
+            new_p['jitter'] = p['jitter'] * self.units['speed']
+
+        v_terms = get_vterms(p, self.params.poly_trend)
+        for i, k in enumerate(v_terms.keys()):
+            _unit = self.units['speed'] / self.units['time']**i
+            new_p[k] = p['v'+str(i)] * _unit
+
+        return new_p
+
     def pack_samples(self, p, strip_units=True):
         r"""Pack a dictionary of samples (in Keplerian parameters P, e, K, etc.)
         as Quantity objects into a 2D array of MCMC parameters.
@@ -207,7 +227,7 @@ class TheJokerMCMCModel:
 
         return np.stack(terms)
 
-    def unpack_samples(self, arr):
+    def unpack_samples(self, arr, add_units=True):
         """Unpack a 2D array of samples in standard variables form into a
         dictionary of samples as Quantity objects as Kepler parameters (i.e.
         period, angles, ...).
@@ -240,23 +260,25 @@ class TheJokerMCMCModel:
         K = sqrtK_cos_M0**2 + sqrtK_sin_M0**2
 
         # Load the Keplerian sample values:
-        samples = JokerSamples()
+        samples = dict()
 
-        samples['P'] = np.exp(ln_P) * self.units['time']
-        samples['M0'] = M0 * self.units['angle']
+        samples['P'] = np.exp(ln_P)
+        samples['M0'] = M0
         samples['e'] = e * u.one
-        samples['omega'] = omega * self.units['angle']
-        samples['K'] = K * self.units['speed']
+        samples['omega'] = omega
+        samples['K'] = K
 
         if not self.params._fixed_jitter:
-            samples['jitter'] = arr.T[5] * self.units['speed']
+            samples['jitter'] = arr.T[5]
             k = 1
         else:
-            samples['jitter'] = np.full(len(arr), self._s) * self.units['speed']
+            samples['jitter'] = np.full(len(arr), self._s)
             k = 0
 
         for i in range(self.params.poly_trend):
-            _unit = self.units['speed'] / self.units['time']**i
-            samples['v' + str(i)] = arr.T[5 + k + i] * _unit
+            samples['v' + str(i)] = arr.T[5 + k + i]
+
+        if add_units:
+            samples = self._add_units(samples)
 
         return samples
