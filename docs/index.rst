@@ -142,11 +142,9 @@ More examples / tutorials
     examples/astrometric-orbit.ipynb
     examples/velocity-trends.ipynb
     examples/custom-prior-sampling.ipynb
-    examples/continue-with-mcmc.ipynb
+    examples/continue-with-emcee.ipynb
 
-.. examples/continue-mcmc.ipynb
 .. examples/mpi.rst
-.. examples/caching-samples.ipynb
 
 API
 ===
