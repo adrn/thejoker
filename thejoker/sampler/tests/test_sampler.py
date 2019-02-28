@@ -90,6 +90,12 @@ class TestSampler(object):
         full_samples = joker.rejection_sample(data, n_prior_samples=128)
         assert quantity_allclose(full_samples['jitter'], jitter)
 
+        samples, lnp, lnl = joker.rejection_sample(data,
+                                                   n_prior_samples=128,
+                                                   return_logprobs=True)
+        assert len(lnp) == len(samples)
+        assert len(lnl) == len(samples)
+
     def test_iterative_rejection_sample(self):
 
         # First, try just running rejection_sample()
@@ -102,6 +108,12 @@ class TestSampler(object):
                                                    n_requested_samples=2)
 
         assert quantity_allclose(samples['jitter'], jitter)
+
+        samples, lnp, lnl = joker.iterative_rejection_sample(
+            data, n_prior_samples=100000, n_requested_samples=2,
+            return_logprobs=True)
+        assert len(lnp) == len(samples)
+        assert len(lnl) == len(samples)
 
     def test_mcmc_continue(self):
         rnd = np.random.RandomState(42)
