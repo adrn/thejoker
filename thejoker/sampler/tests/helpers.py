@@ -46,8 +46,18 @@ class FakeData(object):
         err = np.full_like(rv.value, 0.01) * u.km/u.s
         data = RVData(t, rv, stddev=err, t0=EPOCH)
         self.datasets['binary'] = data
-        self.params['binary'] = JokerParams(P_min=8*u.day, P_max=1024*u.day)
+        self.params['binary'] = JokerParams(P_min=8*u.day, P_max=1024*u.day,
+                                            jitter=1*u.km/u.s)
         self.truths['binary'] = truth.copy()
+
+        # Binary with samplin over jitter
+        self.datasets['binary_jitter'] = data
+        self.params['binary_jitter'] = JokerParams(P_min=8*u.day,
+                                                   P_max=1024*u.day,
+                                                   jitter=(9., 2),
+                                                   jitter_unit=u.m/u.s)
+        self.truths['binary_jitter'] = truth.copy()
+        self.truths['binary_jitter']['jitter'] = 0. * u.km/u.s
 
         ######################################################################
         # Binary on circular orbit

@@ -80,6 +80,7 @@ class JokerParams:
         self.anomaly_tol = float(anomaly_tol)
         self.anomaly_maxiter = int(anomaly_maxiter)
 
+        # K, then the linear parameters
         _n_linear = 1 + self.poly_trend
         if linear_par_Vinv is None:
             self.linear_par_Vinv = 1e-10 * np.eye(_n_linear)
