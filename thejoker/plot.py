@@ -53,14 +53,18 @@ def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
         fig = ax.figure
 
     if t_grid is None:
+        if data is None:
+            raise ValueError('If data is not passed in, you must specify '
+                             'the time grid.')
+
         w = np.ptp(data.t.mjd)
-        dt = samples['P'].to(u.day).value.min() / 32
+        dt = samples['P'].to(u.day).value.min() / 128
         t_grid = np.arange(data.t.mjd.min() - w*0.05,
                            data.t.mjd.max() + w*0.05 + dt,
                            dt)
 
-        if len(t_grid) > 1e4:
-            warnings.warn("Time grid has more than 10000 grid points, so "
+        if len(t_grid) > 1e5:
+            warnings.warn("Time grid has more than 100,000 grid points, so "
                           "plotting orbits could be very slow! Set 't_grid' "
                           "manually to decrease the number of grid points.",
                           ResourceWarning)
@@ -107,7 +111,8 @@ def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
         if data_style['rv_unit'] != rv_unit:
             raise u.UnitsError("Data plot units don't match rv_unit!")
 
-        data.plot(ax=ax, relative_to_t0=relative_to_t0, **data_style)
+        data.plot(ax=ax, relative_to_t0=relative_to_t0, add_labels=False,
+                  **data_style)
 
         _rv = data.rv.to(rv_unit).value
         drv = _rv.max() - _rv.min()

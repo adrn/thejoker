@@ -162,7 +162,7 @@ class RVData:
     # ---
 
     def plot(self, ax=None, rv_unit=None, time_format='mjd', phase_fold=None,
-             relative_to_t0=False, **kwargs):
+             relative_to_t0=False, add_labels=True, **kwargs):
         """
         Plot the data points.
 
@@ -185,6 +185,8 @@ class RVData:
             period.
         relative_to_t0 : bool (optional)
             Plot the time relative to the reference epoch, ``t0``.
+        add_labels : bool (optional)
+            Add labels to the figure.
         **kwargs
             All other keyword arguments are passed to the
             `~matplotlib.pyplot.errorbar` (if errors were provided) or
@@ -228,6 +230,10 @@ class RVData:
             style.pop('ecolor')
             style.pop('elinewidth')
             ax.plot(t, self.rv.to(rv_unit).value, **style)
+
+        if add_labels:
+            ax.set_xlabel('time [BMJD]')
+            ax.set_ylabel('RV [{:latex_inline}]'.format(rv_unit))
 
         return ax
 
