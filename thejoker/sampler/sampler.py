@@ -209,7 +209,7 @@ class TheJoker:
             samples['v'+str(i)] = samples_arr[:, k + 2 + i] * _unit
 
         if return_logprobs:
-            return samples, ln_prior
+            return samples, ln_prior, ln_like
 
         else:
             return samples
@@ -333,10 +333,12 @@ class TheJoker:
                 prior_cache_file = f.name
 
                 # first do prior sampling, cache to temporary file
-                prior_samples = self.sample_prior(size=n_prior_samples)
+                prior_samples, lnp = self.sample_prior(size=n_prior_samples,
+                                                       return_logprobs=True)
                 prior_units = save_prior_samples(prior_cache_file,
                                                  prior_samples,
-                                                 data.rv.unit)
+                                                 data.rv.unit,
+                                                 ln_prior_probs=lnp)
 
                 result = self._rejection_sample_from_cache(
                     data, n_prior_samples, prior_cache_file, start_idx,
@@ -421,9 +423,11 @@ class TheJoker:
                        "and saving them to: {0}".format(prior_cache_file))
 
             # first do prior sampling, cache to temporary file
-            prior_samples = self.sample_prior(size=n_prior_samples)
+            prior_samples, lnp = self.sample_prior(size=n_prior_samples,
+                                                   return_logprobs=True)
             prior_units = save_prior_samples(f.name, prior_samples,
-                                             data.rv.unit)
+                                             data.rv.unit,
+                                             ln_prior_probs=lnp)
 
         maxiter = 128
         for i in range(maxiter):  # we just need to iterate for a long time
