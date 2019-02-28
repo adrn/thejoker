@@ -140,7 +140,9 @@ More examples / tutorials
 
     examples/multiproc-example.ipynb
     examples/astrometric-orbit.ipynb
-..    examples/velocity-trend.ipynb
+    examples/velocity-trends.ipynb
+    examples/custom-prior-sampling.ipynb
+    examples/continue-with-mcmc.ipynb
 
 .. examples/continue-mcmc.ipynb
 .. examples/mpi.rst
