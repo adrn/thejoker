@@ -1,3 +1,7 @@
+"""
+NOTE: this is only used for testing the cython / c implementation.
+"""
+
 # Third-party
 import numpy as np
 from twobody.wrap import cy_rv_from_elements
@@ -53,7 +57,7 @@ def design_matrix(nonlinear_p, data, joker_params):
                                joker_params.anomaly_tol,
                                joker_params.anomaly_maxiter)
 
-    # TODO: right now, we only support a constant N=1 velocity trend!
+    # here we only support a constant N=1 velocity trend!
     A1 = np.vander(t, N=1, increasing=True)
     A = np.hstack((zdot[:, None], A1))
 
