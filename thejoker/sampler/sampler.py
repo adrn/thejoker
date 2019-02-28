@@ -522,32 +522,22 @@ class TheJoker:
         model = TheJokerMCMCModel(joker_params=self.params, data=data)
 
         if len(samples0) > 1:
-            samples0 = samples0.mean()
+            # samples0 = samples0.median()
+            samples0 = samples0[0] # TODO:
+        t0 = samples0.t0
 
-        p0_mean = np.squeeze(model.pack_samples(samples0))
+        samples0 = model._strip_units(samples0)
+        all_samples0 = dict()
+        for i, k in enumerate(samples0.keys()):
+            all_samples0[k] = np.random.normal(samples0[k], ball_scale,
+                                               size=n_walkers)
 
-        if not isiterable(ball_scale):
-            ball_scale = np.full(len(p0_mean), ball_scale)
+            if k in ['e', 'K', 'jitter']:
+                all_samples0[k] = np.abs(all_samples0[k])
 
-        # P, M0, e, omega, jitter, K, v0, ... etc
-        p0 = np.zeros((n_walkers, len(p0_mean)))
-        for i in range(p0.shape[1]):
-            if i in [2, 4]: # eccentricity, jitter
-                p0[:, i] = np.abs(np.random.normal(p0_mean[i], ball_scale[i],
-                                                   size=n_walkers))
-
-            else:
-                p0[:, i] = np.random.normal(p0_mean[i], ball_scale[i],
-                                            size=n_walkers)
-
-        p0 = model.to_mcmc_params(p0.T).T
-
-        # Because jitter is always carried through in the transform above, now
-        # we have to remove the jitter parameter if it's fixed!
-        if self.params._fixed_jitter:
-            p0 = np.delete(p0, 5, axis=1)
-
+        p0 = np.squeeze(model.pack_samples(all_samples0, strip_units=False)).T
         n_dim = p0.shape[1]
+
         sampler = emcee.EnsembleSampler(n_walkers, n_dim, model,
                                         pool=self.pool)
 
@@ -571,8 +561,8 @@ class TheJoker:
                            'percentiles = {0:.2f}, {1:.2f}, {2:.2f}'
                            .format(*np.percentile(acc_frac, [10, 50, 90])))
 
-        samples = model.unpack_samples_mcmc(sampler.chain[:, -1])
-        samples.t0 = samples0.t0
+        samples = model.unpack_samples(sampler.chain[:, -1])
+        samples.t0 = t0
 
         if return_sampler:
             return model, samples, sampler
