@@ -68,7 +68,7 @@ matrix:
         # Check for sphinx doc build warnings - we do this first because it
         # may run for a long time
         - os: linux
-          env: SETUP_CMD='build_docs -w'
+          env: SETUP_CMD='install build_docs -w'
 
         # Now try Astropy dev vesions with the latest 3.x
         - os: linux
