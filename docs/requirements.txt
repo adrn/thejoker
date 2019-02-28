@@ -1,0 +1,15 @@
+numpy
+matplotlib
+astropy-helpers
+astropy
+scipy
+h5py
+sphinx
+nbconvert
+ipykernel
+cython
+schwimmbad
+emcee
+nbsphinx
+twobody
+sphinx_astropy
