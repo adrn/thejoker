@@ -17,6 +17,18 @@ Authors
 - **David W. Hogg** (NYU, MPIA, & Flatiron)
 - **Dan Foreman-Mackey** (UW)
 
+Installation
+------------
+
+To install the latest stable release, use `pip`:
+
+    pip install thejoker
+
+To install the development version:
+
+    pip install twobody
+    pip install git+https://github.com/adrn/thejoker
+
 Attribution
 -----------
 
@@ -27,40 +39,9 @@ Attribution
 .. image:: https://zenodo.org/badge/67356932.svg
         :target: https://zenodo.org/badge/latestdoi/67356932
 
-If you make use of this code, please cite both the paper describing the method,
-and the Zenodo DOI |DOI| as a software citation::
-
-    @misc{Price-Whelan:2017a,
-      author       = {Adrian Price-Whelan and
-                      David W. Hogg},
-      title        = {adrn/thejoker: Release v0.1},
-      month        = jan,
-      year         = 2017,
-      doi          = {10.5281/zenodo.264481},
-      url          = {https://doi.org/10.5281/zenodo.264481}
-    }
-
-    @ARTICLE{Price-Whelan:2017b,
-       author = {{Price-Whelan}, A.~M. and {Hogg}, D.~W. and
-                 {Foreman-Mackey}, D. and {Rix}, H.-W.},
-        title = "{The Joker: A Custom Monte Carlo Sampler for Binary-star and
-                  Exoplanet Radial Velocity Data}",
-        journal = {\apj},
-        archivePrefix = "arXiv",
-        eprint = {1610.07602},
-        primaryClass = "astro-ph.SR",
-        keywords = {binaries: spectroscopic, methods: data analysis,
-                    methods: statistical, planets and satellites: fundamental
-                    parameters, surveys, techniques: radial velocities},
-        year = 2017,
-        month = mar,
-        volume = 837,
-        eid = {20},
-        pages = {20},
-        doi = {10.3847/1538-4357/aa5e50},
-        adsurl = {http://adsabs.harvard.edu/abs/2017ApJ...837...20P},
-        adsnote = {Provided by the SAO/NASA Astrophysics Data System}
-    }
+If you make use of this code, please cite the paper describing the method:
+`Price-Whelan et al. 2017
+<https://ui.adsabs.harvard.edu/#abs/2017ApJ...837...20P/abstract>`_
 
 Documentation
 -------------
