@@ -20,11 +20,11 @@ Authors
 Installation
 ------------
 
-To install the latest stable release, use `pip`:
+To install the latest stable release, use `pip`::
 
     pip install thejoker
 
-To install the development version:
+To install the development version::
 
     pip install twobody
     pip install git+https://github.com/adrn/thejoker
