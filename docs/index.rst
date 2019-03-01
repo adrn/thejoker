@@ -22,15 +22,9 @@ data.
     :maxdepth: 1
 
     install
+    whats-new
     random-numbers
     faq
-    update-0.2
-
-.. note::
-
-    The Joker was recently updated with some API-breaking changes. To see a list
-    of these changes, and a guide on how to migrate to the new version, please
-    see :ref:`update-0.2-guide`.
 
 Getting started
 ===============
@@ -56,8 +50,6 @@ these data into a `~thejoker.data.RVData` object:
     >>> data = RVData(t=t, rv=rv, stddev=err)
     >>> ax = data.plot() # doctest: +SKIP
     >>> ax.set_xlim(-10, 200) # doctest: +SKIP
-    >>> ax.set_xlabel("Time [day]") # doctest: +SKIP
-    >>> ax.set_ylabel("RV [km/s]") # doctest: +SKIP
 
 .. plot::
     :align: center
@@ -73,8 +65,6 @@ these data into a `~thejoker.data.RVData` object:
     data = RVData(t=t, rv=rv, stddev=err)
     ax = data.plot() # doctest: +SKIP
     ax.set_xlim(-10, 200)
-    ax.set_xlabel("Time [day]")
-    ax.set_ylabel("RV [km/s]")
 
 We next need to specify some hyper-parameters for |thejoker|. At minimum, we
 have to specify the minimum and maximum period to consider:
@@ -131,6 +121,7 @@ below to see how these were made):
     plot_rv_curves(samples, t_grid, rv_unit=u.km/u.s, data=data, ax=ax,
                    plot_kwargs=dict(color='#888888'))
     ax.set_xlim(-5, 205)
+
 
 More examples / tutorials
 =========================
