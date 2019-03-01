@@ -26,3 +26,6 @@ def get_extensions():
     exts.append(Extension('thejoker.sampler.fast_likelihood', **cfg))
 
     return exts
+
+def get_package_data():
+    return {'thejoker.sampler': ['fast_likelihood.pyx']}
