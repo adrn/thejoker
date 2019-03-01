@@ -58,7 +58,7 @@ def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
                              'the time grid.')
 
         w = np.ptp(data.t.mjd)
-        dt = samples['P'].to(u.day).value.min() / 128
+        dt = samples['P'].to(u.day).value.min() / 64
         t_grid = np.arange(data.t.mjd.min() - w*0.05,
                            data.t.mjd.max() + w*0.05 + dt,
                            dt)
