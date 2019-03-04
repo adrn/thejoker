@@ -9,7 +9,7 @@ nbconvert
 ipykernel
 cython
 schwimmbad
-emcee
+emcee==2.2.1
 corner
 nbsphinx
 twobody
