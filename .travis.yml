@@ -53,8 +53,8 @@ matrix:
 
     include:
         # Try MacOS X
-        - os: osx
-          env: SETUP_CMD='test'
+        # - os: osx
+        #   env: SETUP_CMD='test'
 
         # Python 3.7
         - os: linux
