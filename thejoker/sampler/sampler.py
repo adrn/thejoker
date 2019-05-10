@@ -349,7 +349,8 @@ class TheJoker:
 
     def iterative_rejection_sample(self, data, n_requested_samples,
                                    prior_cache_file=None, n_prior_samples=None,
-                                   return_logprobs=False, magic_fudge=128):
+                                   return_logprobs=False, init_n_process=None,
+                                   magic_fudge=128):
         """This is an experimental sampling method that adaptively generates
         posterior samples given a large library of prior samples. The advantage
         of this function over the standard ``rejection_sample`` method is that
@@ -369,6 +370,9 @@ class TheJoker:
             The maximum number of prior samples to use.
         return_logprobs : bool (optional)
             Also return the log-probabilities.
+        init_n_process : int (optional)
+            The initial batch size of likelihoods to compute, before growing
+            the batches using the multiplicative ``magic_fudge`` factor.
         magic_fudge : int (optional)
             A magic fudge factor to use when adaptively determining the number
             of prior samples to evaluate at. Larger numbers make the trial
@@ -395,7 +399,10 @@ class TheJoker:
         # There are some magic numbers below used to control how fast the
         # iterative batches grow in size
         safety_factor = 2  # MAGIC NUMBER
-        n_process = magic_fudge * n_requested_samples  # MAGIC NUMBER
+        if init_n_process is None:
+            n_process = magic_fudge * n_requested_samples  # MAGIC NUMBER
+        else:
+            n_process = init_n_process
 
         if n_process > n_prior_samples:
             raise ValueError("Prior sample library not big enough! For "
@@ -429,7 +436,7 @@ class TheJoker:
                                              data.rv.unit,
                                              ln_prior_probs=lnp)
 
-        maxiter = 128
+        maxiter = 128 # MAGIC NUMBER
         for i in range(maxiter):  # we just need to iterate for a long time
             logger.log(1, "The Joker iteration {0}, computing {1} "
                        "likelihoods".format(i, n_process))
