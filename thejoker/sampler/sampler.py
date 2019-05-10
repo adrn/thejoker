@@ -398,7 +398,8 @@ class TheJoker:
 
         # There are some magic numbers below used to control how fast the
         # iterative batches grow in size
-        safety_factor = 2  # MAGIC NUMBER
+        maxiter = 128 # MAGIC NUMBER
+        safety_factor = 4  # MAGIC NUMBER
         if init_n_process is None:
             n_process = magic_fudge * n_requested_samples  # MAGIC NUMBER
         else:
@@ -436,7 +437,6 @@ class TheJoker:
                                              data.rv.unit,
                                              ln_prior_probs=lnp)
 
-        maxiter = 128 # MAGIC NUMBER
         for i in range(maxiter):  # we just need to iterate for a long time
             logger.log(1, "The Joker iteration {0}, computing {1} "
                        "likelihoods".format(i, n_process))

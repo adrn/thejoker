@@ -199,11 +199,11 @@ def _sample_vector_worker(task):
     if global_seed is not None:
         seed = global_seed + chunk_index
         rnd = np.random.RandomState(seed)
-        log.debug("worker with chunk {} has seed {}".format(idx[0], seed))
+        log.log(0, "worker with chunk {} has seed {}".format(idx[0], seed))
 
     else:
         rnd = np.random.RandomState()
-        log.debug("worker with chunk {} not seeded".format(idx[0]))
+        log.log(0, "worker with chunk {} not seeded".format(idx[0]))
 
     # read a chunk of the prior samples
     with h5py.File(prior_cache_file, 'r') as f:
