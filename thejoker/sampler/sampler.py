@@ -5,7 +5,6 @@ import time
 
 # Third-party
 import astropy.units as u
-from astropy.utils.misc import isiterable
 import h5py
 import numpy as np
 
@@ -19,6 +18,8 @@ from .multiproc_helpers import (get_good_sample_indices, compute_likelihoods,
 from .io import save_prior_samples
 from .samples import JokerSamples
 from .mcmc import TheJokerMCMCModel
+from .fast_likelihood import (batch_marginal_ln_likelihood,
+                              batch_get_posterior_samples)
 
 __all__ = ['TheJoker']
 
@@ -347,10 +348,12 @@ class TheJoker:
         return self._unpack_full_samples(result, prior_units, t0=data.t0,
                                          return_logprobs=return_logprobs)
 
-    def iterative_rejection_sample(self, data, n_requested_samples,
-                                   prior_cache_file=None, n_prior_samples=None,
-                                   return_logprobs=False, init_n_process=None,
-                                   magic_fudge=128):
+    def iterative_rejection_sample_from_cache(self, data, n_requested_samples,
+                                              prior_cache_file=None,
+                                              n_prior_samples=None,
+                                              return_logprobs=False,
+                                              init_n_process=None,
+                                              magic_fudge=128):
         """This is an experimental sampling method that adaptively generates
         posterior samples given a large library of prior samples. The advantage
         of this function over the standard ``rejection_sample`` method is that
@@ -490,6 +493,131 @@ class TheJoker:
 
         return self._unpack_full_samples(result, prior_units, t0=data.t0,
                                          return_logprobs=return_logprobs)
+
+    def iterative_rejection_sample(self, data, n_requested_samples,
+                                   prior_samples, prior_units, ln_prior_probs,
+                                   return_logprobs=False,
+                                   init_n_process=None, magic_fudge=128):
+        """This is an experimental sampling method that adaptively generates
+        posterior samples given a large library of prior samples. The advantage
+        of this function over the standard ``rejection_sample`` method is that
+        it will try to adaptively figure out how many prior samples it needs to
+        evaluate the likelihood at in order to return the desired number of
+        posterior samples.
+
+        Parameters
+        ----------
+        data : `~thejoker.data.RVData`
+            The radial velocity data.
+        n_requested_samples : int
+            The number of posterior samples desired.
+        prior_samples : `~thejoker.JokerSamples`
+            The prior samples to run the sampler on.
+        return_logprobs : bool (optional)
+            Also return the log-likelihood values. Unlike other methods, this
+            does not return the log-prior values.
+        init_n_process : int (optional)
+            The initial batch size of likelihoods to compute, before growing
+            the batches using the multiplicative ``magic_fudge`` factor.
+        magic_fudge : int (optional)
+            A magic fudge factor to use when adaptively determining the number
+            of prior samples to evaluate at. Larger numbers make the trial
+            batches larger more rapidly.
+        """
+
+        # validate input data
+        if not isinstance(data, RVData):
+            raise TypeError("Input data must be an RVData instance, not '{}'"
+                            .format(type(data)))
+
+        # a bit of a hack to make the K, v0 samples deterministic
+        if self._rnd_passed:
+            seed = self.random_state.randint(np.random.randint(2**16))
+        else:
+            seed = None
+
+        # HACK: must start from 0
+        start_idx = 0
+
+        # There are some magic numbers below used to control how fast the
+        # iterative batches grow in size
+        maxiter = 128 # MAGIC NUMBER
+        safety_factor = 4  # MAGIC NUMBER
+        if init_n_process is None:
+            n_process = magic_fudge * n_requested_samples  # MAGIC NUMBER
+        else:
+            n_process = init_n_process
+
+        n_prior_samples = len(prior_samples)
+        if n_process > n_prior_samples:
+            raise ValueError("Prior sample library not big enough! For "
+                             "iterative sampling, you have to have at least "
+                             "magic_fudge * n_requested_samples samples in the "
+                             "prior samples cache file. You have {0}"
+                             .format(n_prior_samples))
+
+        all_marg_lls = np.array([])
+
+        for i in range(maxiter):  # we just need to iterate for a long time
+            logger.log(1, "The Joker iteration {0}, computing {1} "
+                       "likelihoods".format(i, n_process))
+
+            end_idx = start_idx + n_process
+            marg_lls = batch_marginal_ln_likelihood(
+                prior_samples[start_idx:end_idx].astype('f8'),
+                data, self.params)
+
+            all_marg_lls = np.concatenate((all_marg_lls, marg_lls))
+
+            good_samples_idx = get_good_sample_indices(all_marg_lls,
+                                                       seed=seed)
+
+            if len(good_samples_idx) == 0:
+                # self.pool.close()
+                raise RuntimeError("Failed to find any good samples!")
+
+            n_good = len(good_samples_idx)
+            logger.log(1, "{0} good samples after rejection sampling"
+                       .format(n_good))
+
+            if len(good_samples_idx) >= n_requested_samples:
+                logger.debug("Enough samples found! {0}"
+                             .format(len(good_samples_idx)))
+                break
+
+            start_idx = end_idx
+
+            n_ll_evals = len(all_marg_lls)
+            n_need = n_requested_samples - n_good
+            n_process = int(safety_factor * n_need / n_good * n_ll_evals)
+
+            if start_idx + n_process > n_prior_samples:
+                n_process = n_prior_samples - start_idx
+
+            if n_process <= 0:
+                break
+
+        else:
+            # We should never get here!!
+            raise RuntimeError("Hit maximum number of iterations!")
+
+        idx = good_samples_idx[:n_requested_samples]
+        pars = batch_get_posterior_samples(prior_samples[idx], data,
+                                           self.params, self.random_state,
+                                           return_logprobs)
+
+        if return_logprobs:
+            samples = self._unpack_full_samples(pars[:, :-1], prior_units,
+                                                t0=data.t0,
+                                                return_logprobs=False)
+            ln_like = pars[:, -1:]
+            ln_prior = ln_prior_probs[idx]
+            return samples, ln_prior, ln_like
+
+        else:
+            samples = self._unpack_full_samples(pars, prior_units, t0=data.t0,
+                                                return_logprobs=False)
+            return samples
 
     # ========================================================================
     # MCMC
