@@ -94,6 +94,8 @@ def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
     for i in range(n_plot):
         orbit = samples.get_orbit(i)
         model_rv[i] = orbit.radial_velocity(t_grid).to(rv_unit).value
+    model_ylim = (np.percentile(model_rv.min(axis=1), 5),
+                  np.percentile(model_rv.max(axis=1), 95))
 
     bmjd = t_grid.tcb.mjd
     if relative_to_t0:
@@ -116,12 +118,18 @@ def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
 
         _rv = data.rv.to(rv_unit).value
         drv = _rv.max() - _rv.min()
-        ax.set_ylim(_rv.min() - 0.2*drv, _rv.max() + 0.2*drv)
+        data_ylim = (_rv.min() - 0.2*drv, _rv.max() + 0.2*drv)
+    else:
+        data_ylim = None
 
     ax.set_xlim(bmjd.min(), bmjd.max())
     if add_labels:
         ax.set_xlabel('BMJD')
         ax.set_ylabel('RV [{}]'
                       .format(rv_unit.to_string(format='latex_inline')))
+
+    # TODO: should we ever set the limits based on the data?
+    ylim = model_ylim
+    ax.set_ylim(ylim)
 
     return fig
