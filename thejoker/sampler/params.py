@@ -119,139 +119,17 @@ class JokerParams:
     @property
     def num_params(self):
         n = len(self.default_params)
+
+        if self._fixed_jitter:
+            n -= 1
+
         return n
 
-    # --- All old shit below here that needs to be moved ---
+    @property
+    def num_params_marginalized(self):
+        n = 5
 
-    # @classmethod
-    # def get_labels(cls, units=None):
-    #     _u = dict()
-    #     if units is None:
-    #         _u = cls._name_to_unit
+        if self._fixed_jitter:
+            n -= 1
 
-    #     else:
-    #         for k,unit in cls._name_to_unit.items():
-    #             if k in units:
-    #                 _u[k] = units[k]
-    #             else:
-    #                 _u[k] = unit
-
-    #     _labels = [
-    #         r'$\ln (P/1\,${}$)$'.format(_u['P'].long_names[0]),
-    #         '$e$',
-    #         r'$\omega$ [{}]'.format(_u['omega']),
-    #         r'$\phi_0$ [{}]'.format(_u['omega']),
-    #         r'$\ln (s/1\,${}$)$'.format(_u['jitter'].to_string(format='latex_inline')),
-    #         r'$K$ [{}]'.format(_u['K'].to_string(format='latex_inline')),
-    #         '$v_0$ [{}]'.format(_u['v0'].to_string(format='latex_inline'))
-    #     ]
-
-    #     return _labels
-
-    # @classmethod
-    # def from_hdf5(cls, f):
-    #     kwargs = dict()
-    #     if isinstance(f, six.string_types):
-    #         with h5py.File(f, 'r') as g:
-    #             for key in cls._name_to_unit.keys():
-    #                 kwargs[key] = quantity_from_hdf5(g, key)
-
-    #     else:
-    #         for key in cls._name_to_unit.keys():
-    #             kwargs[key] = quantity_from_hdf5(f, key)
-
-    #     return cls(**kwargs)
-
-    # def to_hdf5(self, f):
-    #     if isinstance(f, six.string_types):
-    #         with h5py.File(f, 'a') as g:
-    #             for key in self._name_to_unit.keys():
-    #                 quantity_to_hdf5(g, key, getattr(self, key))
-
-    #     else:
-    #         for key in self._name_to_unit.keys():
-    #             quantity_to_hdf5(f, key, getattr(self, key))
-
-    # def pack(self, units=None, plot_transform=False):
-    #     """
-    #     Pack the orbital parameters into a single array structure
-    #     without associated units. The components will have units taken
-    #     from the unit system defined in `thejoker.units.usys`.
-
-    #     Parameters
-    #     ----------
-    #     units : dict (optional)
-    #     plot_transform : bool (optional)
-
-    #     Returns
-    #     -------
-    #     pars : `numpy.ndarray`
-    #         A single 2D array containing the parameter values with no
-    #         units. Will have shape ``(n,6)``.
-
-    #     """
-    #     if units is None:
-    #         all_samples = np.vstack([getattr(self, "_{}".format(key))
-    #                                  for key in self._name_to_unit.keys()]).T
-
-    #     else:
-    #         all_samples = np.vstack([getattr(self, format(key)).to(units[key]).value
-    #                                  for key in self._name_to_unit.keys()]).T
-
-    #     if plot_transform:
-    #         # ln P in plots:
-    #         idx = list(self._name_to_unit.keys()).index('P')
-    #         all_samples[:,idx] = np.log(all_samples[:,idx])
-
-    #         # ln s in plots:
-    #         idx = list(self._name_to_unit.keys()).index('jitter')
-    #         all_samples[:,idx] = np.log(all_samples[:,idx])
-
-    #     return all_samples
-
-    # @classmethod
-    # def unpack(cls, pars):
-    #     """
-    #     Unpack a 2D array structure containing the orbital parameters
-    #     without associated units. Should have shape ``(n,6)`` where ``n``
-    #     is the number of parameters.
-
-    #     Returns
-    #     -------
-    #     p : `~thejoker.celestialmechanics.OrbitalParams`
-
-    #     """
-    #     kw = dict()
-    #     par_arr = np.atleast_2d(pars).T
-    #     for i,key in enumerate(cls._name_to_unit.keys()):
-    #         kw[key] = par_arr[i] * cls._name_to_unit[key]
-
-    #     return cls(**kw)
-
-    # def copy(self):
-    #     return self.__copy__()
-
-    # def rv_orbit(self, index=None):
-    #     """
-    #     Get a `~thejoker.celestialmechanics.SimulatedRVOrbit` instance
-    #     for the orbital parameters with index ``i``.
-
-    #     Parameters
-    #     ----------
-    #     index : int (optional)
-
-    #     Returns
-    #     -------
-    #     orbit : `~thejoker.celestialmechanics.SimulatedRVOrbit`
-    #     """
-    #     from .celestialmechanics_class import SimulatedRVOrbit
-
-    #     if index is None and len(self._P) == 1: # OK
-    #         index = 0
-
-    #     elif index is None and len(self._P) > 1:
-    #         raise IndexError("You must specify the index of the set of paramters to get an "
-    #                          "orbit for!")
-
-    #     i = index
-    #     return SimulatedRVOrbit(self[i])
+        return n
