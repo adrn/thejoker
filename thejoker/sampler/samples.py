@@ -5,6 +5,7 @@ import warnings
 
 # Third-party
 import astropy.units as u
+from astropy.table import Table
 from astropy.time import Time
 import numpy as np
 from twobody import KeplerOrbit, PolynomialRVTrend
@@ -40,7 +41,7 @@ class JokerSamples(OrderedDict):
         self._setup(poly_trend, t0)
 
         for key, val in kwargs.items():
-            self[key] = val # calls __setitem__ below
+            self[key] = val  # calls __setitem__ below
 
     def _setup(self, poly_trend, t0):
         # reference time
@@ -88,8 +89,8 @@ class JokerSamples(OrderedDict):
 
         else:
             new = copy.copy(self)
-            new._size = None # reset number of samples
-            new._shape = None # reset number of samples
+            new._size = None  # reset number of samples
+            new._shape = None  # reset number of samples
 
             for k in self.keys():
                 new[k] = self[k][slc]
@@ -168,6 +169,50 @@ class JokerSamples(OrderedDict):
 
         if self.t0 is not None:
             f.attrs['t0_bmjd'] = self.t0.tcb.mjd
+
+    @classmethod
+    def from_table(cls, tbl_or_f):
+        """Read a samples object from an Astropy table.
+
+        Parameters
+        ----------
+        tbl_or_f : `~astropy.table.Table`, str
+            Either a table instance or a string filename to be read with
+            `astropy.table.Table.read()`.
+        """
+        if isinstance(tbl_or_f, str):
+            tbl_or_f = Table.read(tbl_or_f)
+
+        kwargs = dict()
+        kwargs['poly_trend'] = tbl_or_f.meta.get('poly_trend', 1)
+        if 't0_bmjd'.upper() in tbl_or_f.meta:
+            kwargs['t0'] = Time(tbl_or_f.meta['t0_bmjd'.upper()], format='mjd',
+                                scale='tcb')
+
+        samples = cls(**kwargs)
+        for key in cls._valid_keys:
+            if key in tbl_or_f.colnames:
+                samples[key] = u.Quantity(tbl_or_f[key])
+
+        return samples
+
+    def to_table(self):
+        """Convert the samples to an Astropy table object.
+
+        Returns
+        -------
+        tbl : `~astropy.table.Table`
+        """
+        tbl = Table()
+        for k in self.keys():
+            tbl[k] = self[k]
+
+        tbl.meta['poly_trend'] = self.poly_trend
+
+        if self.t0 is not None:
+            tbl.meta['t0_bmjd'] = self.t0.tcb.mjd
+
+        return tbl
 
     ##########################################################################
     # Interaction with TwoBody

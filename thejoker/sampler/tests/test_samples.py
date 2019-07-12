@@ -116,3 +116,38 @@ def test_apply_methods():
     # try just executing others:
     new_samples = samples.median()
     new_samples = samples.std()
+
+
+@pytest.mark.parametrize("t0,poly_trend",
+                         [(None, 1),
+                          (None, 3),
+                          (Time('J2015.5'), 1),
+                          (Time('J2015.5'), 3)])
+def test_table(tmp_path, t0, poly_trend):
+    N = 16
+    samples = JokerSamples(t0=t0, poly_trend=poly_trend)
+    samples['P'] = np.random.uniform(800, 1000, size=N)*u.day
+    samples['M0'] = 2*np.pi*np.random.random(size=N)*u.radian
+    samples['e'] = np.random.random(size=N)
+    samples['omega'] = 2*np.pi*np.random.random(size=N)*u.radian
+    samples['K'] = 100 * np.random.normal(size=N) * u.km/u.s
+    samples['v0'] = np.random.uniform(0, 10, size=N) * u.km/u.s
+
+    if poly_trend > 1:
+        samples['v1'] = np.random.uniform(0, 1, size=N) * u.km/u.s/u.day
+        samples['v2'] = np.random.uniform(0, 1e-2, size=N) * u.km/u.s/u.day**2
+
+    d = tmp_path / "table"
+    d.mkdir()
+    path = str(d / "t_{t0}_{pt}.fits".format(t0=str(t0), pt=poly_trend))
+
+    tbl = samples.to_table()
+    tbl.write(path)
+
+    samples2 = JokerSamples.from_table(path)
+    assert samples2.poly_trend == samples.poly_trend
+    if t0 is not None:
+        assert np.allclose(samples2.t0.mjd, samples.t0.mjd)
+
+    for k in samples.keys():
+        assert u.allclose(samples2[k], samples[k])
