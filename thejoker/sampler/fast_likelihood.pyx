@@ -402,13 +402,14 @@ cpdef batch_get_posterior_samples(double[:,::1] chunk,
         pars[n, 1] = chunk[n, 1] # M0
         pars[n, 2] = chunk[n, 2] # e
         pars[n, 3] = chunk[n, 3] # omega
+        # TODO: fix this
         pars[n, 4] = chunk[n, 4] # jitter
 
         design_matrix(chunk[n, 0], chunk[n, 1], chunk[n, 2], chunk[n, 3],
                       t, t0, A_T, n_poly)
 
         # jitter must be in same units as the data RV's / ivar!
-        get_ivar(ivar, chunk[n, 4], jitter_ivar)
+        get_ivar(ivar, chunk[n, 4], jitter_ivar) # TODO: fix this
 
         # compute things needed for the ln(likelihood)
         ll = tensor_vector_scalar(A_T, jitter_ivar, rv, Lambda,
@@ -424,9 +425,9 @@ cpdef batch_get_posterior_samples(double[:,::1] chunk,
 
         pars[n, 5] = K
         for j in range(n_poly):
-            pars[n, 6+j] = linear_pars[1+j]
+            pars[n, 6+j] = linear_pars[1+j] # TODO: fix this
 
         if return_logprobs:
-            pars[n, 6+n_poly] = ll
+            pars[n, 6+n_poly] = ll # TODO: fix this
 
     return np.array(pars)
