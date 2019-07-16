@@ -198,7 +198,11 @@ class TheJoker:
         samples = JokerSamples(t0=t0, poly_trend=self.params.poly_trend)
 
         # TODO: need to keep track of this elsewhere...
-        nonlin_params = ['P', 'M0', 'e', 'omega', 'jitter']
+        nonlin_params = ['P', 'M0', 'e', 'omega']
+
+        if not self.params._fixed_jitter:
+            nonlin_params.append('jitter')
+
         for k, key in enumerate(nonlin_params):
             samples[key] = samples_arr[:, k] * prior_units[k]
 
