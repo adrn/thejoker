@@ -31,7 +31,7 @@ def ln_prior(samples, joker_params):
     ln_prior_val += -np.log(2 * np.pi)
 
     # e - MAGIC NUMBERS below: Kipping et al. 2013 (MNRAS 434 L51)
-    ln_prior_val += beta_logpdf(samples['e'], 0.867, 3.03)
+    ln_prior_val += beta_logpdf(np.array(samples['e']), 0.867, 3.03)
 
     # omega
     ln_prior_val += -np.log(2 * np.pi)
