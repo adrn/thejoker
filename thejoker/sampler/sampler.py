@@ -5,20 +5,19 @@ import time
 
 # Third-party
 import astropy.units as u
-from astropy.utils.misc import isiterable
 import h5py
 import numpy as np
 
 # Project
 from ..log import log as logger
 from ..data import RVData
-from ..stats import beta_logpdf, norm_logpdf
 from .params import JokerParams
 from .multiproc_helpers import (get_good_sample_indices, compute_likelihoods,
                                 sample_indices_to_full_samples)
 from .io import save_prior_samples
 from .samples import JokerSamples
 from .mcmc import TheJokerMCMCModel
+from .likelihood import ln_prior
 
 __all__ = ['TheJoker']
 
@@ -127,31 +126,13 @@ class TheJoker:
         # Store the value of the prior at each prior sample
         # TODO: should we store the value for each parameter independently?
         if return_logprobs:
-            ln_prior_val = np.zeros(size)
-
-            # P
-            ln_prior_val += -np.log(b - a) - np.log(samples['P'].value)
-
-            # M0
-            ln_prior_val += -np.log(2 * np.pi)
-
-            # e - MAGIC NUMBERS below: Kipping et al. 2013 (MNRAS 434 L51)
-            ln_prior_val += beta_logpdf(samples['e'].value, 0.867, 3.03)
-
-            # omega
-            ln_prior_val += -np.log(2 * np.pi)
+            ln_prior_val = ln_prior(samples, self.params)
 
         if not self.params._fixed_jitter:
             # Gaussian prior in log(s^2)
             log_s2 = rnd.normal(*self.params.jitter, size=size)
             samples['jitter'] = np.sqrt(
                 np.exp(log_s2)) * self.params._jitter_unit
-
-            if return_logprobs:
-                Jac = np.log(2 / samples['jitter'].value)  # Jacobian
-                ln_prior_val += norm_logpdf(log_s2,
-                                            self.params.jitter[0],
-                                            self.params.jitter[1]) + Jac
 
         else:
             samples['jitter'] = np.ones(size) * self.params.jitter

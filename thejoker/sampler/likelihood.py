@@ -3,14 +3,48 @@ NOTE: this is only used for testing the cython / c implementation.
 """
 
 # Third-party
+import astropy.units as u
 import numpy as np
 from twobody.wrap import cy_rv_from_elements
 
 # Package
 from ..log import log as logger
+from ..stats import beta_logpdf, norm_logpdf
 
-__all__ = ['get_ivar', 'design_matrix',
+__all__ = ['ln_prior', 'get_ivar', 'design_matrix',
            'tensor_vector_scalar', 'marginal_ln_likelihood']
+
+
+def ln_prior(samples, joker_params):
+    """
+    Evaluate The Joker prior for the nonlinear parameters.
+    """
+    size = len(samples)
+    ln_prior_val = np.zeros(size)
+    a, b = (np.log(joker_params.P_min.to(u.day).value),
+            np.log(joker_params.P_max.to(u.day).value))
+
+    # P
+    ln_prior_val += -np.log(b - a) - np.log(samples['P'].to(u.day).value)
+
+    # M0
+    ln_prior_val += -np.log(2 * np.pi)
+
+    # e - MAGIC NUMBERS below: Kipping et al. 2013 (MNRAS 434 L51)
+    ln_prior_val += beta_logpdf(samples['e'], 0.867, 3.03)
+
+    # omega
+    ln_prior_val += -np.log(2 * np.pi)
+
+    # jitter
+    if not joker_params._fixed_jitter:
+        Jac = np.log(2 / samples['jitter'].value)  # Jacobian
+        log_s2 = np.log(samples['jitter'].value ** 2)
+        ln_prior_val += norm_logpdf(log_s2,
+                                    joker_params.jitter[0],
+                                    joker_params.jitter[1]) + Jac
+
+    return ln_prior_val
 
 
 def get_ivar(data, s):
