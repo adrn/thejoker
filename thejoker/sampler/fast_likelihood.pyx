@@ -30,9 +30,9 @@ cdef:
 
 cdef void design_matrix(double P, double phi0, double ecc, double omega,
                         double[::1] t, double t0,
-                        double[:,::1] A_T,
+                        double[:,::1] M_T,
                         int n_trend):
-    """Construct the elements of the design matrix.
+    """Construct the elements of the design matrix, M.
 
     Parameters
     ----------
@@ -53,7 +53,7 @@ cdef void design_matrix(double P, double phi0, double ecc, double omega,
 
     Outputs
     -------
-    A_T : `numpy.ndarray`
+    M_T : `numpy.ndarray`
         The transpose of the design matrix, to be filled by this function.
         Should have shape: (number of linear parameters, number of data points).
 
@@ -62,18 +62,18 @@ cdef void design_matrix(double P, double phi0, double ecc, double omega,
         int i, j
         int n_times = t.shape[0]
 
-    c_rv_from_elements(&t[0], &A_T[0,0], n_times,
+    c_rv_from_elements(&t[0], &M_T[0,0], n_times,
                        P, 1., ecc, omega, phi0, t0,
                        anomaly_tol, anomaly_maxiter)
 
     if n_trend > 0: # only needed if we are fitting for a constant trend
         for j in range(n_times):
-            A_T[1, j] = 1.
+            M_T[1, j] = 1.
 
     if n_trend > 1: # only needed if more than constant trend
         for i in range(1, n_trend):
             for j in range(n_times):
-                A_T[1+i, j] = pow(t[j] - t0, i)
+                M_T[1+i, j] = pow(t[j] - t0, i)
 
 
 cdef void get_ivar(double[::1] ivar, double s, double[::1] new_ivar):
@@ -99,11 +99,11 @@ cdef void get_ivar(double[::1] ivar, double s, double[::1] new_ivar):
         new_ivar[i] = ivar[i] / (1 + s*s * ivar[i])
 
 
-cdef double tensor_vector_scalar(double[:,::1] A_T, double[::1] ivar,
+cdef double tensor_vector_scalar(double[:,::1] M_T, double[::1] ivar,
                                  double[::1] y, double[:, ::1] Lambda,
                                  double[::1] linear_pars,
                                  int sample_linear_pars,
-                                 double[:, ::1] ATCinvA, double[:, ::1] _A,
+                                 double[:, ::1] MCMT, double[:, ::1] _M,
                                  int[:,::1] ipiv,
                                  double[:,::1] work, int[:,::1] lwork,
                                  double[::1] p):
@@ -111,15 +111,14 @@ cdef double tensor_vector_scalar(double[:,::1] A_T, double[::1] ivar,
 
     Parameters
     ----------
-    A_T : `numpy.ndarray`
+    M_T : `numpy.ndarray`
         Transpose of the design matrix.
     ivar : `numpy.ndarray`
         Inverse-variance matrix.
     y : `numpy.ndarray`
         Data (in this case, radial velocities).
     Lambda : `numpy.ndarray`
-        Inverse variance matrix for a Gaussian prior applied to the linear
-        parameters.
+        Variance matrix for a Gaussian prior applied to the linear parameters.
 
     Outputs
     -------
@@ -143,8 +142,8 @@ cdef double tensor_vector_scalar(double[:,::1] A_T, double[::1] ivar,
 
     cdef:
         int i, j, k
-        int n_times = A_T.shape[1]
-        int n_pars = A_T.shape[0]
+        int n_times = M_T.shape[1]
+        int n_pars = M_T.shape[0]
 
         double chi2 = 0. # chi-squared
         double model_y, dy
@@ -154,21 +153,24 @@ cdef double tensor_vector_scalar(double[:,::1] A_T, double[::1] ivar,
         int nrhs = 1 # number of columns in b
         int info = 0 # if 0, success, otherwise some whack shit happened
 
+        double var
+
     # first zero-out arrays
     for i in range(n_pars):
         p[i] = 0.
         for j in range(n_pars):
-            ATCinvA[i, j] = 0.
+            MCMT[i, j] = 0.
 
     for k in range(n_times):
+        var = 1 / ivar[k]
         for i in range(n_pars):
-            p[i] += A_T[i, k] * ivar[k] * y[k]
+            p[i] += M_T[i, k] * ivar[k] * y[k]
             for j in range(n_pars):
-                # implicit transpose of first A_T in the below
-                ATCinvA[i, j] += A_T[i, k] * ivar[k] * A_T[j, k]
-                ATCinvA[i, j] += Lambda[i, j]
+                # implicit transpose of first M_T in the below
+                MCMT[i, j] += M_T[j, k] * var * M_T[i, k] # TODO: audit
+                MCMT[i, j] += Lambda[i, j]
 
-    _A[:, :] = ATCinvA
+    _M[:, :] = MCMT
 
     # p = np.linalg.solve(ATCinvA, ATCinv.dot(y))
     lapack.dsysv(uplo, &n_pars, &nrhs,
@@ -184,7 +186,7 @@ cdef double tensor_vector_scalar(double[:,::1] A_T, double[::1] ivar,
         # compute predicted RV at this timestep
         model_y = 0.
         for i in range(n_pars):
-            model_y += A_T[i, k] * p[i]
+            model_y += M_T[i, k] * p[i]
 
         # don't need log term for the jitter b.c. in likelihood func
         dy = model_y - y[k]
@@ -193,7 +195,7 @@ cdef double tensor_vector_scalar(double[:,::1] A_T, double[::1] ivar,
     if chi2 == INF:
         return -INF
 
-    logdet = logdet_term(ATCinvA, ivar, _A, ipiv)
+    logdet = logdet_term(MCMT, ivar, _A, ipiv)
 
     if sample_linear_pars == 1:
         cov = np.linalg.inv(ATCinvA)
@@ -297,7 +299,7 @@ cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
         double[:, ::1] Lambda = np.ascontiguousarray(joker_params.linear_par_Vinv)
 
         # transpose of design matrix
-        double[:,::1] A_T = np.zeros((n_pars, n_times))
+        double[:,::1] M_T = np.zeros((n_pars, n_times))
         double logdet
 
         # likelihoodz
@@ -330,13 +332,13 @@ cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
             jitter = chunk[n, 4]
 
         design_matrix(chunk[n, 0], chunk[n, 1], chunk[n, 2], chunk[n, 3],
-                      t, t0, A_T, n_poly)
+                      t, t0, M_T, n_poly)
 
         # Note: jitter must be in same units as the data RV's / ivar!
         get_ivar(ivar, jitter, jitter_ivar)
 
         # compute things needed for the ln(likelihood)
-        ll[n] = tensor_vector_scalar(A_T, jitter_ivar, rv, Lambda,
+        ll[n] = tensor_vector_scalar(M_T, jitter_ivar, rv, Lambda,
                                      linear_pars, 0, # IGNORED PLACEHOLDER
                                      ATCinvA, _A, ipiv, work, lwork, p)
 
@@ -376,7 +378,7 @@ cpdef batch_get_posterior_samples(double[:,::1] chunk,
         double[:, ::1] Lambda = np.ascontiguousarray(joker_params.linear_par_Vinv)
 
         # transpose of design matrix
-        double[:,::1] A_T = np.zeros((n_pars, n_times))
+        double[:,::1] M_T = np.zeros((n_pars, n_times))
         double ll
 
         # lol
@@ -405,13 +407,13 @@ cpdef batch_get_posterior_samples(double[:,::1] chunk,
         pars[n, 4] = chunk[n, 4] # jitter
 
         design_matrix(chunk[n, 0], chunk[n, 1], chunk[n, 2], chunk[n, 3],
-                      t, t0, A_T, n_poly)
+                      t, t0, M_T, n_poly)
 
         # jitter must be in same units as the data RV's / ivar!
         get_ivar(ivar, chunk[n, 4], jitter_ivar)
 
         # compute things needed for the ln(likelihood)
-        ll = tensor_vector_scalar(A_T, jitter_ivar, rv, Lambda,
+        ll = tensor_vector_scalar(M_T, jitter_ivar, rv, Lambda,
                                   linear_pars, 1, # do make samples (1 = True)
                                   ATCinvA, _A, ipiv, work, lwork, p)
 
