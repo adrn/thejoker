@@ -104,18 +104,21 @@ def tensor_vector_scalar(M, ivar, y, mu, Lambda, make_aA=False):
 
     Parameters
     ----------
-    M : `~numpy.ndarray`
+    M : array_like
         Design matrix.
-    ivar : `~numpy.ndarray`
+    ivar : array_like
         Inverse-variance matrix.
-    y : `~numpy.ndarray`
+    y : array_like
         Data (in this case, radial velocities).
-    TODO: mu, Lambda
+    mu : array_like
+        Prior mean for linear parameters.
+    Lambda : array_like
+        Prior variance matrix for linear parameters.
 
     Returns
     -------
     B : `numpy.ndarray`
-        C + M V M^T - Variance of data gaussian.
+        C + M Λ M^T - Variance of data gaussian.
     b : `numpy.ndarray`
         M µ - Optimal values of linear parameters.
     chi2 : float
@@ -147,7 +150,7 @@ def tensor_vector_scalar(M, ivar, y, mu, Lambda, make_aA=False):
         Ainv = Λinv + M.T @ Cinv @ M
         # Note: this is unstable! if cond num is high, could do:
         # p, *_ = np.linalg.lstsq(A, y)
-        a = np.linalg.solve(Ainv, Λinv @ mu + M.T @ Cinv @ M)
+        a = np.linalg.solve(Ainv, Λinv @ mu + M.T @ Cinv @ y)
         return marg_ll, a, np.linalg.inv(Ainv)
 
     else:
@@ -169,7 +172,7 @@ def marginal_ln_likelihood(nonlinear_p, data, joker_params):
     data : `~thejoker.data.RVData`
         The observations.
     joker_params : `~thejoker.sampler.params.JokerParams`
-        The specificationof parameters to infer with The Joker.
+        The specification of parameters to infer with The Joker.
     tvsi : iterable (optional)
         Optionally pass in the tensor, vector, scalar, ivar values so they
         aren't re-computed.
@@ -180,9 +183,6 @@ def marginal_ln_likelihood(nonlinear_p, data, joker_params):
         Marginal log-likelihood values.
 
     """
-    # HACK: these need to come in from joker params?
-    mu = np.array([0, 0.])
-    Lambda = np.diag([1e2, 1e2]) ** 2
 
     M = design_matrix(nonlinear_p, data, joker_params)
 
@@ -190,6 +190,7 @@ def marginal_ln_likelihood(nonlinear_p, data, joker_params):
     s = nonlinear_p[4]
     ivar = get_ivar(data, s)
     marg_ll = tensor_vector_scalar(M, ivar, data.rv.value,
-                                   mu, Lambda)
+                                   joker_params.linear_par_mu,
+                                   joker_params.linear_par_Lambda)
 
     return marg_ll

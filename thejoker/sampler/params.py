@@ -37,8 +37,10 @@ class JokerParams:
         number of coefficients. For example, ``poly_trend=3`` will sample over
         parameters of a long-term quadratic velocity trend. Default is 1, just a
         constant velocity shift.
-    linear_par_Vinv : array_like, optional
-        Inverse variance matrix that specifies the Gaussian prior on the linear
+    linear_par_mu : array_like, optional
+        Mean vector for the Gaussian prior on the linear parameters.
+    linear_par_Lambda : array_like, optional
+        Variance matrix that specifies the Gaussian prior on the linear
         parameters, i.e., the semi-amplitude and velocity trend paramters. The
         units must be in inverse, squared ``v_unit`` and ``v_unit/day^n`` where
         ``v_unit`` is the jitter velocity unit, and ``day^n`` corresponds to
@@ -64,8 +66,10 @@ class JokerParams:
     """
     @u.quantity_input(P_min=u.day, P_max=u.day)
     def __init__(self, P_min, P_max,
+                 linear_par_Lambda, linear_par_mu=None,
+                 scale_K_prior_with_P=True,
                  jitter=None, jitter_unit=None,
-                 poly_trend=1, linear_par_Vinv=None,
+                 poly_trend=1,
                  anomaly_tol=1E-10, anomaly_maxiter=128):
 
         # the names of the default parameters
@@ -75,20 +79,28 @@ class JokerParams:
         self.default_params += ['v{0}'.format(i)
                                 for i in range(self.poly_trend)]
 
+        # TODO: internally, time unit always taken to be days
         self.P_min = P_min
         self.P_max = P_max
         self.anomaly_tol = float(anomaly_tol)
         self.anomaly_maxiter = int(anomaly_maxiter)
 
-        # K, then the linear parameters
+        # K + the linear trend parameters
         _n_linear = 1 + self.poly_trend
-        if linear_par_Vinv is None:
-            self.linear_par_Vinv = 1e-10 * np.eye(_n_linear)
-        else:
-            self.linear_par_Vinv = np.array(linear_par_Vinv)
-            if self.linear_par_Vinv.shape != (_n_linear, _n_linear):
-                raise ValueError("Linear parameter inverse variance prior must "
-                                 "have shape ({0}, {0})".format(_n_linear))
+
+        # TODO: ignoring units / assuming units are same as data here
+        if linear_par_mu is None:
+            linear_par_mu = np.zeros(_n_linear)
+        self.linear_par_Lambda = np.array(linear_par_Lambda)
+        self.linear_par_mu = np.array(linear_par_mu)
+
+        if self.linear_par_Lambda.shape != (_n_linear, _n_linear):
+            raise ValueError("Linear parameter prior variance must have shape "
+                             "({0}, {0})".format(_n_linear))
+
+        if self.linear_par_mu.shape != (_n_linear, ):
+            raise ValueError("Linear parameter prior mean must have shape "
+                             "({0}, )".format(_n_linear))
 
         # validate the input jitter specification
         if jitter is None:
@@ -96,16 +108,16 @@ class JokerParams:
 
         if isiterable(jitter):
             if len(jitter) != 2:
-                raise ValueError("If specifying parameters for the jitter prior, you "
-                                 "must pass in a length-2 container containing the "
-                                 "mean and standard deviation of the Gaussian over "
-                                 "log(jitter^2)")
+                raise ValueError("If specifying parameters for the jitter "
+                                 "prior, you must pass in a length-2 container "
+                                 "containing the mean and standard deviation "
+                                 "of the Gaussian over log(jitter^2)")
 
             if jitter_unit is None or not isinstance(jitter_unit, u.UnitBase):
-                raise TypeError("If specifying parameters for the jitter prior, you "
-                                "must also specify the units of the jitter for "
-                                "evaluating the prior as an astropy.units.UnitBase "
-                                "instance.")
+                raise TypeError("If specifying parameters for the jitter "
+                                "prior, you must also specify the units of the "
+                                "jitter for evaluating the prior as an "
+                                "astropy.units.UnitBase instance.")
 
             self._fixed_jitter = False
             self._jitter_unit = jitter_unit

@@ -3,7 +3,8 @@ import astropy.units as u
 import numpy as np
 
 # Package
-from ..likelihood import design_matrix, tensor_vector_scalar, marginal_ln_likelihood
+from ..likelihood import (design_matrix, tensor_vector_scalar,
+                          marginal_ln_likelihood)
 
 from .helpers import FakeData
 
@@ -30,8 +31,8 @@ class TestLikelihood(object):
         data = self.datasets['binary']
         nlp = self.truths_to_nlp(self.truths['binary'])
         A = design_matrix(nlp, data, self.params['binary'])
-        assert A.shape == (len(data), 2) # K, v0
-        assert np.allclose(A[:,1], 1)
+        assert A.shape == (len(data), 2)  # K, v0
+        assert np.allclose(A[:, 1], 1)
 
         # TODO: triple disabled
         # nlp = self.truths_to_nlp(self.truths['triple'])
@@ -45,11 +46,19 @@ class TestLikelihood(object):
         data = self.datasets['binary']
         nlp = self.truths_to_nlp(self.truths['binary'])
         A = design_matrix(nlp, data, self.params['binary'])
-        ATCinvA, p, chi2 = tensor_vector_scalar(A, data.ivar.value,
-                                                data.rv.value)
+        chi2, a, A = tensor_vector_scalar(A, data.ivar.value,
+                                          data.rv.value,
+                                          mu=np.zeros(2),
+                                          Lambda=np.diag([1e2, 1e2])**2,
+                                          make_aA=True)
+
+        assert np.array(chi2).shape == ()
+        assert a.shape == (2, )
+        assert A.shape == (2, 2)
+
         true_p = [self.truths['binary']['K'].value,
                   self.truths['binary']['v0'].value]
-        assert np.allclose(p, true_p, rtol=1e-2)
+        assert np.allclose(a, true_p, rtol=1e-2)
 
         # --
 
@@ -74,7 +83,7 @@ class TestLikelihood(object):
 
         vals = np.linspace(true_nlp[0]-1., true_nlp[0]+1, 4096)
         lls = np.zeros_like(vals)
-        for i,val in enumerate(vals):
+        for i, val in enumerate(vals):
             nlp = true_nlp.copy()
             nlp[0] = val
             lls[i] = marginal_ln_likelihood(nlp, data, params)
@@ -103,7 +112,10 @@ class TestLikelihood(object):
             lls[i] = marginal_ln_likelihood(nlp, data, params)
 
             A = design_matrix(nlp, data, params)
-            _,p,_ = tensor_vector_scalar(A, data.ivar.value, data.rv.value)
+            _, p, _ = tensor_vector_scalar(A, data.ivar.value, data.rv.value,
+                                           mu=np.zeros(2),
+                                           Lambda=np.diag([1e2, 1e2])**2,
+                                           make_aA=True)
             if p[0] < 0:
                 n_neg += 1
 

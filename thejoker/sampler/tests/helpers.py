@@ -45,8 +45,10 @@ class FakeData(object):
         rv = truth['K'] * orbit.unscaled_radial_velocity(t) + truth['v0']
         err = np.full_like(rv.value, 0.01) * u.km/u.s
         data = RVData(t, rv, stddev=err, t0=EPOCH)
+        Lam = np.diag([1e4, 1e4])  # linear par variance
         self.datasets['binary'] = data
         self.params['binary'] = JokerParams(P_min=8*u.day, P_max=1024*u.day,
+                                            linear_par_Lambda=Lam,
                                             jitter=1*u.km/u.s)
         self.truths['binary'] = truth.copy()
 
@@ -54,6 +56,7 @@ class FakeData(object):
         self.datasets['binary_jitter'] = data
         self.params['binary_jitter'] = JokerParams(P_min=8*u.day,
                                                    P_max=1024*u.day,
+                                                   linear_par_Lambda=Lam,
                                                    jitter=(9., 2),
                                                    jitter_unit=u.m/u.s)
         self.truths['binary_jitter'] = truth.copy()
@@ -79,7 +82,8 @@ class FakeData(object):
         data = RVData(t, rv, stddev=err, t0=EPOCH)
         self.datasets['circ_binary'] = data
         self.params['circ_binary'] = JokerParams(P_min=8*u.day,
-                                                 P_max=1024*u.day)
+                                                 P_max=1024*u.day,
+                                                 linear_par_Lambda=Lam)
         self.truths['circ_binary'] = truth.copy()
 
         ######################################################################
