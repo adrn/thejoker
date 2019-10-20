@@ -81,7 +81,9 @@ class TestSampler(object):
 
         # Now re-run with jitter set, check that it's always the fixed value
         jitter = 5.*u.m/u.s
-        params = JokerParams(P_min=8*u.day, P_max=128*u.day, jitter=jitter)
+        params = JokerParams(P_min=8*u.day, P_max=128*u.day,
+                             linear_par_Lambda=np.diag([1e2, 1e2])**2,
+                             jitter=jitter)
         joker = TheJoker(params)
 
         prior_samples = joker.sample_prior(128)
@@ -101,7 +103,9 @@ class TestSampler(object):
         # First, try just running rejection_sample()
         data = self.data['binary']
         jitter = 100*u.m/u.s
-        params = JokerParams(P_min=8*u.day, P_max=128*u.day, jitter=jitter)
+        params = JokerParams(P_min=8*u.day, P_max=128*u.day,
+                             linear_par_Lambda=np.diag([1e2, 1e2])**2,
+                             jitter=jitter)
         joker = TheJoker(params)
 
         samples = joker.iterative_rejection_sample(data, n_prior_samples=100000,

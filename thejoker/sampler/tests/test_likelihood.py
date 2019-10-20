@@ -52,8 +52,10 @@ class TestLikelihood(object):
                                               make_aAinv=True)
 
         assert np.array(ll).shape == ()
-        assert b.shape == (2, )
-        assert B.shape == (2, 2)
+        assert a.shape == (2, )
+        assert Ainv.shape == (2, 2)
+        assert b.shape == (len(data), )
+        assert B.shape == (len(data), len(data))
 
         true_p = [self.truths['binary']['K'].value,
                   self.truths['binary']['v0'].value]
