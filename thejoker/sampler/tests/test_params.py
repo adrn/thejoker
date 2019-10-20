@@ -15,8 +15,9 @@ def test_init():
     assert pars.jitter.value == 0
 
     # test invalid input
-    # with pytest.raises(TypeError):
-    #     pars = JokerParams(P_min=8.*u.day, P_max=8192*u.day, trend="derp")
+
+    with pytest.raises(ValueError):
+        JokerParams(P_min=8.*u.day, P_max=8192*u.day)
 
     with pytest.raises(ValueError):
         pars = JokerParams(P_min=8.*u.day, P_max=8192*u.day,
