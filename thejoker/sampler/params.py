@@ -71,7 +71,7 @@ class JokerParams:
     @u.quantity_input(P_min=u.day, P_max=u.day)
     def __init__(self, P_min, P_max,
                  linear_par_Lambda=None, linear_par_mu=None,
-                 scale_K_prior_with_P=True,
+                 scale_K_prior_with_P=False,
                  jitter=None, jitter_unit=None,
                  poly_trend=1,
                  anomaly_tol=1E-10, anomaly_maxiter=128):
@@ -90,11 +90,11 @@ class JokerParams:
         self.anomaly_maxiter = int(anomaly_maxiter)
 
         # K + the linear trend parameters
-        _n_linear = 1 + self.poly_trend
+        self._n_linear = 1 + self.poly_trend
 
         # TODO: ignoring units / assuming units are same as data here
         if linear_par_mu is None:
-            linear_par_mu = np.zeros(_n_linear)
+            linear_par_mu = np.zeros(self._n_linear)
 
         if linear_par_Lambda is None:
             msg = (
@@ -115,13 +115,16 @@ class JokerParams:
         self.linear_par_Lambda = np.array(linear_par_Lambda)
         self.linear_par_mu = np.array(linear_par_mu)
 
-        if self.linear_par_Lambda.shape != (_n_linear, _n_linear):
-            raise ValueError("Linear parameter prior variance must have shape "
-                             "({0}, {0})".format(_n_linear))
+        self.scale_K_prior_with_P = scale_K_prior_with_P
+        _check_size = self._n_linear - int(self.scale_K_prior_with_P)
 
-        if self.linear_par_mu.shape != (_n_linear, ):
+        if self.linear_par_Lambda.shape != (_check_size, _check_size):
+            raise ValueError("Linear parameter prior variance must have shape "
+                             "({0}, {0})".format(_check_size))
+
+        if self.linear_par_mu.shape != (self._n_linear, ):
             raise ValueError("Linear parameter prior mean must have shape "
-                             "({0}, )".format(_n_linear))
+                             "({0}, )".format(self._n_linear))
 
         # validate the input jitter specification
         if jitter is None:

@@ -186,12 +186,23 @@ def marginal_ln_likelihood(nonlinear_p, data, joker_params, make_aAinv=False):
 
     M = design_matrix(nonlinear_p, data, joker_params)
 
+    if joker_params.scale_K_prior_with_P:
+        # TODO: allow customizing K0!
+        K0 = (100 * u.m/u.s).to_value(joker_params._jitter_unit)
+        Lambda = np.zeros((joker_params._n_linear, joker_params._n_linear))
+        P = nonlinear_p[0]
+        e = nonlinear_p[2]
+        Lambda[0, 0] = K0**2 / (1 - e**2) * (P / 365.)**(-2/3)
+        Lambda[1:, 1:] = joker_params.linear_par_Lambda
+    else:
+        Lambda = joker_params.linear_par_Lambda
+
     # jitter must be in same units as the data RV's / ivar!
     s = nonlinear_p[4]
     ivar = get_ivar(data, s)
     marg_ll, *_ = likelihood_worker(data.rv.value, ivar, M,
                                     joker_params.linear_par_mu,
-                                    joker_params.linear_par_Lambda,
+                                    Lambda,
                                     make_aAinv=make_aAinv)
 
     return marg_ll
