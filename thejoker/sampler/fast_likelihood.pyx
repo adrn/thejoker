@@ -314,7 +314,7 @@ cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
 
     if scale_K_prior_with_P > 0:
         # TODO: allow customizing K0!
-        K0 = (100 * u.m/u.s).to_value(joker_params._jitter_unit)
+        K0 = (25 * u.km/u.s).to_value(joker_params._jitter_unit)
         Lambda[1:, 1:] = np.array(joker_params.linear_par_Lambda)
         Linv[1:, 1:] = np.linalg.inv(joker_params.linear_par_Lambda)
     else:
@@ -416,7 +416,7 @@ cpdef batch_get_posterior_samples(double[:,::1] chunk,
 
     if scale_K_prior_with_P > 0:
         # TODO: allow customizing K0!
-        K0 = (100 * u.m/u.s).to_value(joker_params._jitter_unit)
+        K0 = (25 * u.km/u.s).to_value(joker_params._jitter_unit)
         Lambda[1:, 1:] = np.array(joker_params.linear_par_Lambda)
         Linv[1:, 1:] = np.linalg.inv(joker_params.linear_par_Lambda)
     else:

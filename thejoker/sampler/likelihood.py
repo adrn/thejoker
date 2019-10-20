@@ -188,7 +188,7 @@ def marginal_ln_likelihood(nonlinear_p, data, joker_params, make_aAinv=False):
 
     if joker_params.scale_K_prior_with_P:
         # TODO: allow customizing K0!
-        K0 = (100 * u.m/u.s).to_value(joker_params._jitter_unit)
+        K0 = (25 * u.km/u.s).to_value(joker_params._jitter_unit)
         Lambda = np.zeros((joker_params._n_linear, joker_params._n_linear))
         P = nonlinear_p[0]
         e = nonlinear_p[2]
