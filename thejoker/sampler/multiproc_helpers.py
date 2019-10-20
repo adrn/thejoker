@@ -191,8 +191,8 @@ def _sample_vector_worker(task):
         is not supposed to be in the public API.
     """
 
-    (idx, chunk_index, prior_cache_file, data, joker_params, max_n_samples,
-     global_seed, return_logprobs) = task
+    (idx, chunk_index, prior_cache_file, data, joker_params, global_seed,
+     return_logprobs) = task
 
     if global_seed is not None:
         seed = global_seed + chunk_index
@@ -214,7 +214,7 @@ def _sample_vector_worker(task):
 
     chunk = chunk.astype(np.float64)
 
-    pars = batch_get_posterior_samples(chunk, data, joker_params, max_n_samples,
+    pars = batch_get_posterior_samples(chunk, data, joker_params,
                                        rnd, return_logprobs)
     if return_logprobs:
         pars = np.hstack((pars[:, :-1], ln_prior[:, None], pars[:, -1:]))
@@ -258,9 +258,9 @@ def sample_indices_to_full_samples(good_samples_idx, prior_cache_file, data,
 
     """
 
-    n_samples = min(len(good_samples_idx), max_n_samples)
-    args = [prior_cache_file, data, joker_params, n_samples,
-            global_seed, return_logprobs]
+    good_samples_idx = good_samples_idx[:max_n_samples]
+    n_samples = len(good_samples_idx)
+    args = [prior_cache_file, data, joker_params, global_seed, return_logprobs]
     if n_batches is None:
         n_batches = pool.size
     tasks = chunk_tasks(n_samples, n_batches=n_batches, arr=good_samples_idx,

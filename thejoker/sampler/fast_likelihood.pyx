@@ -334,8 +334,7 @@ cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
 
 
 cpdef batch_get_posterior_samples(double[:,::1] chunk,
-                                  data, joker_params, int max_n_samples,
-                                  rnd, return_logprobs):
+                                  data, joker_params, rnd, return_logprobs):
     """TODO:
 
     Parameters
@@ -395,7 +394,7 @@ cpdef batch_get_posterior_samples(double[:,::1] chunk,
             joker_params.num_params + int(return_logprobs)))
         double[::1] linear_pars
 
-    for n in range(max_n_samples):
+    for n in range(n_samples):
         pars[n, 0] = chunk[n, 0] # P
         pars[n, 1] = chunk[n, 1] # M0
         pars[n, 2] = chunk[n, 2] # e
