@@ -59,8 +59,10 @@ class JokerParams:
 
         >>> import astropy.units as u
         >>> pars = JokerParams(P_min=8*u.day, P_max=8192*u.day,
+        ...                    linear_par_Lambda=np.diag([1e2, 1e2]) ** 2,
         ...                    jitter=5.*u.m/u.s) # fix jitter to 5 m/s
         >>> pars = JokerParams(P_min=8*u.day, P_max=8192*u.day,
+        ...                    linear_par_Lambda=np.diag([1e2, 1e2]) ** 2,
         ...                    jitter=(1., 2.), jitter_unit=u.m/u.s) # specify jitter prior
 
     """
