@@ -11,6 +11,8 @@ from twobody import KeplerOrbit
 from ...data import RVData
 from ..params import JokerParams
 
+Lambda = np.diag([1e2, 1e2])**2
+
 
 class FakeData(object):
 
@@ -40,13 +42,15 @@ class FakeData(object):
 
         orbit = KeplerOrbit(P=truth['P'], e=truth['e'], omega=truth['omega'],
                             M0=truth['M0'], t0=EPOCH,
-                            i=90*u.deg, Omega=0*u.deg) # these don't matter
+                            i=90*u.deg, Omega=0*u.deg)  # these don't matter
 
         rv = truth['K'] * orbit.unscaled_radial_velocity(t) + truth['v0']
         err = np.full_like(rv.value, 0.01) * u.km/u.s
         data = RVData(t, rv, stddev=err, t0=EPOCH)
+
         self.datasets['binary'] = data
         self.params['binary'] = JokerParams(P_min=8*u.day, P_max=1024*u.day,
+                                            linear_par_Lambda=Lambda,
                                             jitter=1*u.km/u.s)
         self.truths['binary'] = truth.copy()
 
@@ -54,6 +58,7 @@ class FakeData(object):
         self.datasets['binary_jitter'] = data
         self.params['binary_jitter'] = JokerParams(P_min=8*u.day,
                                                    P_max=1024*u.day,
+                                                   linear_par_Lambda=Lambda,
                                                    jitter=(9., 2),
                                                    jitter_unit=u.m/u.s)
         self.truths['binary_jitter'] = truth.copy()
@@ -79,7 +84,8 @@ class FakeData(object):
         data = RVData(t, rv, stddev=err, t0=EPOCH)
         self.datasets['circ_binary'] = data
         self.params['circ_binary'] = JokerParams(P_min=8*u.day,
-                                                 P_max=1024*u.day)
+                                                 P_max=1024*u.day,
+                                                 linear_par_Lambda=Lambda)
         self.truths['circ_binary'] = truth.copy()
 
         ######################################################################

@@ -6,13 +6,13 @@ NOTE: this is only used for testing the cython / c implementation.
 import astropy.units as u
 import numpy as np
 from twobody.wrap import cy_rv_from_elements
+from scipy.stats import multivariate_normal
 
 # Package
-from ..log import log as logger
 from ..stats import beta_logpdf, norm_logpdf
 
 __all__ = ['ln_prior', 'get_ivar', 'design_matrix',
-           'tensor_vector_scalar', 'marginal_ln_likelihood']
+           'likelihood_worker', 'marginal_ln_likelihood']
 
 
 def ln_prior(samples, joker_params):
@@ -63,7 +63,7 @@ def get_ivar(data, s):
 
 
 def design_matrix(nonlinear_p, data, joker_params):
-    """
+    """Compute the design matrix, M.
 
     Parameters
     ----------
@@ -79,11 +79,11 @@ def design_matrix(nonlinear_p, data, joker_params):
 
     Returns
     -------
-    A : `numpy.ndarray`
+    M : `numpy.ndarray`
         The design matrix with shape ``(n_times, n_params)``.
 
     """
-    P, M0, ecc, omega = nonlinear_p[:4] # we don't need the jitter here
+    P, M0, ecc, omega = nonlinear_p[:4]  # we don't need the jitter here
 
     t = data._t_bmjd
     t0 = data._t0_bmjd
@@ -91,39 +91,42 @@ def design_matrix(nonlinear_p, data, joker_params):
                                joker_params.anomaly_tol,
                                joker_params.anomaly_maxiter)
 
-    A1 = np.vander(t - t0, N=joker_params.poly_trend, increasing=True)
-    A = np.hstack((zdot[:, None], A1))
+    M1 = np.vander(t - t0, N=joker_params.poly_trend, increasing=True)
+    M = np.hstack((zdot[:, None], M1))
 
-    return A
+    return M
 
 
-def tensor_vector_scalar(A, ivar, y):
+def likelihood_worker(y, ivar, M, mu, Lambda, make_aAinv=False):
     """
     Internal function used to construct linear algebra objects
     used to compute the marginal log-likelihood.
 
     Parameters
     ----------
-    A : `~numpy.ndarray`
+    M : array_like
         Design matrix.
-    ivar : `~numpy.ndarray`
+    ivar : array_like
         Inverse-variance matrix.
-    y : `~numpy.ndarray`
+    y : array_like
         Data (in this case, radial velocities).
+    mu : array_like
+        Prior mean for linear parameters.
+    Lambda : array_like
+        Prior variance matrix for linear parameters.
 
     Returns
     -------
-    ATCinvA : `numpy.ndarray`
-        Value of A^T C^-1 A -- inverse of the covariance matrix
-        of the linear parameters.
-    p : `numpy.ndarray`
-        Optimal values of linear parameters.
+    B : `numpy.ndarray`
+        C + M Λ M^T - Variance of data gaussian.
+    b : `numpy.ndarray`
+        M µ - Optimal values of linear parameters.
     chi2 : float
         Chi-squared value.
 
     Notes
     -----
-    The linear parameter vector returned here (``p``) may have a negative
+    The linear parameter vector returned here (``b``) may have a negative
     velocity semi-amplitude. I don't think there is anything we can do
     about this if we want to preserve the simple linear algebra below and
     it means that optimizing over the marginal likelihood below won't
@@ -132,25 +135,32 @@ def tensor_vector_scalar(A, ivar, y):
     shifted from the truth.
 
     """
-    ATCinv = (A.T * ivar[None])
-    ATCinvA = ATCinv.dot(A)
+    Λ = Lambda
+    Λinv = np.linalg.inv(Λ)
+    µ = mu
 
-    # Note: this is unstable! if cond num is high, could do:
-    # p,*_ = np.linalg.lstsq(A, y)
-    p = np.linalg.solve(ATCinvA, ATCinv.dot(y))
-    dy = A.dot(p) - y
+    Cinv = np.diag(ivar)
+    C = np.diag(1 / ivar)
 
-    chi2 = np.sum(dy**2 * ivar) # don't need log term for the jitter b.c. in likelihood below
+    b = M @ µ
+    B = C + M @ Λ @ M.T
+    marg_ll = multivariate_normal.logpdf(y, b, B)
 
-    return ATCinvA, p, chi2
+    if make_aAinv:
+        Ainv = Λinv + M.T @ Cinv @ M
+        # Note: this is unstable! if cond num is high, could do:
+        # p, *_ = np.linalg.lstsq(A, y)
+        a = np.linalg.solve(Ainv, Λinv @ mu + M.T @ Cinv @ y)
+        return marg_ll, b, B, a, Ainv
+
+    else:
+        return marg_ll, b, B
 
 
-def marginal_ln_likelihood(nonlinear_p, data, joker_params, tvsi=None):
+def marginal_ln_likelihood(nonlinear_p, data, joker_params, make_aAinv=False):
     """
     Internal function used to compute the likelihood marginalized
     over the linear parameters.
-
-    This returns Eq. 11 arxiv:1610.07602v2
 
     Parameters
     ----------
@@ -162,7 +172,7 @@ def marginal_ln_likelihood(nonlinear_p, data, joker_params, tvsi=None):
     data : `~thejoker.data.RVData`
         The observations.
     joker_params : `~thejoker.sampler.params.JokerParams`
-        The specificationof parameters to infer with The Joker.
+        The specification of parameters to infer with The Joker.
     tvsi : iterable (optional)
         Optionally pass in the tensor, vector, scalar, ivar values so they
         aren't re-computed.
@@ -173,23 +183,15 @@ def marginal_ln_likelihood(nonlinear_p, data, joker_params, tvsi=None):
         Marginal log-likelihood values.
 
     """
-    if tvsi is None:
-        A = design_matrix(nonlinear_p, data, joker_params)
 
-        # jitter must be in same units as the data RV's / ivar!
-        s = nonlinear_p[4]
-        ivar = get_ivar(data, s)
-        ATCinvA, p, chi2 = tensor_vector_scalar(A, ivar, data.rv.value)
+    M = design_matrix(nonlinear_p, data, joker_params)
 
-    else:
-        ATCinvA, p, chi2, ivar = tvsi
+    # jitter must be in same units as the data RV's / ivar!
+    s = nonlinear_p[4]
+    ivar = get_ivar(data, s)
+    marg_ll, *_ = likelihood_worker(data.rv.value, ivar, M,
+                                    joker_params.linear_par_mu,
+                                    joker_params.linear_par_Lambda,
+                                    make_aAinv=make_aAinv)
 
-    # This is -logdet(2πC_j)
-    sign, logdet = np.linalg.slogdet(ATCinvA / (2*np.pi))
-    if not np.all(sign == 1.):
-        logger.debug('logdet sign < 0')
-        return np.nan
-
-    logdet += np.sum(np.log(ivar / (2*np.pi)))
-
-    return 0.5*logdet - 0.5*np.atleast_1d(chi2)
+    return marg_ll

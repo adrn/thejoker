@@ -62,7 +62,8 @@ class TheJokerMCMCModel:
 
         # Covariance matrix for Gaussian prior on velocity trend terms:
         #   K, v0, v1, v2 ...
-        self._V = np.linalg.inv(self.params.linear_par_Vinv)
+        # TODO: support non-zero mean for linear par mu
+        self._V = self.params.linear_par_Lambda
         self._vterms_norm = multivariate_normal(
             mean=np.zeros(1 + self.params.poly_trend),
             cov=self._V)

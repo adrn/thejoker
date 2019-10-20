@@ -195,8 +195,9 @@ class TheJoker:
         else:
             return samples
 
-    def _rejection_sample_from_cache(self, data, n_prior_samples, cache_file,
-                                     start_idx, seed, return_logprobs=False):
+    def _rejection_sample_from_cache(self, data, n_prior_samples, max_n_samples,
+                                     cache_file, start_idx, seed,
+                                     return_logprobs=False):
         """Perform The Joker's rejection sampling on a cache file containing
         prior samples. This is meant to be used internally.
         """
@@ -222,10 +223,13 @@ class TheJoker:
         logger.info("{0} good sample{1} after rejection sampling"
                     .format(n_good, s_or_not))
 
+        if max_n_samples is None:
+            max_n_samples = n_good
+
         # For samples that pass the rejection step, we now have their indices
         # in the prior cache file. Here, we read the actual values:
         result = sample_indices_to_full_samples(
-            good_samples_idx, cache_file, data, self.params,
+            good_samples_idx, cache_file, data, self.params, max_n_samples,
             pool=self.pool, global_seed=seed, return_logprobs=return_logprobs)
 
         return result
@@ -257,7 +261,7 @@ class TheJoker:
 
         return n_prior_samples, cache_exists
 
-    def rejection_sample(self, data, n_prior_samples=None,
+    def rejection_sample(self, data, n_prior_samples=None, max_n_samples=None,
                          prior_cache_file=None, return_logprobs=False,
                          start_idx=0):
         """Run The Joker's rejection sampling on prior samples to get posterior
@@ -305,8 +309,8 @@ class TheJoker:
                 prior_units = [u.Unit(uu) for uu in f.attrs['units']]
 
             result = self._rejection_sample_from_cache(
-                data, n_prior_samples, prior_cache_file, start_idx, seed=seed,
-                return_logprobs=return_logprobs)
+                data, n_prior_samples, max_n_samples, prior_cache_file,
+                start_idx, seed=seed, return_logprobs=return_logprobs)
 
         else:
             with tempfile.NamedTemporaryFile(mode='r+',
@@ -322,8 +326,8 @@ class TheJoker:
                                                  ln_prior_probs=lnp)
 
                 result = self._rejection_sample_from_cache(
-                    data, n_prior_samples, prior_cache_file, start_idx,
-                    seed=seed, return_logprobs=return_logprobs)
+                    data, n_prior_samples, max_n_samples, prior_cache_file,
+                    start_idx, seed=seed, return_logprobs=return_logprobs)
 
         return self._unpack_full_samples(result, prior_units, t0=data.t0,
                                          return_logprobs=return_logprobs)
@@ -461,8 +465,8 @@ class TheJoker:
             raise RuntimeError("Hit maximum number of iterations!")
 
         result = sample_indices_to_full_samples(
-            good_samples_idx[:n_requested_samples], prior_cache_file, data,
-            self.params, pool=self.pool, global_seed=seed,
+            good_samples_idx, prior_cache_file, data,
+            self.params, n_requested_samples, pool=self.pool, global_seed=seed,
             return_logprobs=return_logprobs)
 
         if close_f:

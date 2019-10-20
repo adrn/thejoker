@@ -67,10 +67,13 @@ these data into a `~thejoker.data.RVData` object:
     ax.set_xlim(-10, 200)
 
 We next need to specify some hyper-parameters for |thejoker|. At minimum, we
-have to specify the minimum and maximum period to consider:
+have to specify the minimum and maximum period to consider, and a prior on the
+linear parameters in the model (the semi-amplitude and velocity zero-point):
 
+    >>> import numpy as np
     >>> from thejoker.sampler import JokerParams
-    >>> params = JokerParams(P_min=8*u.day, P_max=512*u.day)
+    >>> params = JokerParams(P_min=8*u.day, P_max=512*u.day,
+    ...                      linear_par_Lambda=np.diag([1e2, 1e2])**2)
 
 Finally we can create the sampler object and run:
 
@@ -100,7 +103,8 @@ below to see how these were made):
     err = [0.184, 0.261, 0.112, 0.155, 0.223] * u.km/u.s
 
     data = RVData(t=t, rv=rv, stddev=err)
-    params = JokerParams(P_min=8*u.day, P_max=512*u.day)
+    params = JokerParams(P_min=8*u.day, P_max=512*u.day,
+                         linear_par_Lambda=np.diag([1e2, 1e2])**2)
     pool = schwimmbad.MultiPool()
     joker = TheJoker(params, pool=pool)
 
