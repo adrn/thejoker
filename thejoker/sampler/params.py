@@ -71,7 +71,6 @@ class JokerParams:
     @u.quantity_input(P_min=u.day, P_max=u.day)
     def __init__(self, P_min, P_max,
                  linear_par_Lambda=None, linear_par_mu=None,
-                 scale_K_prior_with_P=True,
                  jitter=None, jitter_unit=None,
                  poly_trend=1,
                  anomaly_tol=1E-10, anomaly_maxiter=128):
