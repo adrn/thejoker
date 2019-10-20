@@ -12,7 +12,7 @@ from scipy.stats import multivariate_normal
 from ..stats import beta_logpdf, norm_logpdf
 
 __all__ = ['ln_prior', 'get_ivar', 'design_matrix',
-           'tensor_vector_scalar', 'marginal_ln_likelihood']
+           'likelihood_worker', 'marginal_ln_likelihood']
 
 
 def ln_prior(samples, joker_params):
@@ -97,7 +97,7 @@ def design_matrix(nonlinear_p, data, joker_params):
     return M
 
 
-def tensor_vector_scalar(M, ivar, y, mu, Lambda, make_aA=False):
+def likelihood_worker(y, ivar, M, mu, Lambda, make_aAinv=False):
     """
     Internal function used to construct linear algebra objects
     used to compute the marginal log-likelihood.
@@ -146,18 +146,18 @@ def tensor_vector_scalar(M, ivar, y, mu, Lambda, make_aA=False):
     B = C + M @ Λ @ M.T
     marg_ll = multivariate_normal.logpdf(y, b, B)
 
-    if make_aA:
+    if make_aAinv:
         Ainv = Λinv + M.T @ Cinv @ M
         # Note: this is unstable! if cond num is high, could do:
         # p, *_ = np.linalg.lstsq(A, y)
         a = np.linalg.solve(Ainv, Λinv @ mu + M.T @ Cinv @ y)
-        return marg_ll, a, np.linalg.inv(Ainv)
+        return marg_ll, b, B, a, Ainv
 
     else:
-        return marg_ll
+        return marg_ll, b, B
 
 
-def marginal_ln_likelihood(nonlinear_p, data, joker_params):
+def marginal_ln_likelihood(nonlinear_p, data, joker_params, make_aAinv=False):
     """
     Internal function used to compute the likelihood marginalized
     over the linear parameters.
@@ -189,8 +189,9 @@ def marginal_ln_likelihood(nonlinear_p, data, joker_params):
     # jitter must be in same units as the data RV's / ivar!
     s = nonlinear_p[4]
     ivar = get_ivar(data, s)
-    marg_ll = tensor_vector_scalar(M, ivar, data.rv.value,
-                                   joker_params.linear_par_mu,
-                                   joker_params.linear_par_Lambda)
+    marg_ll, *_ = likelihood_worker(data.rv.value, ivar, M,
+                                    joker_params.linear_par_mu,
+                                    joker_params.linear_par_Lambda,
+                                    make_aAinv=make_aAinv)
 
     return marg_ll

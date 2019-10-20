@@ -4,8 +4,6 @@ import numpy as np
 
 # Project
 from ..log import log
-from .likelihood import (get_ivar, design_matrix, tensor_vector_scalar,
-                         marginal_ln_likelihood)
 from .fast_likelihood import (batch_marginal_ln_likelihood,
                               batch_get_posterior_samples)
 
@@ -48,19 +46,19 @@ def chunk_tasks(n_tasks, n_batches, arr=None, args=None, start_idx=0):
             if i < rmdr:
                 i2 += 1
 
-            if arr is None: # store indices
+            if arr is None:  # store indices
                 tasks.append([(i1, i2), i1] + args)
 
-            else: # store sliced array
+            else:  # store sliced array
                 tasks.append([arr[i1:i2], i1] + args)
 
             i1 = i2
 
     else:
-        if arr is None: # store indices
+        if arr is None:  # store indices
             tasks.append([(start_idx, n_tasks+start_idx), start_idx] + args)
 
-        else: # store sliced array
+        else:  # store sliced array
             tasks.append([arr[start_idx:n_tasks+start_idx], start_idx] + args)
 
     return tasks
@@ -193,8 +191,8 @@ def _sample_vector_worker(task):
         is not supposed to be in the public API.
     """
 
-    (idx, chunk_index, prior_cache_file, data, joker_params, global_seed,
-     return_logprobs) = task
+    (idx, chunk_index, prior_cache_file, data, joker_params, max_n_samples,
+     global_seed, return_logprobs) = task
 
     if global_seed is not None:
         seed = global_seed + chunk_index
@@ -216,16 +214,17 @@ def _sample_vector_worker(task):
 
     chunk = chunk.astype(np.float64)
 
-    pars = batch_get_posterior_samples(chunk, data, joker_params, rnd,
-                                       return_logprobs)
+    pars = batch_get_posterior_samples(chunk, data, joker_params, max_n_samples,
+                                       rnd, return_logprobs)
     if return_logprobs:
         pars = np.hstack((pars[:, :-1], ln_prior[:, None], pars[:, -1:]))
     return pars
 
 
 def sample_indices_to_full_samples(good_samples_idx, prior_cache_file, data,
-                                   joker_params, pool, global_seed=None,
-                                   return_logprobs=False, n_batches=None):
+                                   joker_params, max_n_samples, pool,
+                                   global_seed=None, return_logprobs=False,
+                                   n_batches=None):
     """
     Generate the full set of parameter values (linear + non-linear) for
     the nonlinear parameter prior samples that pass the rejection sampling.
@@ -246,6 +245,8 @@ def sample_indices_to_full_samples(good_samples_idx, prior_cache_file, data,
         An instance of ``RVData`` with the data we're modeling.
     joker_params : `~thejoker.sampler.params.JokerParams`
         A specification of the parameters to use.
+    max_n_samples : int
+        The maximum number of samples to return.
     pool : `~schwimmbad.pool.BasePool` or subclass
         An instance of a processing pool - must have a ``.map()`` method.
     global_seed : int (optional)
@@ -257,8 +258,9 @@ def sample_indices_to_full_samples(good_samples_idx, prior_cache_file, data,
 
     """
 
-    n_samples = len(good_samples_idx)
-    args = [prior_cache_file, data, joker_params, global_seed, return_logprobs]
+    n_samples = min(len(good_samples_idx), max_n_samples)
+    args = [prior_cache_file, data, joker_params, n_samples,
+            global_seed, return_logprobs]
     if n_batches is None:
         n_batches = pool.size
     tasks = chunk_tasks(n_samples, n_batches=n_batches, arr=good_samples_idx,
