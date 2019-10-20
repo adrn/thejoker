@@ -1,3 +1,5 @@
+from warnings import warn
+
 # Third-party
 from astropy.utils.misc import isiterable
 import astropy.units as u
@@ -68,7 +70,7 @@ class JokerParams:
     """
     @u.quantity_input(P_min=u.day, P_max=u.day)
     def __init__(self, P_min, P_max,
-                 linear_par_Lambda, linear_par_mu=None,
+                 linear_par_Lambda=None, linear_par_mu=None,
                  scale_K_prior_with_P=True,
                  jitter=None, jitter_unit=None,
                  poly_trend=1,
@@ -93,6 +95,23 @@ class JokerParams:
         # TODO: ignoring units / assuming units are same as data here
         if linear_par_mu is None:
             linear_par_mu = np.zeros(_n_linear)
+
+        if linear_par_Lambda is None:
+            msg = (
+                "You did not specify a prior for the linear parameters of "
+                "The Joker, i.e. the velocity semi-amplitude, systemic "
+                "velocity, or velocity trend parameters. A past version of "
+                "The Joker erroneously assumed that this prior was very broad "
+                "and could be ignored, but this bug has been fixed, and you "
+                "must specify this prior. Currently, we only support a "
+                "Gaussian prior on the linear parameters, and thus allow "
+                "specifying the mean (linear_par_mu) and covariance matrix "
+                "(linear_par_Lambda) of this Gaussian prior. For example, "
+                "to set this to a broad prior, pass in, e.g.: "
+                "linear_par_Lambda=np.diag([1e2, 1e2])**2. The default mean "
+                "is assumed to be zero.")
+            raise ValueError(msg)
+
         self.linear_par_Lambda = np.array(linear_par_Lambda)
         self.linear_par_mu = np.array(linear_par_mu)
 
