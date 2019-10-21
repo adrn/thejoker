@@ -53,6 +53,9 @@ class JokerSamples(OrderedDict):
         self._cache = dict()
 
         self.poly_trend = int(poly_trend)
+
+    @property
+    def _valid_keys(self):
         self._trend_names = ['v{0}'.format(i)
                              for i in range(self.poly_trend)]
         for name in self._trend_names:
