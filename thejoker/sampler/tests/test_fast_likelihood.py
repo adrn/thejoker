@@ -43,10 +43,7 @@ def test_against_py():
     n_chunk = len(chunk)
     py_ll = np.zeros(n_chunk)
     for i in range(n_chunk):
-        try:
-            py_ll[i] = marginal_ln_likelihood(chunk[i], data, joker_params)
-        except Exception as e:
-            py_ll[i] = np.nan
+        py_ll[i] = marginal_ln_likelihood(chunk[i], data, joker_params)
     print("Python:", time.time() - t0)
 
     assert np.allclose(np.array(cy_ll), py_ll)
@@ -54,7 +51,7 @@ def test_against_py():
 
 def test_against_py_scale_varK():
     joker_params = JokerParams(P_min=8*u.day, P_max=32768*u.day,
-                               jitter=0*u.m/u.s,
+                               jitter=0*u.km/u.s,
                                scale_K_prior_with_P=True,
                                linear_par_Lambda=np.diag([1e2])**2)
     joker = TheJoker(joker_params)
@@ -80,10 +77,7 @@ def test_against_py_scale_varK():
     n_chunk = len(chunk)
     py_ll = np.zeros(n_chunk)
     for i in range(n_chunk):
-        try:
-            py_ll[i] = marginal_ln_likelihood(chunk[i], data, joker_params)
-        except Exception as e:
-            py_ll[i] = np.nan
+        py_ll[i] = marginal_ln_likelihood(chunk[i], data, joker_params)
     print("Python:", time.time() - t0)
 
     t0 = time.time()

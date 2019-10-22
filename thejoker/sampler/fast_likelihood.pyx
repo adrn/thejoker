@@ -437,6 +437,8 @@ cpdef batch_get_posterior_samples(double[:,::1] chunk,
         get_ivar(ivar, chunk[n, 4], jitter_ivar)
 
         if scale_K_prior_with_P > 0:
+            # TODO: many issues with this. If units are whack, this matrix could
+            # become singular! e.g., 25 km/s -> 25000 m/s, squared...
             Lambda[0, 0] = K0**2 / (1 - chunk[n, 2]**2) * (chunk[n, 0] / 365.)**(-2/3)
             Linv[0, 0] = 1 / Lambda[0, 0]
 
