@@ -10,6 +10,7 @@ from .params import JokerParams
 from .samples import JokerSamples
 from ..data import RVData
 from ..stats import beta_logpdf, norm_logpdf
+from ..log import log as logger
 
 __all__ = ['TheJokerMCMCModel']
 
@@ -128,11 +129,15 @@ class TheJokerMCMCModel:
         Kv_terms = np.concatenate((p['K'], vterms))
         if self.params.scale_K_prior_with_P:
             # TODO: assumes period in days
-            self._V[0, 0] = (self._K0**2 / (1 - p['e']**2) *
-                             (p['P'] / 365.)**(-2/3.))
-            lnp += multivariate_normal.logpdf(Kv_terms,
-                                              mean=self._mu,
-                                              cov=self._V)
+            try:
+                self._V[0, 0] = (self._K0**2 / (1 - p['e']**2) *
+                                 (p['P'] / 365.)**(-2/3.))
+                lnp += multivariate_normal.logpdf(Kv_terms,
+                                                  mean=self._mu,
+                                                  cov=self._V)
+            except Exception:
+                logger.warning("Failed to compute linear par prior.")
+                return -np.inf
         else:
             lnp += self._vterms_norm.logpdf(Kv_terms)
 
