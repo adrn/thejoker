@@ -17,7 +17,7 @@ __all__ = ['JokerSamples']
 
 
 class JokerSamples(OrderedDict):
-    _valid_keys = ['P', 'M0', 'e', 'omega', 'jitter', 'K']
+    _base_keys = ['P', 'M0', 'e', 'omega', 'jitter', 'K']
 
     def __init__(self, t0=None, poly_trend=1, **kwargs):
         """A dictionary-like object for storing posterior samples from
@@ -56,11 +56,13 @@ class JokerSamples(OrderedDict):
 
     @property
     def _valid_keys(self):
+        keys = self._base_keys.copy()
         self._trend_names = ['v{0}'.format(i)
                              for i in range(self.poly_trend)]
         for name in self._trend_names:
-            if name not in self._valid_keys:
-                self._valid_keys.append(name)
+            if name not in keys:
+                keys.append(name)
+        return keys
 
     def __getstate__(self):
         return (self.poly_trend, self.t0, dict(self))
