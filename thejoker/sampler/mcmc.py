@@ -62,11 +62,17 @@ class TheJokerMCMCModel:
 
         # Covariance matrix for Gaussian prior on velocity trend terms:
         #   K, v0, v1, v2 ...
-        # TODO: support non-zero mean for linear par mu
-        self._V = self.params.linear_par_Lambda
-        self._vterms_norm = multivariate_normal(
-            mean=np.zeros(1 + self.params.poly_trend),
-            cov=self._V)
+        self._mu = self.params.linear_par_mu
+        if self.params.scale_K_prior_with_P:
+            self._V = np.zeros((self.params._n_linear, self.params._n_linear))
+            self._V[1:, 1:] = self.params.linear_par_Lambda
+        else:
+            self._V = self.params.linear_par_Lambda
+            self._vterms_norm = multivariate_normal(
+                mean=self._mu,
+                cov=self._V)
+        # TODO: allow setting K0
+        self._K0 = (25 * u.km/u.s).to_value(joker_params._jitter_unit)
 
         # various cached things:
         self._P_min = self.params.P_min.to_value(self.units['time'])
@@ -120,7 +126,15 @@ class TheJokerMCMCModel:
         # TODO: technicaly, K prior is improper because half-gaussian (K>0)!
         vterms = np.ravel(list(get_vterms(p, self.params.poly_trend).values()))
         Kv_terms = np.concatenate((p['K'], vterms))
-        lnp += self._vterms_norm.logpdf(Kv_terms)
+        if self.params.scale_K_prior_with_P:
+            # TODO: assumes period in days
+            self._V[0, 0] = (self._K0**2 / (1 - p['e']**2) *
+                             (p['P'] / 365.)**(-2/3.))
+            lnp += multivariate_normal.logpdf(Kv_terms,
+                                              mean=self._mu,
+                                              cov=self._V)
+        else:
+            lnp += self._vterms_norm.logpdf(Kv_terms)
 
         return lnp
 
