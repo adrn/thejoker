@@ -124,7 +124,7 @@ class TheJokerMCMCModel:
                                self.params.jitter[1])
 
         # Gaussian priors on K, v0, v1, ...
-        # TODO: technicaly, K prior is improper because half-gaussian (K>0)!
+        # TODO: technically, K prior is improper because half-gaussian (K>0)!
         vterms = np.ravel(list(get_vterms(p, self.params.poly_trend).values()))
         Kv_terms = np.concatenate((p['K'], vterms))
         if self.params.scale_K_prior_with_P:
@@ -136,7 +136,9 @@ class TheJokerMCMCModel:
                                                   mean=self._mu,
                                                   cov=self._V)
             except Exception:
-                logger.warning("Failed to compute linear par prior.")
+                logger.warning("Failed to compute linear par prior: V={}, Kv={}"
+                               "P={}, e={}".format(self._V, Kv_terms,
+                                                   p['P'], p['e']))
                 return -np.inf
         else:
             lnp += self._vterms_norm.logpdf(Kv_terms)
