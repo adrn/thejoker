@@ -123,11 +123,6 @@ class TheJoker:
 
         samples['omega'] = rnd.uniform(0, 2 * np.pi, size=size) * u.radian
 
-        # Store the value of the prior at each prior sample
-        # TODO: should we store the value for each parameter independently?
-        if return_logprobs:
-            ln_prior_val = ln_prior(samples, self.params)
-
         if not self.params._fixed_jitter:
             # Gaussian prior in log(s^2)
             log_s2 = rnd.normal(*self.params.jitter, size=size)
@@ -136,6 +131,11 @@ class TheJoker:
 
         else:
             samples['jitter'] = np.ones(size) * self.params.jitter
+
+        # Store the value of the prior at each prior sample
+        # TODO: should we store the value for each parameter independently?
+        if return_logprobs:
+            ln_prior_val = ln_prior(samples, self.params)
 
         if return_logprobs:
             return samples, ln_prior_val
