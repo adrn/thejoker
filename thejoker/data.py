@@ -1,42 +1,41 @@
 # Third-party
+from astropy.table import Table
 from astropy.time import Time
 import astropy.units as u
 import numpy as np
 
 # Project
 from .log import log as logger
+from .utils import guess_time_format
 
 __all__ = ['RVData']
 
 
 class RVData:
-    """
-    Time-domain radial velocity measurements for a single target.
+    """Time-domain radial velocity measurements for a single target.
 
     Parameters
     ----------
     t : `~astropy.time.Time`, array_like
-        Array of measurement times. Either as an array of BMJD values
-        or as an Astropy time object.
+        Array of measurement times. Either as an astropy `~astropy.time.Time`
+        object, or as a numpy array of Barycentric MJD (BMJD) values.
     rv : `~astropy.units.Quantity` [speed]
         Radial velocity (RV) measurements.
-    stddev : `~astropy.units.Quantity` [speed] (optional)
-        Standard deviation for each RV measurement. Specify this or ``ivar``.
-    ivar : `~astropy.units.Quantity` [1/speed^2] (optional)
-        Inverse variance for each RV measurement. Specify this or ``stddev``.
-    metadata : any (optional)
-        Any metadata associated with the object.
+    rv_err : `~astropy.units.Quantity` [speed] (optional)
+        If 1D, assumed to be the standard deviation for each RV measurement. If
+        this input is 2-dimensional, this is assumed to be a covariance matrix
+        for all data points.
     t0 : numeric (optional) [day]
         A reference time. Default is to use the minimum time in barycentric MJD
-        (days).
+        (days). Set to ``False`` to disable subtracting the reference time.
+    clean : bool (optional)
+        Filter out any NaN or Inf data points.
 
     """
-    @u.quantity_input(rv=u.km/u.s)
-    def __init__(self, t, rv, ivar=None, stddev=None,
-                 metadata=None, t0=None):
+    @u.quantity_input(rv=u.km/u.s, rv_err=[u.km/u.s, (u.km/u.s)**2])
+    def __init__(self, t, rv, rv_err, t0=None, clean=True):
 
-        # For speed, many of the attributes are saved without units and only
-        #   returned with units if asked for.
+        # For speed, time is saved internally as BMJD:
         if isinstance(t, Time):
             _t_bmjd = t.tcb.mjd
         else:
@@ -45,75 +44,81 @@ class RVData:
 
         self.rv = np.atleast_1d(rv)
 
-        # parse input specification of errors
-        self._has_err = True
-        if ivar is None and stddev is None:
-            self.ivar = np.full_like(self.rv.value, np.nan) * self.rv.unit
-            self._has_err = False
+        # Figure out what kind of error is specified
+        self.rv_err = np.atleast_1d(rv_err)
 
-        elif ivar is not None and stddev is not None:
-            raise ValueError("You must pass in 'ivar' or 'stddev', not both.")
+        if self.rv_err.ndim == 1:
+            self._has_cov = False
+        elif self.rv_err.ndim == 2:
+            self._has_cov = True
 
-        elif ivar is not None:
-            if not hasattr(ivar, 'unit'):
-                raise TypeError("ivar must be an Astropy Quantity object")
-            elif not ivar.unit.is_equivalent(1/self.rv.unit**2):
-                raise u.UnitsError("ivar must have same unit type as RV^-2")
-
-            self.ivar = ivar.to(1/self.rv.unit**2)
-
-        elif stddev is not None:
-            if not hasattr(stddev, 'unit'):
-                raise TypeError("stddev must be an Astropy Quantity object!")
-            elif not stddev.unit.is_equivalent(self.rv.unit):
-                raise u.UnitsError("stddev must have same unit type as RV")
-
-            self.ivar = 1 / stddev.to(self.rv.unit)**2
-        self.ivar = np.atleast_1d(self.ivar)
+        if (self.rv_err.shape != (self.rv.size, self.rv.size)
+                and self.rv_err.shape != (self.rv.size, )):
+            raise ValueError(f"Invalid shape for input RV error "
+                             f"{self.rv_err.shape}. Should either be "
+                             f"({self.rv.size},) or "
+                             f"({self.rv.size}, {self.rv.size})")
 
         # make sure shapes are consistent
-        if self._t_bmjd.shape != self.rv.shape or self.rv.shape != self.ivar.shape:
-            raise ValueError("Shape of input time, RV, and errors must be consistent! "
-                             "({} vs {} vs {})".format(self._t_bmjd.shape,
-                                                       self.rv.shape,
-                                                       self.ivar.shape))
-        # filter out NAN or INF data points
-        idx = np.isfinite(self._t_bmjd) & np.isfinite(self.rv)
+        if self._t_bmjd.shape != self.rv.shape:
+            raise ValueError(f"Shape of input times and RVs must be consistent "
+                             f"({self._t_bmjd.shape} vs {self.rv.shape})")
 
-        if self._has_err:
-            idx &= np.isfinite(self.ivar) & (self.ivar.value > 0)
+        if clean:
+            # filter out NAN or INF data points
+            idx = (np.isfinite(self._t_bmjd)
+                   & np.isfinite(self.rv))
 
-        if idx.sum() < len(self.rv):
-            logger.info("Filtering {} NaN/Inf data points".format(len(self.rv) - idx.sum()))
+            if self._has_cov:
+                idx &= np.isfinite(self.rv_err).all(axis=0)
+            else:
+                idx &= np.isfinite(self.rv_err)
 
-        self._t_bmjd = self._t_bmjd[idx]
-        self.rv = self.rv[idx]
-        self.ivar = self.ivar[idx]
+            n_filter = len(self.rv) - idx.sum()
+            if n_filter > 0:
+                logger.info(f"Filtering {n_filter} NaN/Inf data points")
+
+            self._t_bmjd = self._t_bmjd[idx]
+            self.rv = self.rv[idx]
+
+            if self._has_cov:
+                self.rv_err = self.rv_err[idx]
+                self.rv_err = self.rv_err[:, idx]
+            else:
+                self.rv_err = self.rv_err[idx]
 
         # sort on times
         idx = self._t_bmjd.argsort()
         self._t_bmjd = self._t_bmjd[idx]
         self.rv = self.rv[idx]
-        self.ivar = self.ivar[idx]
-
-        # metadata can be anything
-        self.metadata = metadata
+        if self._has_cov:
+            self.rv_err = self.rv_err[idx]
+            self.rv_err = self.rv_err[:, idx]
+        else:
+            self.rv_err = self.rv_err[idx]
 
         # if no offset is provided, subtract the minimum time
-        if t0 is None:
-            t0 = self.t.min()
+        if t0 is False:
+            self.t0 = None
+            self._t0_bmjd = 0.
 
-        if not isinstance(t0, Time):
-            raise TypeError('If a reference time t0 is specified, it must '
-                            'be an astropy.time.Time object.')
+        else:
+            if t0 is None:
+                t0 = self.t.min()
 
-        self.t0 = t0
-        self._t0_bmjd = self.t0.tcb.mjd
+            if not isinstance(t0, Time):
+                raise TypeError('If a reference time t0 is specified, it must '
+                                'be an astropy.time.Time object.')
+
+            self.t0 = t0
+            self._t0_bmjd = self.t0.tcb.mjd
+
+    # ------------------------------------------------------------------------
+    # Computed or convenience properties
 
     @property
     def t(self):
-        """
-        The times of each observation.
+        """The times of each observation.
 
         Returns
         -------
@@ -121,6 +126,160 @@ class RVData:
             An Astropy Time object for all times.
         """
         return Time(self._t_bmjd, scale='tcb', format='mjd')
+
+    # ------------------------------------------------------------------------
+    # Other initialization methods:
+
+    @classmethod
+    def guess_from_table(cls, data, time_kwargs=None, rv_unit=None, fuzzy=True):
+        """Try to construct an ``RVData`` instance by guessing column names
+        from the input table.
+
+        Parameters
+        ----------
+        data
+        time_kwargs : dict (optional)
+        rv_unit : `astropy.units.Unit` (optional)
+            If not specified via the relevant table column, this specifies the
+            velocity units.
+        fuzzy : bool (optional)
+            Use fuzzy string matching to guess data column names. This requires
+            the ``fuzzywuzzy`` package.
+        """
+        data = Table(data)
+        lwr_cols = [x.lower() for x in data.colnames]
+
+        # --------------------------------------------------------------------
+        # First handle time data:
+
+        time_data = None
+        if time_kwargs is None:
+            time_kwargs = dict()
+
+        time_info_msg = ("Assuming time scale is '{}' because it was not "
+                         "specified. To change this, pass in: "
+                         "time_kwargs=dict(scale='...') with whatever time "
+                         "scale your data are in.")
+        _scale_specified = 'scale' in time_kwargs
+
+        # First check for any of the valid astropy Time format names:
+        # TODO: right now we only support jd and mjd (and b-preceding)
+        for fmt in ['jd', 'mjd']:
+            if fmt in lwr_cols:
+                time_kwargs['format'] = time_kwargs.get('format', fmt)
+                time_data = data[fmt]
+                break
+
+            elif f'b{fmt}' in lwr_cols:
+                time_kwargs['format'] = time_kwargs.get('format', fmt)
+                time_kwargs['scale'] = time_kwargs.get('scale', 'tcb')
+                time_data = data[f'b{fmt}']
+                break
+
+        # check colnames for "t" or "time"
+        for name in ['t', 'time']:
+            if name in lwr_cols:
+                time_data = data[name]
+                time_kwargs['format'] = time_kwargs.get(
+                    'format', guess_time_format(data[name]))
+                break
+
+        if not _scale_specified:
+            logger.info(time_info_msg.format(time_kwargs.get('scale', 'utc')))
+
+        if time_data is None:
+            raise RuntimeWarning("Failed to parse time data and format from "
+                                 "input table. Instead, try using the "
+                                 "initializer directly, and specify the time "
+                                 "as an astropy.time.Time instance.")
+
+        time = Time(time_data, **time_kwargs)
+
+        # --------------------------------------------------------------------
+        # Now deal with RV data:
+
+        # TODO: could make this customizable...
+        _valid_rv_names = ['rv', 'vr', 'radial_velocity', 'vhelio', 'vrad']
+
+        if fuzzy:
+            from fuzzywuzzy import process
+            # TODO: could make this customizable too...
+            score_thresh = 90
+
+            matches = []
+            scores = []
+            for name in _valid_rv_names:
+                match, score = process.extractOne(name, lwr_cols)
+                matches.append(match)
+                scores.append(score)
+            scores = np.array(scores)
+            matches = np.array(matches)
+
+            # error if the best match is below threshold
+            if scores.max() < score_thresh:
+                raise RuntimeError("Failed to parse radial velocity data from "
+                                   "input table: No column names looked "
+                                   "good with fuzzy name matching.")
+
+            # check for multiple bests:
+            if np.sum(scores == scores.max()) > 1:
+                raise RuntimeError("Failed to parse radial velocity data from "
+                                   "input table: Multiple column names looked "
+                                   "good with fuzzy matching {}."
+                                   .format(matches[scores == scores.max()]))
+
+            best_rv_name = matches[scores.argmax()]
+
+        else:
+            for name in _valid_rv_names:
+                if name in lwr_cols:
+                    best_rv_name = name
+                    break
+            else:
+                raise RuntimeError("Failed to parse radial velocity data from "
+                                   "input table: no matches to input names: "
+                                   f"{_valid_rv_names}. Use fuzzy=True or "
+                                   "use the initializer directly.")
+
+        rv_data = u.Quantity(data[best_rv_name])
+
+        # TODO: allow customizing?
+        _valid_err_names = [f'{best_rv_name}err', f'{best_rv_name}_err',
+                            f'{best_rv_name}_e', f'e_{best_rv_name}']
+        for err_name in _valid_err_names:
+            if err_name in lwr_cols:
+                err_data = u.Quantity(data[err_name])
+                break
+        else:
+            raise RuntimeError("Failed to parse radial velocity error data "
+                               "from input table: no matches to input names: "
+                               f"{_valid_err_names}. Try using the "
+                               "initializer directly.")
+
+        if rv_unit is not None:
+            if rv_data.unit is u.one:
+                rv_data = rv_data * rv_unit
+
+            if err_data is not None and err_data.unit is u.one:
+                err_data = err_data * rv_unit
+
+        return cls(time, rv_data, err_data)
+
+    # ------------------------------------------------------------------------
+    # To other classes
+
+    def to_timeseries(self):
+        """Convert this object into an `astropy.timeseries.TimeSeries` instance.
+        """
+        from astropy.timeseries import TimeSeries
+
+        ts = TimeSeries(time=self.t, data={'rv': self.rv,
+                                           'rv_err': self.rv_err})
+
+        return ts
+
+    # ------------------------------------------------------------------------
+    # Other methods
 
     def phase(self, P, t0=None):
         """
@@ -146,20 +305,6 @@ class RVData:
         if t0 is None:
             t0 = self.t0
         return ((self.t - t0) / P) % 1.
-
-    @property
-    def stddev(self):
-        """
-        The Gaussian error for each radial velocity measurement.
-
-        Returns
-        -------
-        stddev : `~astropy.units.Quantity` [speed]
-            An Astropy Quantity with velocity (speed) units.
-        """
-        return 1 / np.sqrt(self.ivar)
-
-    # ---
 
     def plot(self, ax=None, rv_unit=None, time_format='mjd', phase_fold=None,
              relative_to_t0=False, add_labels=True, **kwargs):
@@ -222,14 +367,9 @@ class RVData:
         if phase_fold:
             t = (t / phase_fold.to(u.day).value) % 1
 
-        if self._has_err:
-            ax.errorbar(t, self.rv.to(rv_unit).value,
-                        self.stddev.to(rv_unit).value,
-                        **style)
-        else:
-            style.pop('ecolor')
-            style.pop('elinewidth')
-            ax.plot(t, self.rv.to(rv_unit).value, **style)
+        ax.errorbar(t, self.rv.to(rv_unit).value,
+                    self.stddev.to(rv_unit).value,
+                    **style)
 
         if add_labels:
             ax.set_xlabel('time [BMJD]')
@@ -249,66 +389,7 @@ class RVData:
     def __getitem__(self, slc):
         return self.__class__(t=self.t.copy()[slc],
                               rv=self.rv.copy()[slc],
-                              ivar=self.ivar.copy()[slc])
+                              rv_err=self.rv_err.copy()[slc])
 
     def __len__(self):
         return len(self.rv.value)
-
-    def to_hdf5(self, file_or_path):
-        """
-        Write data to an HDF5 file.
-
-        Parameters
-        ----------
-        file_or_path : str, `h5py.File`, `h5py.Group`
-        """
-
-        import h5py
-        if isinstance(file_or_path, str):
-            f = h5py.File(file_or_path, 'w')
-            close = True
-
-        else:
-            f = file_or_path
-            close = False
-
-        d = f.create_dataset('mjd', data=self.t.tcb.mjd)
-        d.attrs['format'] = 'mjd'
-        d.attrs['scale'] = 'tcb'
-
-        d = f.create_dataset('rv', data=self.rv.value)
-        d.attrs['unit'] = str(self.rv.unit)
-
-        d = f.create_dataset('rv_err', data=self.stddev.value)
-        d.attrs['unit'] = str(self.stddev.unit)
-
-        if close:
-            f.close()
-
-    @classmethod
-    def from_hdf5(cls, file_or_path):
-        """
-        Read data to an HDF5 file.
-
-        Parameters
-        ----------
-        file_or_path : str, `h5py.File`, `h5py.Group`
-        """
-
-        import h5py
-        if isinstance(file_or_path, str):
-            f = h5py.File(file_or_path, 'r')
-            close = True
-
-        else:
-            f = file_or_path
-            close = False
-
-        t = f['mjd']
-        rv = f['rv'][:] * u.Unit(f['rv'].attrs['unit'])
-        stddev = f['rv_err'][:] * u.Unit(f['rv_err'].attrs['unit'])
-
-        if close:
-            f.close()
-
-        return cls(t=t, rv=rv, stddev=stddev)
