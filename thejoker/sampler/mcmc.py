@@ -9,8 +9,8 @@ from .likelihood import get_ivar, design_matrix
 from .params import JokerParams
 from .samples import JokerSamples
 from ..data import RVData
-from ..stats import beta_logpdf, norm_logpdf
-from ..logging import logger
+from ..utils.stats import beta_logpdf, norm_logpdf
+from ..utils.logging import logger
 
 __all__ = ['TheJokerMCMCModel']
 
