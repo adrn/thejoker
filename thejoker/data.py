@@ -131,7 +131,8 @@ class RVData:
     # Other initialization methods:
 
     @classmethod
-    def guess_from_table(cls, data, time_kwargs=None, rv_unit=None, fuzzy=True):
+    def guess_from_table(cls, tbl, time_kwargs=None, rv_unit=None,
+                         fuzzy=False):
         """Try to construct an ``RVData`` instance by guessing column names
         from the input table.
 
@@ -146,8 +147,9 @@ class RVData:
             Use fuzzy string matching to guess data column names. This requires
             the ``fuzzywuzzy`` package.
         """
-        data = Table(data)
-        lwr_cols = [x.lower() for x in data.colnames]
+        tbl = Table(tbl)
+        lwr_to_col = {x.lower(): x for x in tbl.colnames}
+        lwr_cols = [x.lower() for x in tbl.colnames]
 
         # --------------------------------------------------------------------
         # First handle time data:
@@ -160,6 +162,7 @@ class RVData:
                          "specified. To change this, pass in: "
                          "time_kwargs=dict(scale='...') with whatever time "
                          "scale your data are in.")
+        _fmt_specified = 'format' in time_kwargs
         _scale_specified = 'scale' in time_kwargs
 
         # First check for any of the valid astropy Time format names:
@@ -167,21 +170,28 @@ class RVData:
         for fmt in ['jd', 'mjd']:
             if fmt in lwr_cols:
                 time_kwargs['format'] = time_kwargs.get('format', fmt)
-                time_data = data[fmt]
+                time_data = tbl[lwr_to_col[fmt]]
                 break
 
             elif f'b{fmt}' in lwr_cols:
                 time_kwargs['format'] = time_kwargs.get('format', fmt)
                 time_kwargs['scale'] = time_kwargs.get('scale', 'tcb')
-                time_data = data[f'b{fmt}']
+                time_data = tbl[lwr_to_col[f'b{fmt}']]
                 break
 
         # check colnames for "t" or "time"
         for name in ['t', 'time']:
             if name in lwr_cols:
-                time_data = data[name]
+                time_data = tbl[lwr_to_col[name]]
                 time_kwargs['format'] = time_kwargs.get(
-                    'format', guess_time_format(data[name]))
+                    'format', guess_time_format(tbl[lwr_to_col[name]]))
+                if not _fmt_specified:
+                    logger.info("Guessed time format: '{}'. If this is "
+                                "incorrect, try passing in "
+                                "time_kwargs=dict(format='...') with the "
+                                "correct format, and open an issue at "
+                                "https://github.com/adrn/thejoker/issues"
+                                .format(time_kwargs['format']))
                 break
 
         if not _scale_specified:
@@ -199,10 +209,17 @@ class RVData:
         # Now deal with RV data:
 
         # TODO: could make this customizable...
-        _valid_rv_names = ['rv', 'vr', 'radial_velocity', 'vhelio', 'vrad']
+        _valid_rv_names = ['rv', 'vr', 'radial_velocity',
+                           'vhelio', 'vrad', 'vlos']
 
         if fuzzy:
-            from fuzzywuzzy import process
+            try:
+                from fuzzywuzzy import process
+            except ImportError:
+                raise ImportError("Fuzzy column name matching requires "
+                                  "`fuzzywuzzy`. Install with pip install "
+                                  "fuzzywuzzy.")
+
             # TODO: could make this customizable too...
             score_thresh = 90
 
@@ -241,14 +258,14 @@ class RVData:
                                    f"{_valid_rv_names}. Use fuzzy=True or "
                                    "use the initializer directly.")
 
-        rv_data = u.Quantity(data[best_rv_name])
+        rv_data = u.Quantity(tbl[lwr_to_col[best_rv_name]])
 
         # TODO: allow customizing?
         _valid_err_names = [f'{best_rv_name}err', f'{best_rv_name}_err',
                             f'{best_rv_name}_e', f'e_{best_rv_name}']
         for err_name in _valid_err_names:
             if err_name in lwr_cols:
-                err_data = u.Quantity(data[err_name])
+                err_data = u.Quantity(tbl[lwr_to_col[err_name]])
                 break
         else:
             raise RuntimeError("Failed to parse radial velocity error data "
@@ -367,9 +384,15 @@ class RVData:
         if phase_fold:
             t = (t / phase_fold.to(u.day).value) % 1
 
+        if self._has_cov:
+            # TODO: this is a bit of a hack
+            diag_var = np.diag(self.rv_err.value)
+            err = np.sqrt(diag_var) * self.rv_err.unit ** 0.5
+        else:
+            err = self.rv_err
+
         ax.errorbar(t, self.rv.to(rv_unit).value,
-                    self.stddev.to(rv_unit).value,
-                    **style)
+                    err.to(rv_unit).value, **style)
 
         if add_labels:
             ax.set_xlabel('time [BMJD]')
@@ -381,15 +404,20 @@ class RVData:
     def __copy__(self):
         return self.__class__(t=self.t.copy(),
                               rv=self.rv.copy(),
-                              ivar=self.ivar.copy())
+                              rv_err=self.rv_err.copy())
 
     def copy(self):
         return self.__copy__()
 
     def __getitem__(self, slc):
-        return self.__class__(t=self.t.copy()[slc],
-                              rv=self.rv.copy()[slc],
-                              rv_err=self.rv_err.copy()[slc])
+        if self._has_cov:
+            return self.__class__(t=self.t.copy()[slc],
+                                  rv=self.rv.copy()[slc],
+                                  rv_err=self.rv_err.copy()[slc][:, slc])
+        else:
+            return self.__class__(t=self.t.copy()[slc],
+                                  rv=self.rv.copy()[slc],
+                                  rv_err=self.rv_err.copy()[slc])
 
     def __len__(self):
         return len(self.rv.value)
