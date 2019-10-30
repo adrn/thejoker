@@ -409,7 +409,6 @@ class RVData:
 
         return ax
 
-    # copy methods
     def __copy__(self):
         return self.__class__(t=self.t.copy(),
                               rv=self.rv.copy(),
