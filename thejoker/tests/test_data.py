@@ -1,5 +1,5 @@
 # Third-party
-import astropy.time as atime
+from astropy.time import Time
 import astropy.units as u
 import numpy as np
 import pytest
@@ -7,50 +7,86 @@ import pytest
 try:
     import matplotlib.pyplot as plt
     HAS_MPL = True
-except:
+except ImportError:
     HAS_MPL = False
 
 # Package
 from ..data import RVData
 
-def test_rvdata():
 
-    # test various initializations
-    t = np.random.uniform(55555., 56012., size=1024)
-    rv = 100 * np.sin(0.5*t) * u.km/u.s
-    ivar = 1 / (np.random.normal(0,5,size=1024)*u.km/u.s)**2
-    RVData(t=t, rv=rv, ivar=ivar)
+def test_rvdata_init():
+    rnd = np.random.RandomState(42)
 
-    t = atime.Time(t, format='mjd', scale='utc')
-    RVData(t=t, rv=rv, ivar=ivar)
+    # Test valid initialization combos
+    t_arr = rnd.uniform(55555., 56012., size=32)
+    t_obj = Time(t_arr, format='mjd')
+
+    rv = 100 * np.sin(0.5 * t_arr) * u.km / u.s
+    err = rnd.normal(0, 5, size=len(t_arr)) * u.km/u.s
+    cov = (np.diag(err.value) * err.unit) ** 2
+
+    # These should succeed:
+    RVData(t=t_arr, rv=rv, rv_err=err)
+    RVData(t_arr, rv, err)
+    RVData(t_obj, rv, err)
+    RVData(t_arr, rv, cov)
+
+    # With/without clean:
+    for i in range(1, 3):  # skip time, because Time() catches nan values
+        inputs = [t_arr, rv, err]
+        arr = inputs[i].copy()
+        arr[0] = np.nan
+        inputs[i] = arr
+
+        data = RVData(*inputs)
+        assert len(data) == (len(arr)-1)
+
+        data = RVData(*inputs, clean=True)
+        assert len(data) == (len(arr)-1)
+
+        data = RVData(*inputs, clean=False)
+        assert len(data) == len(arr)
+
+    # With/without t0
+    data = RVData(t_arr, rv, err, t0=False)
+    assert data.t0 is None
+
+    data = RVData(t_arr, rv, err, t0=t_obj[3])
+    assert np.isclose(data.t0.mjd, t_obj[3].mjd)
+
+    # ------------------------------------------------------------------------
+    # Test expected failures:
+
+    # no units on something
+    with pytest.raises(TypeError):
+        RVData(t_arr, rv.value, err)
 
     with pytest.raises(TypeError):
-        RVData(t=t, rv=rv.value, ivar=ivar)
-
-    with pytest.raises(TypeError):
-        RVData(t=t, rv=rv, ivar=ivar.value)
-
-    # pass both
-    with pytest.raises(ValueError):
-        RVData(t=t, rv=rv, ivar=ivar, stddev=np.sqrt(1/ivar))
-
-    # not velocity units
-    with pytest.raises(u.UnitsError):
-        RVData(t=t, rv=rv, ivar=ivar.value*u.km)
-
-    # no error
-    data = RVData(t=t, rv=rv)
-    assert np.isnan(data.stddev.value).all()
+        RVData(t_arr, rv, err.value)
 
     # shapes must be consistent
     with pytest.raises(ValueError):
-        RVData(t=t[:-1], rv=rv, ivar=ivar)
+        RVData(t_obj[:-1], rv, err)
 
     with pytest.raises(ValueError):
-        RVData(t=t, rv=rv[:-1], ivar=ivar)
+        RVData(t_obj, rv[:-1], err)
 
     with pytest.raises(ValueError):
-        RVData(t=t, rv=rv, ivar=ivar[:-1])
+        RVData(t_obj, rv, err[:-1])
+
+    with pytest.raises(ValueError):
+        RVData(t_obj, rv, cov[:-1])
+
+    bad_cov = np.arange(8).reshape((2, 2, 2)) * (u.km/u.s)**2
+    with pytest.raises(ValueError):
+        RVData(t_obj, rv, bad_cov)
+
+    # t0 must be a Time instance
+    with pytest.raises(TypeError):
+        RVData(t_arr, rv, err, t0=t_arr[3])
+
+
+def test_data_methods():
 
     # check that copy works
     t = atime.Time(t, format='mjd', scale='utc')
@@ -72,16 +108,6 @@ def test_rvdata():
     assert len(data2.t) == 16
     assert len(data2.rv) == 16
     assert len(data2.ivar) == 16
-
-    # check filtering NaN's
-    t = np.random.uniform(55555., 56012., size=128)
-    rv = 100 * np.sin(0.5*t)
-    rv[:16] = np.nan
-    rv = rv * u.km/u.s
-    ivar = 1 / (np.random.normal(0,5,size=t.size)*u.km/u.s)**2
-
-    data = RVData(t=t, rv=rv, ivar=ivar)
-    assert len(data) == (128-16)
 
 
 @pytest.mark.skipif(not HAS_MPL, reason='matplotlib not installed')
