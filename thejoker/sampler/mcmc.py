@@ -10,7 +10,7 @@ from .params import JokerParams
 from .samples import JokerSamples
 from ..data import RVData
 from ..stats import beta_logpdf, norm_logpdf
-from ..log import log as logger
+from ..logging import logger
 
 __all__ = ['TheJokerMCMCModel']
 

@@ -3,7 +3,7 @@ import h5py
 import numpy as np
 
 # Project
-from ..log import log
+from ..logging import logger
 from .fast_likelihood import (batch_marginal_ln_likelihood,
                               batch_get_posterior_samples)
 
@@ -197,11 +197,11 @@ def _sample_vector_worker(task):
     if global_seed is not None:
         seed = global_seed + chunk_index
         rnd = np.random.RandomState(seed)
-        log.log(0, "worker with chunk {} has seed {}".format(idx[0], seed))
+        logger.log(0, "worker with chunk {} has seed {}".format(idx[0], seed))
 
     else:
         rnd = np.random.RandomState()
-        log.log(0, "worker with chunk {} not seeded".format(idx[0]))
+        logger.log(0, "worker with chunk {} not seeded".format(idx[0]))
 
     # read a chunk of the prior samples
     with h5py.File(prior_cache_file, 'r') as f:
