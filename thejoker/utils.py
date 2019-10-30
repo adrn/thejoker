@@ -4,7 +4,7 @@ import astropy.units as u
 import numpy as np
 
 # Package
-from .log import log as logger
+from .logging import logger
 
 
 def quantity_from_hdf5(f, key, n=None):

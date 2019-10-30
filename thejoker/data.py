@@ -5,7 +5,7 @@ import astropy.units as u
 import numpy as np
 
 # Project
-from .log import log as logger
+from .logging import logger
 from .utils import guess_time_format
 
 __all__ = ['RVData']
