@@ -11,7 +11,7 @@ import numpy as np
 from twobody import KeplerOrbit, PolynomialRVTrend
 
 # Package
-from ..utils import quantity_to_hdf5, quantity_from_hdf5
+from ..utils.io import quantity_to_hdf5, quantity_from_hdf5
 
 __all__ = ['JokerSamples']
 

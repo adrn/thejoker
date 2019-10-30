@@ -9,7 +9,7 @@ import h5py
 import numpy as np
 
 # Project
-from ..logging import logger
+from ..utils.logging import logger
 from ..data import RVData
 from .params import JokerParams
 from .multiproc_helpers import (get_good_sample_indices, compute_likelihoods,

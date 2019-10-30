@@ -9,7 +9,7 @@ from twobody.wrap import cy_rv_from_elements
 from scipy.stats import multivariate_normal
 
 # Package
-from ..stats import beta_logpdf, norm_logpdf
+from ..utils.stats import beta_logpdf, norm_logpdf
 
 __all__ = ['ln_prior', 'get_ivar', 'design_matrix',
            'likelihood_worker', 'marginal_ln_likelihood']

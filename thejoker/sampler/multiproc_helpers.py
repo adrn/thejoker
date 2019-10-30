@@ -3,7 +3,7 @@ import h5py
 import numpy as np
 
 # Project
-from ..logging import logger
+from ..utils.logging import logger
 from .fast_likelihood import (batch_marginal_ln_likelihood,
                               batch_get_posterior_samples)
 
