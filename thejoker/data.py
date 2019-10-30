@@ -136,10 +136,19 @@ class RVData:
         """Try to construct an ``RVData`` instance by guessing column names
         from the input table.
 
+        .. note::
+
+            This is an experimental feature! Use at your own risk.
+
         Parameters
         ----------
-        data
+        tbl : `~astropy.table.Table`
+            The source data table.
         time_kwargs : dict (optional)
+            Additional keyword arguments to pass to the `~astropy.time.Time`
+            initializer when passing in the inferred time data column. For
+            example, if you know the time data are in Julian days, you can pass
+            in ``time_kwargs=dict(format='jd')`` to improve the guessing.
         rv_unit : `astropy.units.Unit` (optional)
             If not specified via the relevant table column, this specifies the
             velocity units.
