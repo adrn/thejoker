@@ -8,11 +8,18 @@ import theano.tensor as tt
 import exoplanet as xo
 import exoplanet.units as xu
 
+__all__ = ['JokerPrior']
+
 
 class JokerPrior:
 
-    def __init__(self, pars=None, unpars=None, P_lim=None):
-        """
+    def __init__(self, pars, unpars=None):
+        """This class controls the prior probability distributions for the
+        parameters used in The Joker.
+
+        TODO: words
+        TODO: note, use uniform_logP for old functionality
+
         Retrieve the prior parameters for the nonlinear Joker parameters as
         pymc3 variables. If not specified, most parameters have sensible
         defaults. However, specifying the period prior is required and must be
@@ -32,10 +39,6 @@ class JokerPrior:
             nonlinear parameters (P, e, omega, M0), you must also pass in the
             un-transformed variables keyed on the name of the transformed
             parameters through this argument.
-        P_lim : iterable (optional)
-            If the period prior is not specified explicitly, this sets the
-            bounds of the period prior, assumed to be proportional to 1/P
-            (uniform in log(P)).
 
         Examples
         --------
@@ -76,11 +79,11 @@ class JokerPrior:
                                  "The input `unpars` must be a dictionary, not"
                                  " '{}'".format(type(unpars)))
 
-        # Initialize the default prior:
-        # - P is special, we allow passing in a range, assuming 1/P period:
-        pars['P'], unpars['P'] = self._get_P(pars, unpars, P_lim)
+        # User must specify a prior on period, P
+        if 'P' not in pars:
+            raise ValueError("TODO: you must ... use .uniform_logP")
 
-        # Now set up the default priors on
+        # Set up the default priors for parameters with defaults
         with pm.Model() as model:
             default_pars = {
                 'e': xo.distributions.eccentricity.kipping13('e'),
@@ -101,43 +104,25 @@ class JokerPrior:
         self.pars = pars
         self.unpars = unpars
 
-    @staticmethod
-    @u.quantity_input(P_lim=u.day)
-    def _get_P(pars, unpars, P_lim=None):
-        """Note: this is an internal function.
-
-        Retrieve the period prior as a pymc3 variable given semi-flexible input.
-        """
-
-        if 'P' in pars and P_lim is not None:
-            raise ValueError("Period appears in the input parameters, but "
-                             "period limits are also specified (via P_lim). "
-                             "Specify one or the other, but on both.")
-
-        elif 'P' not in pars and P_lim is None:
-            raise ValueError("The period prior requires some specification: "
-                            "Either pass in an explicit pymc3 variable with a "
-                            "defined distribution, or pass in limits, P_lim, "
-                            "for an assumed (default) prior proportional "
-                            "to 1/P")
-
-        # Short-circuit if P is already defined
-        if 'P' in pars:
-            return pars['P'], unpars.get('P', None)
+    @classmethod
+    @u.quantity_input(P_min=u.day, P_max=u.day)
+    def uniform_logP(cls, P_min, P_max, **kwargs):
+        pars = kwargs.pop('pars', dict())
+        unpars = kwargs.pop('unpars', dict())
 
         # At this point, P is not in pars but P_lim has been specified:
+        P_max = P_max.to(P_min.unit)
         with pm.Model() as model:
-            logP_kw = dict()
-            if P_lim is not None:
-                logP_kw['lower'] = np.log10(P_lim.value[0])
-                logP_kw['upper'] = np.log10(P_lim.value[1])
+            unpars['P'] = pm.Uniform('logP',
+                                     np.log10(P_min.value),
+                                     np.log10(P_max.value))
+            pars['P'] = xu.with_unit(pm.Deterministic('P', 10**unpars['P']),
+                                     P_min.unit)
 
-            logP = pm.Uniform('logP', **logP_kw)
-            default_P = xu.with_unit(pm.Deterministic('P', 10**logP),
-                                     P_lim.unit)
+        kwargs['pars'] = pars
+        kwargs['unpars'] = unpars
 
-        return default_P, logP
-
+        return cls(**kwargs)
 
     def sample(self, size=1, return_logprobs=False):
         """Note: this is an internal function. To generate samples from the
