@@ -115,7 +115,10 @@ def get_valid_objs():
 @pytest.mark.parametrize('kw,expected_units', list(zip(*get_valid_objs())))
 def test_init_sample(kw, expected_units):
     # Running this function is enough to test valid initialization schemes:
-    prior = JokerPrior(**kw)
+    if 'P_lim' in kw:
+        prior = JokerPrior.uniform_logP(*kw['P_lim'])
+    else:
+        prior = JokerPrior(**kw)
 
     samples = prior.sample()
     for k in samples.keys():
