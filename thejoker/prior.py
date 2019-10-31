@@ -4,7 +4,7 @@ from pymc3.distributions import draw_values
 def _get_P(pars, unpars, P_lim=None):
     """Note: this is an internal function.
 
-    This returns the period prior as a pymc3 variable.
+    Retrieve the period prior as a pymc3 variable given semi-flexible input.
     """
 
     if 'P' in pars and P_lim is not None:
@@ -36,8 +36,30 @@ def _get_P(pars, unpars, P_lim=None):
 
 
 def _get_prior_pars(pars=None, unpars=None, P_lim=None):
-    """Note: these are internal functions. Use ``joker.sample_prior()`` to
-    generate samples from the prior.
+    """Note: this is an internal function.
+
+    Retrieve the prior parameters for the nonlinear Joker parameters as pymc3
+    variables. If not specified, most parameters have sensible defaults.
+    However, specifying the period prior is required and must be done either by
+    passing it in explicitly (i.e. to the ``pars`` argument), or by specifying
+    the limits of the default prior (i.e. via ``P_lim``).
+
+    Parameters
+    ----------
+    pars : dict, list (optional)
+        Either a list of pymc3 variables, or a dictionary of variables with keys
+        set to the variable names. If any of these variables are defined as
+        deterministic transforms from other variables, see the next parameter
+        below.
+    unpars : dict (optional)
+        For parameters that have defined deterministic transforms that go from
+        the parameters used for sampling to the standard Joker nonlinear
+        parameters (P, e, omega, M0), you must also pass in the un-transformed
+        variables keyed on the name of the transformed parameters through this
+        argument.
+    P_lim : iterable (optional)
+        If the period prior is not specified explicitly, this sets the bounds of
+        the period prior, assumed to be proportional to 1/P (uniform in log(P)).
     """
 
     # Parse and clean up the input
@@ -73,8 +95,25 @@ def _get_prior_pars(pars=None, unpars=None, P_lim=None):
 
 
 def _sample_prior(pars, unpars, size=1, return_logprobs=False):
-    """Note: these are internal functions. Use ``joker.sample_prior()`` to
-    generate samples from the prior.
+    """Note: this is an internal function. To generate samples from the prior,
+    use ``TheJoker.sample_prior()`` instead.
+
+    Parameters
+    ----------
+    pars : dict
+        A dictionary of variables with keys set to the variable names. If any of
+        these variables are defined as deterministic transforms from other
+        variables, see the next parameter below.
+    unpars : dict (optional)
+        For parameters that have defined deterministic transforms that go from
+        the parameters used for sampling to the standard Joker nonlinear
+        parameters (P, e, omega, M0), you must also pass in the un-transformed
+        variables keyed on the name of the transformed parameters through this
+        argument.
+    size : int (optional)
+    return_logprobs : bool (optional)
+        Return the log-prior probability at the position of each sample, for
+        each parameter separately
     """
     pars_list = list(pars.values())
     npars = len(pars_list)
@@ -102,8 +141,8 @@ def _sample_prior(pars, unpars, size=1, return_logprobs=False):
     if not return_logprobs:
         return prior_samples
 
-    log_prior_vals = {p.name: samples
-                      for p, samples in zip(pars_list,
-                                            samples_values[npars:])}
+    log_prior_vals = {p.name: vals
+                      for p, vals in zip(pars_list,
+                                         samples_values[npars:])}
 
     return prior_samples, log_prior_vals
