@@ -11,9 +11,70 @@ import exoplanet.units as xu
 __all__ = ['JokerPrior']
 
 
+@u.quantity_input(P_min=u.day, P_max=u.day)
+def default_nonlinear_prior(P_min, P_max, model=None):
+
+    pars = dict()
+    unpars = dict()
+
+    P_max = P_max.to(P_min.unit)
+    with pm.Model(model=model):
+        # Set up the default priors for parameters with defaults
+        pars['e'] = xo.distributions.eccentricity.kipping13('e')
+        pars['omega'] = xu.with_unit(pm.Uniform('omega',
+                                                lower=0, upper=2*np.pi),
+                                     u.radian)
+        pars['M0'] =  xu.with_unit(pm.Uniform('M0', lower=0, upper=2*np.pi),
+                                   u.radian)
+
+        # TODO: these default units are a little sloppy, but it doesn't matter
+        #       in practice...
+        pars['jitter'] = xu.with_unit(pm.Constant('jitter', 0.),
+                                      u.m/u.s)
+
+        # Default period prior is uniform in log period:
+        unpars['P'] = pm.Uniform('logP',
+                                 np.log10(P_min.value),
+                                 np.log10(P_max.value))
+        pars['P'] = xu.with_unit(pm.Deterministic('P', 10**unpars['P']),
+                                 P_min.unit)
+
+    return pars, unpars
+
+
+@u.quantity_input(sigma_K0=u.km/u.s, sigma_v0=u.km/u.s)
+def default_linear_prior(nonlinear_pars, sigma_K0, sigma_v0, model=None):
+    pars = dict()
+
+    K_unit = sigma_K0.unit
+    sigma_v0 = sigma_v0.to(K_unit)
+    with pm.Model(model=model):
+        # Default prior on semi-amplitude: scales with period and eccentricity
+        # such that it is flat with companion mass
+        P = nonlinear_pars['P']
+        e = nonlinear_pars['e']
+        varK = sigma_K0.value**2 * (P / 365)**(-2/3) / (1 - e**2)
+        pars['K'] = xu.with_unit(pm.Normal('K', 0., tt.sqrt(varK)),
+                                 K_unit)
+
+        # Default prior on constant velocity is a single gaussian component
+        pars['v0'] = xu.with_unit(pm.Normal('v0', 0., sigma_v0.value),
+                                  K_unit)
+
+    # return an empty dict for untransformed parameters, for consistency...
+    return pars, dict()
+
+
 class JokerPrior:
 
-    def __init__(self, pars, unpars=None):
+    # TODO: offsets isn't really the right word...
+    # TODO: offsets can be additional Gaussian parameters that specify the
+    # number of offsets!
+    # TODO: inside TheJoker, when sampling, validate that number of RVData's passed in equals the number of (offsets+1)
+    # prior = JokerPrior.from_default(..., v0_offsets=[pm.Normal(...)])
+    # joker = TheJoker(prior)
+    # joker.rejection_sample([data1, data2], ...)
+    def __init__(self, pars, unpars=None, poly_trend=1, v0_offsets=None):
         """This class controls the prior probability distributions for the
         parameters used in The Joker.
 
@@ -39,6 +100,12 @@ class JokerPrior:
             nonlinear parameters (P, e, omega, M0), you must also pass in the
             un-transformed variables keyed on the name of the transformed
             parameters through this argument.
+        poly_trend : int (optional)
+            Specifies the number of coefficients in an additional polynomial
+            velocity trend, meant to capture long-term trends in the data. The
+            default here is ``polytrend=1``, meaning one term: the (constant)
+            systemtic velocity. For example, ``poly_trend=3`` will sample over
+            parameters of a long-term quadratic velocity trend.
 
         Examples
         --------
@@ -79,54 +146,39 @@ class JokerPrior:
                                  "The input `unpars` must be a dictionary, not"
                                  " '{}'".format(type(unpars)))
 
-        # User must specify a prior on period, P
-        if 'P' not in pars:
-            raise ValueError("TODO: you must ... use .uniform_logP")
+        # Set the number of polynomial trend parameters
+        self.poly_trend = int(poly_trend)
 
-        # Set up the default priors for parameters with defaults
-        with pm.Model() as model:
-            default_pars = {
-                'e': xo.distributions.eccentricity.kipping13('e'),
-                'omega': xu.with_unit(pm.Uniform('omega',
-                                                 lower=0, upper=2*np.pi),
-                                      u.radian),
-                'M0': xu.with_unit(pm.Uniform('M0', lower=0, upper=2*np.pi),
-                                   u.radian),
-                'jitter': xu.with_unit(pm.Constant('jitter', 0.),
-                                       u.m/u.s)  # TODO: default units
-            }
+        # Store the names of the default parameters, used for validating input:
+        self.param_names = ['P', 'M0', 'e', 'omega', 'jitter', 'K']
+        self.poly_trend = int(poly_trend)
+        self.param_names += ['v{0}'.format(i)
+                             for i in range(self.poly_trend)]
 
-        # Fill the parameter dictionary with defaults if not specified
-        for k in default_pars.keys():
-            pars[k] = pars.get(k, default_pars.get(k))
-            unpars[k] = unpars.get(k, None)
+        # Enforce that the prior on linear parameters are gaussian
+        for name in self.param_names[5:]:
+            if not isinstance(pars[name].distribution, pm.Normal):
+                raise ValueError("Priors on the linear parameters (K, v0, "
+                                 "etc.) must be independent Normal "
+                                 "distributions, not '{}'"
+                                 .format(type(pars[name].distribution)))
+
 
         self.pars = pars
         self.unpars = unpars
 
     @classmethod
-    @u.quantity_input(P_min=u.day, P_max=u.day)
-    def uniform_logP(cls, P_min, P_max, **kwargs):
-        pars = kwargs.pop('pars', dict())
-        unpars = kwargs.pop('unpars', dict())
+    def from_default(cls, P_min, P_max, sigma_K0, sigma_v0):
+        nl_pars, nl_unpars = default_nonlinear_prior(P_min, P_max)
+        l_pars, l_unpars = default_linear_prior(nl_pars, sigma_K0, sigma_v0)
 
-        # At this point, P is not in pars but P_lim has been specified:
-        P_max = P_max.to(P_min.unit)
-        with pm.Model() as model:
-            unpars['P'] = pm.Uniform('logP',
-                                     np.log10(P_min.value),
-                                     np.log10(P_max.value))
-            pars['P'] = xu.with_unit(pm.Deterministic('P', 10**unpars['P']),
-                                     P_min.unit)
+        pars = {**nl_pars, **l_pars}
+        unpars = {**nl_unpars, **l_unpars}
 
-        kwargs['pars'] = pars
-        kwargs['unpars'] = unpars
-
-        return cls(**kwargs)
+        return cls(pars=pars, unpars=unpars)
 
     def sample(self, size=1, return_logprobs=False):
-        """Note: this is an internal function. To generate samples from the
-        prior, use ``TheJoker.sample_prior()`` instead.
+        """TODO
 
         Parameters
         ----------
@@ -141,9 +193,16 @@ class JokerPrior:
             un-transformed variables keyed on the name of the transformed
             parameters through this argument.
         size : int (optional)
+            The number of samples to generate.
         return_logprobs : bool (optional)
             Return the log-prior probability at the position of each sample, for
             each parameter separately
+
+        Returns
+        -------
+        samples : dict
+            TODO
+
         """
         pars_list = list(self.pars.values())
         npars = len(pars_list)
