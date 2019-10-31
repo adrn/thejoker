@@ -2,15 +2,21 @@ import pymc3 as pm
 from pymc3.distributions import draw_values
 
 def _get_P(pars, unpars, P_lim=None):
-    """Note: these are internal functions. Use ``joker.sample_prior()`` to
-    generate samples from the prior.
+    """Note: this is an internal function.
+
+    This returns the period prior as a pymc3 variable.
     """
 
     if 'P' in pars and P_lim is not None:
-        raise ValueError("TODO specify one or other...")
+        raise ValueError("Period appears in the input parameters, but period "
+                         "limits are also specified (via P_lim). Specify one "
+                         "or the other, but on both.")
 
     elif 'P' not in pars and P_lim is None:
-        raise ValueError("TODO must specify one of...")
+        raise ValueError("The period prior requires some specification: "
+                         "Either pass in an explicit pymc3 variable with a "
+                         "defined distribution, or pass in limits, P_lim, for "
+                         "an assumed (default) prior proportional to 1/P")
 
     # Short-circuit if P is already defined
     if 'P' in pars:
