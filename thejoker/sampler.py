@@ -9,15 +9,15 @@ import h5py
 import numpy as np
 
 # Project
-from ..utils.logging import logger
-from ..data import RVData
-from .params import JokerParams
-from .multiproc_helpers import (get_good_sample_indices, compute_likelihoods,
-                                sample_indices_to_full_samples)
-from .io import save_prior_samples
-from .samples import JokerSamples
-from .mcmc import TheJokerMCMCModel
-from .likelihood import ln_prior
+# from .utils import logger
+# from .data import RVData
+# # from .params import JokerParams
+# from .multiproc_helpers import (get_good_sample_indices, compute_likelihoods,
+#                                 sample_indices_to_full_samples)
+# from .io import save_prior_samples
+# from .samples import JokerSamples
+# from .mcmc import TheJokerMCMCModel
+# from .likelihood import ln_prior
 
 __all__ = ['TheJoker']
 
@@ -27,8 +27,6 @@ class TheJoker:
 
     Parameters
     ----------
-    params : `~thejoker.sampler.params.JokerParams`
-        Object specifying hyper-parameters for The Joker.
     pool : ``schwimmbad.BasePool`` (optional)
         A processing pool (default is a ``schwimmbad.SerialPool`` instance).
     random_state : `numpy.random.RandomState` (optional)
@@ -43,11 +41,12 @@ class TheJoker:
         ``100*pool.size``) to avoid memory issues.
     tempfile_path : str (optional)
         Path to create temporary files needed for executing the sampler.
-        Defaults to whatever ``tempfile`` thinks is a good temporary directory.
+        Defaults to whatever Python's ``tempfile`` thinks is a good temporary
+        directory.
     """
 
-    def __init__(self, params, pool=None, random_state=None, n_batches=None,
-                 tempfile_path=None):
+    def __init__(self, prior, pool=None, random_state=None,
+                 n_batches=None, tempfile_path=None):
 
         # set the processing pool
         if pool is None:
