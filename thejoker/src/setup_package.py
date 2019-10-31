@@ -22,10 +22,10 @@ def get_extensions():
                                         'src/twobody.c'))
 
     cfg['extra_compile_args'].append('--std=gnu99')
-    cfg['sources'].append('thejoker/sampler/fast_likelihood.pyx')
-    exts.append(Extension('thejoker.sampler.fast_likelihood', **cfg))
+    cfg['sources'].append('thejoker/src/fast_likelihood.pyx')
+    exts.append(Extension('thejoker.src.fast_likelihood', **cfg))
 
     return exts
 
 def get_package_data():
-    return {'thejoker.sampler': ['fast_likelihood.pyx']}
+    return {'thejoker.src': ['fast_likelihood.pyx']}
