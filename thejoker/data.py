@@ -397,9 +397,9 @@ class RVData:
             the `~astropy.time.Time` object, or it can be a callable (e.g.,
             function) that does more complex things (for example:
             ``time_format=lambda t: t.datetime.day``).
-        phase_fold : bool (optional)
-            Plot the phase instead of the time by folding on the specified
-            period.
+        phase_fold : quantity_like (optional)
+            Plot the phase instead of the time by folding on a period value
+            passed in to this argument as an Astropy `~astropy.units.Quantity`.
         relative_to_t0 : bool (optional)
             Plot the time relative to the reference epoch, ``t0``.
         add_labels : bool (optional)
