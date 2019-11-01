@@ -1,5 +1,4 @@
 # Third-party
-from astropy.utils.misc import isiterable
 import astropy.units as u
 import numpy as np
 import pymc3 as pm
@@ -67,8 +66,6 @@ def default_linear_prior(nonlinear_pars, sigma_K0, sigma_v0, model=None):
 
 class JokerPrior:
 
-    # TODO: offsets can be additional Gaussian parameters that specify the
-    # number of offsets!
     # TODO: inside TheJoker, when sampling, validate that number of RVData's passed in equals the number of (offsets+1)
     # prior = JokerPrior.from_default(..., v0_offsets=[pm.Normal(...)])
     # joker = TheJoker(prior)
@@ -163,7 +160,21 @@ class JokerPrior:
                                  "distributions, not '{}'"
                                  .format(type(pars[name].distribution)))
 
-        #
+        # TODO: internally, need to use these to construct the constant part of # the design matrix
+        if v0_offsets is not None:
+            try:
+                v0_offsets = list(v0_offsets)
+            except Exception:
+                raise TypeError("Constant velocity offsets must be an iterable "
+                                "of pymc3 variables that define the priors on "
+                                "each offset term.")
+
+            for offset in v0_offsets:
+                if not isinstance(offset.distribution, pm.Normal):
+                    raise ValueError("Priors on the constant offset parameters "
+                                     "must be independent Normal "
+                                     "distributions, not '{}'"
+                                     .format(type(offset.distribution)))
         self.v0_offsets = v0_offsets
 
         self.pars = pars
@@ -183,7 +194,7 @@ class JokerPrior:
     def param_names(self):
         return self._nonlinear_param_names + self._linear_param_names
 
-    def sample(self, size=1, return_logprobs=False):
+    def sample(self, size=1, return_logprobs=False, model=None):
         """TODO
 
         Parameters
@@ -217,7 +228,7 @@ class JokerPrior:
         if return_logprobs:
             # Add deterministic variables to track the value of the prior at
             # each sample generated:
-            with pm.Model() as model:
+            with pm.Model(model=model):
                 for par in pars_list:
                     if (par.name in self.unpars.keys()
                             and self.unpars[par.name] is not None):
