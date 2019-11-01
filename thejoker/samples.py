@@ -1,30 +1,25 @@
 # Standard library
-from collections import OrderedDict
 import copy
-import warnings
 
 # Third-party
 import astropy.units as u
-from astropy.table import Table
-from astropy.time import Time
+from astropy.table import QTable
 import numpy as np
 from twobody import KeplerOrbit, PolynomialRVTrend
-
-# Package
-from ..utils.io import quantity_to_hdf5, quantity_from_hdf5
 
 __all__ = ['JokerSamples']
 
 
-class JokerSamples(OrderedDict):
+class JokerSamples(QTable):
     _valid_keys = ['P', 'M0', 'e', 'omega', 'jitter', 'K']
 
-    def __init__(self, t0=None, poly_trend=1, **kwargs):
+    def __init__(self, samples, *args, t0=None, poly_trend=1, **kwargs):
         """A dictionary-like object for storing posterior samples from
         The Joker, with some extra functionality.
 
         Parameters
         ----------
+        samples :
         t0 : `astropy.time.Time`, numeric (optional)
             The reference time for the orbital parameters.
         poly_trend : int, optional
@@ -37,182 +32,31 @@ class JokerSamples(OrderedDict):
         """
 
         # initialize empty dictionary
-        super(JokerSamples, self).__init__()
-        self._setup(poly_trend, t0)
+        super().__init__(samples, *args, **kwargs)
 
-        for key, val in kwargs.items():
-            self[key] = val  # calls __setitem__ below
-
-    def _setup(self, poly_trend, t0):
-        # reference time
-        self.t0 = t0
-
-        self._size = None
-        self._shape = None
-
-        self._cache = dict()
-
-        self.poly_trend = int(poly_trend)
+        self.meta['poly_trend'] = int(poly_trend)
         self._trend_names = ['v{0}'.format(i)
                              for i in range(self.poly_trend)]
         for name in self._trend_names:
             if name not in self._valid_keys:
                 self._valid_keys.append(name)
 
-    def __getstate__(self):
-        return (self.poly_trend, self.t0, dict(self))
+        self.meta['t0'] = t0
 
-    def __setstate__(self, state):
-        poly_trend, t0, data = state
-        self._setup(poly_trend, t0)
-        self.update(data)
-
-    def __reduce__(self):
-        return (JokerSamples, (), self.__getstate__())
-
-    def _validate_key(self, key):
-        if key not in self._valid_keys:
-            raise ValueError("Invalid key '{0}'.".format(key))
-
-    def _validate_val(self, val):
-        val = u.Quantity(val)
-        if self._shape is not None and val.shape != self.shape:
-            raise ValueError("Shape of new samples must match those already "
-                             "stored! ({0}, expected {1})"
-                             .format(len(val), self.shape))
-
-        return val
-
-    def __getitem__(self, slc):
-        if isinstance(slc, str):
-            return super(JokerSamples, self).__getitem__(slc)
-
-        else:
-            new = copy.copy(self)
-            new._size = None  # reset number of samples
-            new._shape = None  # reset number of samples
-
-            for k in self.keys():
-                new[k] = self[k][slc]
-
-            return new
+        self._cache = dict()
 
     def __setitem__(self, key, val):
-        self._validate_key(key)
-        val = self._validate_val(val)
-
-        if self._shape is None:
-            self._shape = val.shape
-            self._size = val.size
-
-        super(JokerSamples, self).__setitem__(key, val)
+        if key not in self._valid_keys:
+            raise ValueError(f"Invalid parameter name '{key}'. Must be one of: {self._valid_keys}")
+        super().__setitem__(key, val)
 
     @property
-    def n_samples(self):
-        warnings.warn(".n_samples is deprecated in favor of .size",
-                      DeprecationWarning)
-        return self.size
+    def poly_trend(self):
+        return self.meta['poly_trend']
 
     @property
-    def size(self):
-        if self._size is None:
-            raise ValueError("No samples stored!")
-        return self._size
-
-    @property
-    def shape(self):
-        if self._shape is None:
-            raise ValueError("No samples stored!")
-        return self._shape
-
-    def __len__(self):
-        return self.n_samples
-
-    def __str__(self):
-        return ("<JokerSamples in [{0}], {1} samples>"
-                .format(','.join(self.keys()), len(self)))
-
-    @classmethod
-    def from_hdf5(cls, f, n=None, **kwargs):
-        """
-        Parameters
-        ----------
-        f : :class:`h5py.File`, :class:`h5py.Group`
-        n : int (optional)
-            The number of samples to load.
-        **kwargs
-            All other keyword arguments are passed to the class initializer.
-        """
-
-        if 't0_bmjd' in f.attrs:
-            # Read the reference time:
-            t0 = Time(f.attrs['t0_bmjd'], format='mjd', scale='tcb')
-        else:
-            t0 = None
-
-        samples = cls(t0=t0, **kwargs)
-        for key in cls._valid_keys:
-            if key in f:
-                samples[key] = quantity_from_hdf5(f, key, n=n)
-
-        return samples
-
-    def to_hdf5(self, f):
-        """
-        Parameters
-        ----------
-        f : :class:`h5py.File`, :class:`h5py.Group`
-        """
-
-        for key in self.keys():
-            quantity_to_hdf5(f, key, self[key])
-
-        if self.t0 is not None:
-            f.attrs['t0_bmjd'] = self.t0.tcb.mjd
-
-    @classmethod
-    def from_table(cls, tbl_or_f):
-        """Read a samples object from an Astropy table.
-
-        Parameters
-        ----------
-        tbl_or_f : `~astropy.table.Table`, str
-            Either a table instance or a string filename to be read with
-            `astropy.table.Table.read()`.
-        """
-        if isinstance(tbl_or_f, str):
-            tbl_or_f = Table.read(tbl_or_f)
-
-        kwargs = dict()
-        kwargs['poly_trend'] = tbl_or_f.meta.get('poly_trend', 1)
-        if 't0_bmjd'.upper() in tbl_or_f.meta:
-            kwargs['t0'] = Time(tbl_or_f.meta['t0_bmjd'.upper()], format='mjd',
-                                scale='tcb')
-
-        samples = cls(**kwargs)
-        for key in cls._valid_keys:
-            if key in tbl_or_f.colnames:
-                samples[key] = u.Quantity(tbl_or_f[key])
-
-        return samples
-
-    def to_table(self):
-        """Convert the samples to an Astropy table object.
-
-        Returns
-        -------
-        tbl : `~astropy.table.Table`
-        """
-        tbl = Table()
-        for k in self.keys():
-            tbl[k] = self[k]
-
-        tbl.meta['poly_trend'] = self.poly_trend
-
-        if self.t0 is not None:
-            tbl.meta['t0_bmjd'] = self.t0.tcb.mjd
-
-        return tbl
+    def t0(self):
+        return self.meta['t0']
 
     ##########################################################################
     # Interaction with TwoBody
@@ -253,8 +97,8 @@ class JokerSamples(OrderedDict):
         M0 = self['M0']
         a = kwargs.pop('a', P * K / (2*np.pi) * np.sqrt(1 - e**2))
 
-        if len(self) == 1 and len(self.shape) == 0:
-            if index > 0:
+        if len(self) == 1:
+            if index is not None and index > 0:
                 raise ValueError('Samples are scalar-valued!')
 
             trend_coeffs = [self[x] for x in self._trend_names]
