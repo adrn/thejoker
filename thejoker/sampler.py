@@ -9,15 +9,12 @@ import h5py
 import numpy as np
 
 # Project
-# from .utils import logger
-# from .data import RVData
-# # from .params import JokerParams
-# from .multiproc_helpers import (get_good_sample_indices, compute_likelihoods,
-#                                 sample_indices_to_full_samples)
-# from .io import save_prior_samples
-# from .samples import JokerSamples
-# from .mcmc import TheJokerMCMCModel
-# from .likelihood import ln_prior
+from .utils import logger
+from .data import RVData
+from .prior import JokerPrior
+from .multiproc_helpers import (get_good_sample_indices, compute_likelihoods,
+                                sample_indices_to_full_samples)
+from .samples import JokerSamples
 
 __all__ = ['TheJoker']
 
@@ -75,71 +72,14 @@ class TheJoker:
         self.random_state = random_state
 
         # check if a JokerParams instance was passed in to specify the state
-        if not isinstance(params, JokerParams):
-            raise TypeError("Parameter specification must be a JokerParams "
-                            "instance, not a '{0}'".format(type(params)))
-        self.params = params
+        if not isinstance(prior, JokerPrior):
+            raise TypeError("TODO: prior must be a prior...")
+        self.prior = prior
+
+        # TODO: store or remember number of v0 offsets...
 
         self.n_batches = n_batches
         self.tempfile_path = tempfile_path
-
-    def sample_prior(self, size=1, return_logprobs=False):
-        """Generate samples from the prior. Logarithmic in period, uniform in
-        phase and argument of pericenter, Beta distribution in eccentricity.
-
-        Parameters
-        ----------
-        size : int
-            Number of samples to generate.
-        return_logprobs : bool (optional)
-            If ``True``, will also return the log-value of the prior at each
-            sample.
-
-        Returns
-        -------
-        samples : `~thejoker.sampler.samples.JokerSamples`
-            Keys: `['P', 'M0', 'e', 'omega']`, each as
-            `astropy.units.Quantity` objects (i.e. with units).
-
-        TODO
-        ----
-        - All prior distributions are fixed. These should be customizable.
-        """
-        rnd = self.random_state
-
-        # Create an empty, dictionary-like 'samples' object to fill
-        samples = JokerSamples()
-
-        # sample from priors in nonlinear parameters
-        a, b = (np.log(self.params.P_min.to(u.day).value),
-                np.log(self.params.P_max.to(u.day).value))
-        samples['P'] = np.exp(rnd.uniform(a, b, size=size)) * u.day
-
-        samples['M0'] = rnd.uniform(0, 2 * np.pi, size=size) * u.radian
-
-        # MAGIC NUMBERS below: Kipping et al. 2013 (MNRAS 434 L51)
-        samples['e'] = rnd.beta(a=0.867, b=3.03, size=size) * u.one
-
-        samples['omega'] = rnd.uniform(0, 2 * np.pi, size=size) * u.radian
-
-        if not self.params._fixed_jitter:
-            # Gaussian prior in log(s^2)
-            log_s2 = rnd.normal(*self.params.jitter, size=size)
-            samples['jitter'] = np.sqrt(
-                np.exp(log_s2)) * self.params._jitter_unit
-
-        else:
-            samples['jitter'] = np.ones(size) * self.params.jitter
-
-        # Store the value of the prior at each prior sample
-        # TODO: should we store the value for each parameter independently?
-        if return_logprobs:
-            ln_prior_val = ln_prior(samples, self.params)
-
-        if return_logprobs:
-            return samples, ln_prior_val
-        else:
-            return samples
 
     def _unpack_full_samples(self, result, prior_units, return_logprobs,
                              t0=None):
@@ -193,6 +133,9 @@ class TheJoker:
 
         else:
             return samples
+
+    def marginal_ln_likelihood(self, data, prior_samples):
+        pass
 
     def _rejection_sample_from_cache(self, data, n_prior_samples, max_n_samples,
                                      cache_file, start_idx, seed,
@@ -474,93 +417,3 @@ class TheJoker:
 
         return self._unpack_full_samples(result, prior_units, t0=data.t0,
                                          return_logprobs=return_logprobs)
-
-    # ========================================================================
-    # MCMC
-
-    def mcmc_sample(self, data, samples0, n_steps=1024,
-                    n_walkers=256, n_burn=8192, return_sampler=False,
-                    ball_scale=1E-5):
-        """Run standard MCMC (using `emcee <http://emcee.readthedocs.io/>`_) to
-        generate posterior samples in orbital parameters.
-
-        Parameters
-        ----------
-        data : `~thejoker.RVData`
-            The data to fit orbits to.
-        samples0 : `~thejoker.JokerSamples`
-            This can either be (a) a single sample to use as initial conditions
-            for the MCMC walkers, or (b) a set of samples, in which case the
-            mean of the samples will be used as initial conditions.
-        n_steps : int
-            The number of MCMC steps to run for.
-        n_walkers : int (optional)
-            The number of walkers to use in the ``emcee`` ensemble.
-        n_burn : int (optional)
-            If specified, the number of steps to burn in for.
-        return_sampler : bool (optional)
-            Also return the sampler object.
-
-        Returns
-        -------
-        model : `~thejoker.TheJokerMCMCModel`
-        samples : `~thejoker.JokerSamples`
-            The posterior samples.
-        sampler : `emcee.EnsembleSampler`
-            If ``return_sampler == True``.
-        """
-        import emcee
-
-        if not isinstance(samples0, JokerSamples):
-            raise TypeError('Input samples initial position must be ')
-
-        model = TheJokerMCMCModel(joker_params=self.params, data=data)
-
-        if len(samples0) > 1:
-            # samples0 = samples0.median()
-            samples0 = samples0[0] # TODO:
-        t0 = samples0.t0
-
-        samples0 = model._strip_units(samples0)
-        all_samples0 = dict()
-        for i, k in enumerate(samples0.keys()):
-            all_samples0[k] = np.random.normal(samples0[k], ball_scale,
-                                               size=n_walkers)
-
-            if k in ['e', 'K', 'jitter']:
-                all_samples0[k] = np.abs(all_samples0[k])
-
-        p0 = np.squeeze(model.pack_samples(all_samples0, strip_units=False)).T
-        n_dim = p0.shape[1]
-
-        sampler = emcee.EnsembleSampler(n_walkers, n_dim, model,
-                                        pool=self.pool)
-
-        if n_burn is not None and n_burn > 0:
-            logger.debug('Burning in MCMC for {0} steps...'.format(n_burn))
-            time0 = time.time()
-            pos, *_ = sampler.run_mcmc(p0, n_burn)
-            logger.debug('...time spent burn-in: {0}'.format(time.time()-time0))
-
-            p0 = pos
-            sampler.reset()
-
-        logger.debug('Running MCMC for {0} steps...'.format(n_steps))
-        time0 = time.time()
-        _ = sampler.run_mcmc(p0, n_steps)
-        logger.debug('...time spent sampling: {0}'.format(time.time()-time0))
-
-        acc_frac = sampler.acceptance_fraction
-        if np.percentile(acc_frac, 10) < 0.1:
-            logger.warning('Walkers have low acceptance fractions: 10/50/90 '
-                           'percentiles = {0:.2f}, {1:.2f}, {2:.2f}'
-                           .format(*np.percentile(acc_frac, [10, 50, 90])))
-
-        samples = model.unpack_samples(sampler.chain[:, -1])
-        samples.t0 = t0
-
-        if return_sampler:
-            return model, samples, sampler
-
-        else:
-            return model, samples

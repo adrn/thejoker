@@ -304,3 +304,95 @@ class TheJokerMCMCModel:
             samples = self._add_units(samples)
 
         return samples
+
+
+# ========================================================================
+# MCMC
+# TODO: moved here from TheJoker, where it used to be a method
+
+def mcmc_sample(self, data, samples0, n_steps=1024,
+                n_walkers=256, n_burn=8192, return_sampler=False,
+                ball_scale=1E-5):
+    """Run standard MCMC (using `emcee <http://emcee.readthedocs.io/>`_) to
+    generate posterior samples in orbital parameters.
+
+    Parameters
+    ----------
+    data : `~thejoker.RVData`
+        The data to fit orbits to.
+    samples0 : `~thejoker.JokerSamples`
+        This can either be (a) a single sample to use as initial conditions
+        for the MCMC walkers, or (b) a set of samples, in which case the
+        mean of the samples will be used as initial conditions.
+    n_steps : int
+        The number of MCMC steps to run for.
+    n_walkers : int (optional)
+        The number of walkers to use in the ``emcee`` ensemble.
+    n_burn : int (optional)
+        If specified, the number of steps to burn in for.
+    return_sampler : bool (optional)
+        Also return the sampler object.
+
+    Returns
+    -------
+    model : `~thejoker.TheJokerMCMCModel`
+    samples : `~thejoker.JokerSamples`
+        The posterior samples.
+    sampler : `emcee.EnsembleSampler`
+        If ``return_sampler == True``.
+    """
+    import emcee
+
+    if not isinstance(samples0, JokerSamples):
+        raise TypeError('Input samples initial position must be ')
+
+    model = TheJokerMCMCModel(joker_params=self.params, data=data)
+
+    if len(samples0) > 1:
+        # samples0 = samples0.median()
+        samples0 = samples0[0] # TODO:
+    t0 = samples0.t0
+
+    samples0 = model._strip_units(samples0)
+    all_samples0 = dict()
+    for i, k in enumerate(samples0.keys()):
+        all_samples0[k] = np.random.normal(samples0[k], ball_scale,
+                                            size=n_walkers)
+
+        if k in ['e', 'K', 'jitter']:
+            all_samples0[k] = np.abs(all_samples0[k])
+
+    p0 = np.squeeze(model.pack_samples(all_samples0, strip_units=False)).T
+    n_dim = p0.shape[1]
+
+    sampler = emcee.EnsembleSampler(n_walkers, n_dim, model,
+                                    pool=self.pool)
+
+    if n_burn is not None and n_burn > 0:
+        logger.debug('Burning in MCMC for {0} steps...'.format(n_burn))
+        time0 = time.time()
+        pos, *_ = sampler.run_mcmc(p0, n_burn)
+        logger.debug('...time spent burn-in: {0}'.format(time.time()-time0))
+
+        p0 = pos
+        sampler.reset()
+
+    logger.debug('Running MCMC for {0} steps...'.format(n_steps))
+    time0 = time.time()
+    _ = sampler.run_mcmc(p0, n_steps)
+    logger.debug('...time spent sampling: {0}'.format(time.time()-time0))
+
+    acc_frac = sampler.acceptance_fraction
+    if np.percentile(acc_frac, 10) < 0.1:
+        logger.warning('Walkers have low acceptance fractions: 10/50/90 '
+                        'percentiles = {0:.2f}, {1:.2f}, {2:.2f}'
+                        .format(*np.percentile(acc_frac, [10, 50, 90])))
+
+    samples = model.unpack_samples(sampler.chain[:, -1])
+    samples.t0 = t0
+
+    if return_sampler:
+        return model, samples, sampler
+
+    else:
+        return model, samples
