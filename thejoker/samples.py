@@ -10,8 +10,16 @@ from twobody import KeplerOrbit, PolynomialRVTrend
 __all__ = ['JokerSamples']
 
 
+# TODO: don't subclass, just use table internally!
 class JokerSamples(QTable):
-    _valid_keys = ['P', 'M0', 'e', 'omega', 'jitter', 'K']
+    _valid_units = {
+        'P': u.day,
+        'M0': u.radian,
+        'e': u.one,
+        'omega': u.radian,
+        'jitter': u.m/u.s,
+        'K': u.m/u.s
+    }
 
     def __init__(self, samples, *args, t0=None, poly_trend=1, **kwargs):
         """A dictionary-like object for storing posterior samples from
@@ -19,7 +27,7 @@ class JokerSamples(QTable):
 
         Parameters
         ----------
-        samples :
+        data
         t0 : `astropy.time.Time`, numeric (optional)
             The reference time for the orbital parameters.
         poly_trend : int, optional
@@ -37,18 +45,26 @@ class JokerSamples(QTable):
         self.meta['poly_trend'] = int(poly_trend)
         self._trend_names = ['v{0}'.format(i)
                              for i in range(self.poly_trend)]
-        for name in self._trend_names:
-            if name not in keys:
-                keys.append(name)
-        return keys
+        for i, name in enumerate(self._trend_names):
+            if name not in self._valid_units:
+                self._valid_units[name] = u.m/u.s/u.day**i
 
         self.meta['t0'] = t0
 
         self._cache = dict()
 
     def __setitem__(self, key, val):
-        if key not in self._valid_keys:
-            raise ValueError(f"Invalid parameter name '{key}'. Must be one of: {self._valid_keys}")
+        if key not in self._valid_units:
+            raise ValueError(f"Invalid parameter name '{key}'. Must be one of: {0}"
+                             .format(list(self._valid_units.keys())))
+
+        if not hasattr(val, 'unit'):
+            raise TypeError("Values must be added an astropy Quantity object.")
+
+        expected_unit = self._valid_units[key]
+        if not val.unit.is_equivalent(expected_unit):
+            raise u.UnitsError(f"Units of '{key}' must be convertable to {expected_unit}")
+
         super().__setitem__(key, val)
 
     @property
@@ -155,9 +171,41 @@ class JokerSamples(QTable):
         return self._apply(np.mean)
 
     def median(self):
-        """Return a new scalar object by taking the medin across all samples"""
+        """Return a new scalar object by taking the median across all samples"""
         return self._apply(np.mean)
 
     def std(self):
-        """Return a new scalar object by taking the medin across all samples"""
+        """Return a new scalar object by taking the standard deviation across all samples"""
         return self._apply(np.std)
+
+    # Packing and unpacking
+    def pack(self):
+        arrs = []
+        units = {}
+        for name in self.colnames:
+            arrs.append(samples[name].value)
+            units[name] = samples[name].unit
+
+        if 'jitter' not in self.colnames:
+            jitter = np.zeros_like(arrs[0])
+            units['jitter'] = u.m/u.s
+
+        return np.stack(arrs, axis=1), units
+
+    @classmethod
+    def unpack(cls, packed_samples, units, meta=None):
+        if meta is None:
+            meta = dict()
+
+        data = {}
+        for i, k in enumerate(units.keys()):
+            unit = units[k]
+            data[k] = packed_samples[:, i] * unit
+        return cls(data, **meta)
+
+    def write(self, *args, **kwargs):
+        # Change the default so that metadata / units are always stored:
+        kwargs['serialize_meta'] = kwargs.get('serialize_meta', True)
+        super().write(*args, **kwargs)
+
+JokerSamples.write.__doc__ = QTable.write.__doc__
