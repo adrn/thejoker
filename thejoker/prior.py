@@ -1,4 +1,5 @@
 # Third-party
+from astropy.table import QTable, Table
 import astropy.units as u
 import numpy as np
 import pymc3 as pm
@@ -12,12 +13,16 @@ __all__ = ['JokerPrior']
 
 @u.quantity_input(P_min=u.day, P_max=u.day)
 def default_nonlinear_prior(P_min, P_max, model=None):
+    """TODO
+    model is required or need to be in a context
+    """
+    model = pm.modelcontext(model)
 
     pars = dict()
     unpars = dict()
 
     P_max = P_max.to(P_min.unit)
-    with pm.Model(model=model):
+    with model:
         # Set up the default priors for parameters with defaults
         pars['e'] = xo.distributions.eccentricity.kipping13('e')
         pars['omega'] = xu.with_unit(pm.Uniform('omega',
@@ -43,11 +48,16 @@ def default_nonlinear_prior(P_min, P_max, model=None):
 
 @u.quantity_input(sigma_K0=u.km/u.s, sigma_v0=u.km/u.s)
 def default_linear_prior(nonlinear_pars, sigma_K0, sigma_v0, model=None):
+    """TODO
+    model is required or need to be in a context
+    """
+    model = pm.modelcontext(model)
+
     pars = dict()
 
     K_unit = sigma_K0.unit
     sigma_v0 = sigma_v0.to(K_unit)
-    with pm.Model(model=model):
+    with model:
         # Default prior on semi-amplitude: scales with period and eccentricity
         # such that it is flat with companion mass
         P = nonlinear_pars['P']
@@ -70,7 +80,8 @@ class JokerPrior:
     # prior = JokerPrior.from_default(..., v0_offsets=[pm.Normal(...)])
     # joker = TheJoker(prior)
     # joker.rejection_sample([data1, data2], ...)
-    def __init__(self, pars, unpars=None, poly_trend=1, v0_offsets=None):
+    def __init__(self, pars, unpars=None, poly_trend=1, v0_offsets=None,
+                 model=None):
         """This class controls the prior probability distributions for the
         parameters used in The Joker.
 
@@ -142,6 +153,11 @@ class JokerPrior:
                                  "The input `unpars` must be a dictionary, not"
                                  " '{}'".format(type(unpars)))
 
+        # TODO: validate that this is a pymc3 model
+        if model is None:
+            model = pm.Model()
+        self.model = model
+
         # Set the number of polynomial trend parameters
         self.poly_trend = int(poly_trend)
 
@@ -181,20 +197,24 @@ class JokerPrior:
         self.unpars = unpars
 
     @classmethod
-    def from_default(cls, P_min, P_max, sigma_K0, sigma_v0):
-        nl_pars, nl_unpars = default_nonlinear_prior(P_min, P_max)
-        l_pars, l_unpars = default_linear_prior(nl_pars, sigma_K0, sigma_v0)
+    def from_default(cls, P_min, P_max, sigma_K0, sigma_v0, model=None):
+        if model is None:
+            model = pm.Model()
+
+        nl_pars, nl_unpars = default_nonlinear_prior(P_min, P_max, model=model)
+        l_pars, l_unpars = default_linear_prior(nl_pars, sigma_K0, sigma_v0,
+                                                model=model)
 
         pars = {**nl_pars, **l_pars}
         unpars = {**nl_unpars, **l_unpars}
 
-        return cls(pars=pars, unpars=unpars)
+        return cls(pars=pars, unpars=unpars, model=model)
 
     @property
     def param_names(self):
         return self._nonlinear_param_names + self._linear_param_names
 
-    def sample(self, size=1, return_logprobs=False, model=None):
+    def sample(self, size=1, return_logprobs=False, as_table=True):
         """TODO
 
         Parameters
@@ -228,18 +248,24 @@ class JokerPrior:
         if return_logprobs:
             # Add deterministic variables to track the value of the prior at
             # each sample generated:
-            with pm.Model(model=model):
+            with self.model:
                 for par in pars_list:
                     if (par.name in self.unpars.keys()
                             and self.unpars[par.name] is not None):
                         upar = self.unpars[par.name]
-                        logp_var = pm.Deterministic(
-                            f'{upar.name}_log_prior',
-                            upar.distribution.logp(upar))
+                        logp_name = f'{upar.name}_log_prior'
+                        dist = upar.distribution.logp(upar)
+
                     else:
-                        logp_var = pm.Deterministic(
-                            f'{par.name}_log_prior',
-                            par.distribution.logp(par))
+                        logp_name = f'{par.name}_log_prior'
+                        dist = par.distribution.logp(par)
+
+                    if logp_name in self.model.named_vars:
+                        logp_var = self.model.named_vars[logp_name]
+                    else:
+                        # doesn't exist in the model yet, so add it
+                        logp_var = pm.Deterministic(logp_name, dist)
+
                     log_prior.append(logp_var)
 
         samples_values = draw_values(pars_list + log_prior, size=size)
@@ -255,11 +281,19 @@ class JokerPrior:
                 unit = u.one
             prior_samples[p.name] = prior_samples[p.name] * unit
 
+        if as_table:
+            prior_samples = {k: np.atleast_1d(v)
+                             for k, v in prior_samples.items()}
+            prior_samples = QTable(prior_samples)[self.param_names]
+
         if not return_logprobs:
             return prior_samples
 
-        log_prior_vals = {p.name: vals
-                          for p, vals in zip(pars_list,
-                                             samples_values[npars:])}
+        log_prior = {p.name: vals for p, vals in zip(pars_list,
+                                                     samples_values[npars:])}
+        if as_table:
+            log_prior = {k: np.atleast_1d(v)
+                         for k, v in log_prior.items()}
+            log_prior = Table(log_prior)[self.param_names]
 
-        return prior_samples, log_prior_vals
+        return prior_samples, log_prior
