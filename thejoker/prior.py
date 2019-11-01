@@ -67,7 +67,6 @@ def default_linear_prior(nonlinear_pars, sigma_K0, sigma_v0, model=None):
 
 class JokerPrior:
 
-    # TODO: offsets isn't really the right word...
     # TODO: offsets can be additional Gaussian parameters that specify the
     # number of offsets!
     # TODO: inside TheJoker, when sampling, validate that number of RVData's passed in equals the number of (offsets+1)
@@ -150,10 +149,11 @@ class JokerPrior:
         self.poly_trend = int(poly_trend)
 
         # Store the names of the default parameters, used for validating input:
-        self.param_names = ['P', 'M0', 'e', 'omega', 'jitter', 'K']
+        self._nonlinear_param_names = ['P', 'M0', 'e', 'omega', 'jitter']
+
         self.poly_trend = int(poly_trend)
-        self.param_names += ['v{0}'.format(i)
-                             for i in range(self.poly_trend)]
+        self._linear_param_names = ['K'] + ['v{0}'.format(i)
+                                            for i in range(self.poly_trend)]
 
         # Enforce that the prior on linear parameters are gaussian
         for name in self.param_names[5:]:
@@ -163,6 +163,8 @@ class JokerPrior:
                                  "distributions, not '{}'"
                                  .format(type(pars[name].distribution)))
 
+        #
+        self.v0_offsets = v0_offsets
 
         self.pars = pars
         self.unpars = unpars
@@ -176,6 +178,10 @@ class JokerPrior:
         unpars = {**nl_unpars, **l_unpars}
 
         return cls(pars=pars, unpars=unpars)
+
+    @property
+    def param_names(self):
+        return self._nonlinear_param_names + self._linear_param_names
 
     def sample(self, size=1, return_logprobs=False):
         """TODO
