@@ -47,8 +47,6 @@ def get_valid_objs():
                        sigma_K0=25*u.km/u.s, sigma_v0=100*u.km/u.s))
     expected_units.append(default_expected_units)
 
-    return priors, expected_units
-
     # No transformed parameters
     pars = {}  # pars to replace
     unpars = {}

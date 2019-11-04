@@ -54,33 +54,54 @@ def default_nonlinear_prior(P_min, P_max, model=None, pars=None, unpars=None):
     P_max = P_max.to(P_min.unit)
     with model:
         # Set up the default priors for parameters with defaults
-        out_pars['e'] = pars.get('e',
-                                 xo.distributions.eccentricity.kipping13('e'))
-        out_pars['omega'] = pars.get('omega',
-                                     xu.with_unit(pm.Uniform('omega',
-                                                             lower=0,
-                                                             upper=2*np.pi),
-                                                  u.radian))
-        out_pars['M0'] =  pars.get('M0',
-                                   xu.with_unit(pm.Uniform('M0', lower=0,
-                                                           upper=2*np.pi),
-                                                u.radian))
+        # Note: we have to do it this way (as opposed to with .get(...,
+        # default)because this can only get executed if the param is not already
+        # defined, otherwise a pymc3 error is thrown
 
-        # These default units are a little sloppy, but it doesn't really matter
-        out_pars['s'] = pars.get('s',
-                                 xu.with_unit(pm.Constant('s', 0.), u.m/u.s))
+        if 'e' in pars:
+            out_pars['e'] = pars['e']
+            out_unpars['e'] = unpars.get('e')
+        else:
+            out_pars['e'] = xo.distributions.eccentricity.kipping13('e')
 
-        # Default period prior is uniform in log period:
-        out_unpars['P'] = unpars.get('P',
-                                     pm.Uniform('logP',
-                                                np.log10(P_min.value),
-                                                np.log10(P_max.value)))
-        out_pars['P'] = pars.get('P',
-                                 xu.with_unit(pm.Deterministic('P',
-                                                               10**unpars['P']),
-                                              P_min.unit))
+        if 'omega' in pars:
+            out_pars['omega'] = pars['omega']
+            out_unpars['s'] = unpars.get('s')
+        else:
 
-    return out_pars, out_unpars
+            out_pars['omega'] = xu.with_unit(pm.Uniform('omega',
+                                                        lower=0,
+                                                        upper=2*np.pi),
+                                             u.radian)
+
+        if 'M0' in pars:
+            out_pars['M0'] = pars['M0']
+            out_unpars['M0'] = unpars.get('M0')
+        else:
+            out_pars['M0'] = xu.with_unit(pm.Uniform('M0',
+                                                     lower=0, upper=2*np.pi),
+                                          u.radian)
+
+        if 's' in pars:
+            out_pars['s'] = pars['s']
+            out_unpars['s'] = unpars.get('s')
+        else:
+            # These default units are a little sloppy, but it's 0 so ...
+            out_pars['s'] = xu.with_unit(pm.Constant('s', 0.), u.m/u.s)
+
+        if 'P' in pars:
+            out_pars['P'] = pars['P']
+            out_unpars['P'] = unpars.get('P')
+        else:
+            # Default period prior is uniform in log period:
+            out_unpars['P'] = pm.Uniform('logP',
+                                         np.log10(P_min.value),
+                                         np.log10(P_max.value))
+            out_pars['P'] = xu.with_unit(pm.Deterministic('P',
+                                                          10**out_unpars['P']),
+                                         P_min.unit)
+
+    return out_pars, {k: v for k, v in out_unpars.items() if v is not None}
 
 
 @u.quantity_input(sigma_K0=u.km/u.s, sigma_v0=u.km/u.s)
@@ -121,27 +142,35 @@ def default_linear_prior(nonlinear_pars, sigma_K0, sigma_v0, model=None,
         unpars = dict()
 
     out_pars = dict()
+    out_unpars = dict()
 
     K_unit = sigma_K0.unit
     sigma_v0 = sigma_v0.to(K_unit)
     with model:
-        # Default prior on semi-amplitude: scales with period and eccentricity
-        # such that it is flat with companion mass
-        P = nonlinear_pars['P']
-        e = nonlinear_pars['e']
-        varK = sigma_K0.value**2 * (P / 365)**(-2/3) / (1 - e**2)
-        out_pars['K'] = pars.get('K',
-                                 xu.with_unit(pm.Normal('K', 0., tt.sqrt(varK)),
-                                              K_unit))
+        if 'K' in pars:
+            out_pars['K'] = pars['K']
+            out_unpars['K'] = unpars.get('K')
+        else:
+            # Default prior on semi-amplitude: scales with period and
+            # eccentricity such that it is flat with companion mass
+            P = nonlinear_pars['P']
+            e = nonlinear_pars['e']
+            varK = sigma_K0.value**2 * (P / 365)**(-2/3) / (1 - e**2)
+            out_pars['K'] = xu.with_unit(pm.Normal('K', 0., tt.sqrt(varK)),
+                                         K_unit)
 
-        # Default prior on constant velocity is a single gaussian component
-        out_pars['v0'] = pars.get('v0',
-                                  xu.with_unit(pm.Normal('v0', 0.,
-                                                         sigma_v0.value),
-                                               K_unit))
+        if 'v0' in pars:
+            out_pars['v0'] = pars['v0']
+            out_unpars['v0'] = unpars.get('v0')
+        else:
+            # Default prior on constant velocity is a single gaussian component
+            out_pars['v0'] = xu.with_unit(pm.Normal('v0', 0.,
+                                                    sigma_v0.value),
+                                          K_unit)
+
 
     # return an empty dict for untransformed parameters, for consistency...
-    return out_pars, dict()
+    return out_pars, {k: v for k, v in out_unpars.items() if v is not None}
 
 
 class JokerPrior:
