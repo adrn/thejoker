@@ -12,8 +12,9 @@ import numpy as np
 from .utils import logger
 from .data import RVData
 from .prior import JokerPrior
-from .multiproc_helpers import (get_good_sample_indices, compute_likelihoods,
-                                sample_indices_to_full_samples)
+from .src.multiproc_helpers import (get_good_sample_indices,
+                                    compute_likelihoods,
+                                    sample_indices_to_full_samples)
 from .samples import JokerSamples
 
 __all__ = ['TheJoker']
@@ -24,6 +25,8 @@ class TheJoker:
 
     Parameters
     ----------
+    prior : `~thejoker.JokerPrior`
+        TODO: stuff
     pool : ``schwimmbad.BasePool`` (optional)
         A processing pool (default is a ``schwimmbad.SerialPool`` instance).
     random_state : `numpy.random.RandomState` (optional)
@@ -76,66 +79,66 @@ class TheJoker:
             raise TypeError("TODO: prior must be a prior...")
         self.prior = prior
 
-        # TODO: store or remember number of v0 offsets...
-
         self.n_batches = n_batches
         self.tempfile_path = tempfile_path
 
-    def _unpack_full_samples(self, result, prior_units, return_logprobs,
-                             t0=None):
-        """Unpack an array of The Joker samples into a dictionary-like object of
-        Astropy Quantity objects (with units). This is meant to be used
-        internally.
+    def _prepare_data(self, data):
+        """Internal function.
 
-        Parameters
-        ----------
-        result : tuple
-            A tuple of output directly from _rejection_sample_from_cache().
-            Depending on the value of ``return_logprobs``, this is either just
-            the sample values as a 2D array, or a lenth 3 tuple with the 2D
-            samples array, prior values, and likelihood values.
-        prior_units : list
-            List of units for the prior samples.
-        return_logprobs : bool
-            Are we also returning the log prior values?
-        t0 : `~astropy.time.Time` (optional)
-            Passed to `thejoker.JokerSamples`.
-
-        Returns
-        -------
-        samples : `~thejoker.sampler.samples.JokerSamples`
-
+        Used to take an input ``RVData`` instance, or a list/dict of ``RVData``
+        instances, and produce concatenated time, RV, and error arrays, along
+        with a consistent t0.
         """
 
-        if return_logprobs:
-            samples_arr, ln_prior, ln_like = result
+        if isinstance(data, RVData):  # single instance
+            return data, None
 
-        else:
-            samples_arr = result
+        # Turn a list-like into a dict object:
+        if not hasattr(data, 'keys'):
+            _d = {}
+            for i, d in enumerate(data):
+                _d[i] = d
+            data = _d
 
-        n, n_params = samples_arr.shape
+        # If we've gotten here, data is dict-like:
+        rv_unit = None
+        t = []
+        rv = []
+        err = []
+        ids = []
+        for k in data.keys():
+            d = data[k]
 
-        samples = JokerSamples(t0=t0, poly_trend=self.params.poly_trend)
+            if d._has_cov:
+                raise NotImplementedError("We currently don't support "
+                                          "multi-survey data when a full "
+                                          "covariance matrix is specified. "
+                                          "Raise an issue in adrn/thejoker if "
+                                          "you want this functionality.")
 
-        # TODO: need to keep track of this elsewhere...
-        nonlin_params = ['P', 'M0', 'e', 'omega', 'jitter']
-        for k, key in enumerate(nonlin_params):
-            samples[key] = samples_arr[:, k] * prior_units[k]
+            if rv_unit is None:
+                rv_unit = d.rv.unit
 
-        samples['K'] = samples_arr[:, k + 1] * prior_units[-1]  # jitter unit
+            t.append(d.t.tcb.mjd)
+            rv.append(d.rv.to_value(rv_unit))
+            err.append(d.rv_err.to_value(rv_unit))
+            ids.append([k] * len(d))
 
-        for i in range(self.params.poly_trend):
-            _unit = prior_units[-1] / u.day**i  # HACK: jitter unit per day
-            samples['v'+str(i)] = samples_arr[:, k + 2 + i] * _unit
+        t = np.concatenate(t)
+        rv = np.concatenate(rv) * rv_unit
+        err = np.concatenate(err) * rv_unit
+        ids = np.concatenate(ids)
 
-        if return_logprobs:
-            return samples, ln_prior, ln_like
+        all_data = RVData(t=Time(t, format='mjd', scale='tcb'),
+                          rv=rv, rv_err=err)
 
-        else:
-            return samples
+        return all_data, ids
 
-    def marginal_ln_likelihood(self, data, prior_samples):
+    def marginal_ln_likelihood(self, prior_samples, data):
         pass
+
+
+    # TODO: rethink the in-memory vs. out-of-memory split below
 
     def _rejection_sample_from_cache(self, data, n_prior_samples, max_n_samples,
                                      cache_file, start_idx, seed,

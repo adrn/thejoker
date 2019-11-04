@@ -1,4 +1,5 @@
 # Standard library
+from collections import OrderedDict
 import copy
 
 # Third-party
@@ -11,43 +12,36 @@ __all__ = ['JokerSamples']
 
 
 class JokerSamples:
-    _valid_units = {
-        'P': u.day,
-        'M0': u.radian,
-        'e': u.one,
-        'omega': u.radian,
-        'jitter': u.m/u.s,
-        'K': u.m/u.s
-    }
 
-    def __init__(self, samples, t0=None, poly_trend=1, **kwargs):
+    def __init__(self, thejoker, samples=None, t0=None, **kwargs):
         """A dictionary-like object for storing posterior samples from
         The Joker, with some extra functionality.
 
         Parameters
         ----------
+        thejoker : `thejoker.TheJoker`
+            TODO:
         samples : `~astropy.table.Table` or table-like
             TODO:
         t0 : `astropy.time.Time`, numeric (optional)
             The reference time for the orbital parameters.
-        poly_trend : int, optional
-            If specified, sample over a polynomial velocity trend with the
-            specified number of coefficients. For example, ``poly_trend=3`` will
-            sample over parameters of a long-term quadratic velocity trend.
-            Default is 1, just a constant velocity shift.
+        **kwargs :
+            TODO: Stored as metadata.
         """
 
-        self.samples = QTable(samples)
-        self.samples.meta['poly_trend'] = int(poly_trend)
-        self._trend_names = ['v{0}'.format(i)
-                             for i in range(self.poly_trend)]
-        for i, name in enumerate(self._trend_names):
-            if name not in self._valid_units:
-                self._valid_units[name] = u.m/u.s/u.day**i
+        from .sampler import TheJoker
+        if not isinstance(thejoker, TheJoker):
+            raise TypeError("TODO")
+        self.thejoker = thejoker
 
+        self.samples = QTable(samples)
+        self.samples.meta['poly_trend'] = self.thejoker.prior.poly_trend
         self.samples.meta['t0'] = t0
         for k, v in kwargs.items():
             self.samples.meta[k] = v
+
+        self._valid_units = {**self.thejoker.prior._nonlinear_params,
+                             **self.thejoker.prior._linear_params}
 
         self._cache = dict()
 
@@ -182,9 +176,16 @@ class JokerSamples:
         return self._apply(np.std)
 
     # Packing and unpacking
-    def pack(self):
+    def pack(self, nonlinear_only=True):
+        """TODO:
+
+        Parameters
+        ----------
+        nonlinear_only : bool (optional)
+            TODO
+        """
         arrs = []
-        units = {}
+        units = OrderedDict()
         for name in self.param_names:
             arrs.append(self.samples[name].value)
             units[name] = self.samples[name].unit
@@ -196,15 +197,23 @@ class JokerSamples:
         return np.stack(arrs, axis=1), units
 
     @classmethod
-    def unpack(cls, packed_samples, units, meta=None):
-        if meta is None:
-            meta = dict()
+    def unpack(cls, packed_samples, thejoker, t0=None):
+        """TODO:
 
-        samples = {}
-        for i, k in enumerate(units.keys()):
+        Parameters
+        ----------
+        packed_samples :
+        units : `~collections.OrderedDict`, dict_like
+            TODO: sets the order of packed_samples...
+        """
+
+        nsamples, npars = packed_samples.shape
+
+        samples = cls(thejoker=thejoker, t0=t0)
+        for i, k in enumerate(list(units.keys())[:npars]):
             unit = units[k]
             samples[k] = packed_samples[:, i] * unit
-        return cls(samples, **meta)
+        return samples
 
     def save(self, filename):
         pass
