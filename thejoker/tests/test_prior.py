@@ -88,6 +88,9 @@ def get_valid_objs():
     priors.append(dict(pars=pars, unpars=unpars))
     expected_units.append(units)
 
+    # TODO: check valid input for linear parameters too (i.e. must be gaussian,
+    # untransformed )
+
     # TODO: also try specifying v0_offsets
 
     return priors, expected_units

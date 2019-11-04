@@ -14,6 +14,7 @@ np.import_array()
 import cython
 cimport cython
 cimport scipy.linalg.cython_lapack as lapack
+import theano.tensor as tt
 
 # from libc.stdio cimport printf
 from libc.math cimport pow, log, fabs, pi
@@ -27,55 +28,9 @@ cdef extern from "src/twobody.h":
 cdef:
     double LN_2PI = 1.8378770664093453
     double INF = float('inf')
-    double anomaly_tol = 1E-10 # passed to c_rv_from_elements
-    int anomaly_maxiter = 128 # passed to c_rv_from_elements
-
-cdef void design_matrix(double P, double phi0, double ecc, double omega,
-                        double[::1] t, double t0,
-                        double[:, ::1] M_T,
-                        int n_trend):
-    """Construct the elements of the design matrix transpose, M_T.
-
-    Parameters
-    ----------
-    P : double
-        Period [day].
-    phi0 : double
-        Phase [radian].
-    ecc : double
-        Eccentricity
-    omega : double
-        Argument of pericenter [radian].
-    t : `numpy.ndarray`
-        Data time array.
-    t0 : double
-        Reference time.
-    n_trend : int
-        Number of terms in the long-term velocity trend.
-
-    Outputs
-    -------
-    M_T : `numpy.ndarray`
-        The transpose of the design matrix, to be filled by this function.
-        Should have shape: (number of linear parameters, number of data points).
-
-    """
-    cdef:
-        int i, j
-        int n_times = t.shape[0]
-
-    c_rv_from_elements(&t[0], &M_T[0,0], n_times,
-                       P, 1., ecc, omega, phi0, t0,
-                       anomaly_tol, anomaly_maxiter)
-
-    if n_trend > 0: # only needed if we are fitting for a constant trend
-        for j in range(n_times):
-            M_T[1, j] = 1.
-
-    if n_trend > 1: # only needed if more than constant trend
-        for i in range(1, n_trend):
-            for j in range(n_times):
-                M_T[1+i, j] = pow(t[j] - t0, i)
+    # TODO: these should be pulled from the instance of TheJoker!
+    double anomaly_tol = 1E-10  # passed to c_rv_from_elements
+    int anomaly_maxiter = 128   # passed to c_rv_from_elements
 
 
 cdef void get_ivar(double[::1] ivar, double s, double[::1] new_ivar):
@@ -249,8 +204,8 @@ cpdef test_likelihood_worker(y, ivar, M, mu, Lambda, make_aAinv):
     return np.array(b), np.array(B), np.array(a), np.array(Ainv)
 
 
-cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
-                                   data, joker_params):
+cpdef batch_marginal_ln_likelihood(double[:, ::1] chunk, data, prior,
+                                   double[:, ::1] trend_M):
     """Compute the marginal log-likelihood for a batch of prior samples.
 
     Parameters
@@ -265,86 +220,101 @@ cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
     joker_params : `~thejoker.sampler.params.JokerParams`
         The specification of parameters to infer with The Joker.
     """
+    rv_unit = data.rv.unit
 
     cdef:
-        int n
+        int n, i
         int n_samples = chunk.shape[0]
         int n_times = len(data)
-        int n_poly = joker_params.poly_trend  # polynomial trend terms
-        int n_pars = 1 + n_poly  # always have K, v trend terms
+        int n_poly = prior.poly_trend  # polynomial trend terms
+        int n_linear = 1 + n_poly  # K, trend - TODO: v0_offsets
+        int generate_samples = 0  # don't generate samples here, just eval
 
+        double t0 = data._t0_bmjd
         double[::1] t = np.ascontiguousarray(data._t_bmjd, dtype='f8')
         double[::1] rv = np.ascontiguousarray(data.rv.value, dtype='f8')
         double[::1] ivar = np.ascontiguousarray(data.ivar.value, dtype='f8')
 
-        # inverse variance array with jitter included
-        double[::1] jitter_ivar = np.zeros(data.ivar.value.shape)
-        double[:, ::1] Lambda = np.zeros((n_pars, n_pars))
-        double[::1] mu = np.ascontiguousarray(joker_params.linear_par_mu)
+        # The data (RV) inverse variances with extra variance, s, included
+        double[::1] s_ivar = np.zeros(data.ivar.value.shape)
 
-        # design matrix
-        double[:, ::1] M_T = np.zeros((n_pars, n_times))
-        double logdet
+        # full design matrix (transpose)
+        double[:, ::1] M_T = np.zeros((n_linear, n_times))
 
-        # likelihoodz
+        # the log-likelihood values
         double[::1] ll = np.full(n_samples, np.nan)
-
-        # jitter stuff
-        double t0 = data._t0_bmjd
-        int _fixed_jitter
-        double jitter
-
-        # Needed for likelihood_worker:
-        double[:, ::1] B = np.zeros((n_times, n_times), dtype=np.float64)
-        double[::1] b = np.zeros(n_times, dtype=np.float64)
-        double[:, ::1] Ainv = np.zeros((n_pars, n_pars), dtype=np.float64)
-        double[::1] a = np.zeros(n_pars, dtype=np.float64)
 
         # Needed for temporary storage in likelihood_worker:
         double[:, ::1] Btmp = np.zeros((n_times, n_times), dtype=np.float64)
-        double[:, ::1] Atmp = np.zeros((n_pars, n_pars), dtype=np.float64)
-        double[:, ::1] Linv = np.zeros((n_pars, n_pars), dtype=np.float64)
-        int[::1] npar_ipiv = np.zeros(n_pars, dtype=np.int32)
+        double[:, ::1] Atmp = np.zeros((n_linear, n_linear), dtype=np.float64)
+        double[:, ::1] Linv = np.zeros((n_linear, n_linear), dtype=np.float64)
+        int[::1] npar_ipiv = np.zeros(n_linear, dtype=np.int32)
         int[::1] ntime_ipiv = np.zeros(n_times, dtype=np.int32)
-        double[::1] npar_work = np.zeros(n_pars, dtype=np.float64)
+        double[::1] npar_work = np.zeros(n_linear, dtype=np.float64)
         double[::1] ntime_work = np.zeros(n_times, dtype=np.float64)
 
-        double K0
-        int scale_K_prior_with_P = joker_params.scale_K_prior_with_P
+        # Needed for internal work / output from likelihood_worker:
+        double[:, ::1] B = np.zeros((n_times, n_times), dtype=np.float64)
+        double[::1] b = np.zeros(n_times, dtype=np.float64)
+        double[:, ::1] Ainv = np.zeros((n_linear, n_linear), dtype=np.float64)
+        double[::1] a = np.zeros(n_linear, dtype=np.float64)
 
-    if scale_K_prior_with_P > 0:
-        # TODO: allow customizing K0!
-        K0 = (25 * u.km/u.s).to_value(joker_params._jitter_unit)
-        Lambda[1:, 1:] = np.array(joker_params.linear_par_Lambda)
-        Linv[1:, 1:] = np.linalg.inv(joker_params.linear_par_Lambda)
-    else:
-        Lambda = np.ascontiguousarray(joker_params.linear_par_Lambda)
-        Linv = np.linalg.inv(Lambda)
+        # TODO: Lambda should be a matrix, but we currently only support
+        # diagonal variance on Lambda, so here and elsewhere we just use the
+        # diagonal
+        int fixed_K_prior = 1
+        double[::1] mu = np.zeros(n_linear)
+        double[::1] Lambda = np.zeros(n_linear)
+        double[::1] Linv = np.zeros(n_linear)
+        double sigma_K0  # TODO HACK
 
-    if joker_params._fixed_jitter:
-        _fixed_jitter = 1
-        jitter = joker_params.jitter.to(data.rv.unit).value
+    # Pre-fill the design matrix with the columns for the linear part of M
+    for n in range(n_times):
+        for i in range(n_linear):
+            M_T[1 + i, n] = trend_M[n, i]
 
-    else:
-        _fixed_jitter = 0
+    # ------------------------------------------------------------------------
+    # TODO: This is a hack that is totally inconsistent with the flexible prior
+    # specification allowed through pymc3. However, we currently only support
+    # constant values for the mean, and only support constant or one special
+    # scaled prior with the variance
+    for i, name in enumerate(prior._linear_pars.keys()):
+        mu[i] = prior.model[name].distribution.mean.eval()
+        if not isinstance(prior.model[name].distribution.sd,
+                          tt.TensorConstant):
+            fixed_K_prior = 0
+            sigma_K0 = prior._sigma_K0.to_value(rv_unit)
+
+    for i, name in enumerate(prior._linear_pars.keys()):
+        if fixed_K_prior == 0 and i == 0:
+            # Skip K term: the prior on K is scaled with P, e, so we set it in # the loop over nonlinear samples below
+            continue
+
+        Lambda[i] = prior.model[name].distribution.sd.eval()
+        Linv[i] = 1 / Lambda[i]
+    # ------------------------------------------------------------------------
 
     for n in range(n_samples):
-        if _fixed_jitter == 0:
-            jitter = chunk[n, 4]
-
-        design_matrix(chunk[n, 0], chunk[n, 1], chunk[n, 2], chunk[n, 3],
-                      t, t0, M_T, n_poly)
+        # TODO: audit order of chunk[...]'s and what c_rv_from_elements expects
+        c_rv_from_elements(&t[0], &M_T[0, 0], t.shape[0],
+                           chunk[n, 0], 1., chunk[n, 1],
+                           chunk[n, 2], chunk[n, 3], t0,
+                           anomaly_tol, anomaly_maxiter)
 
         # Note: jitter must be in same units as the data RV's / ivar!
-        get_ivar(ivar, jitter, jitter_ivar)
+        # TODO: a consequence here is that the jitter must always be defined in
+        # the chunk, so it can't be fixed to a value not set in the prior cache
+        get_ivar(ivar, chunk[n, 4], s_ivar)
 
-        if scale_K_prior_with_P > 0:
-            Lambda[0, 0] = K0**2 / (1 - chunk[n, 2]**2) * (chunk[n, 0] / 365.)**(-2/3.)
-            Linv[0, 0] = 1 / Lambda[0, 0]
+        # TODO: this is a continuation of the massive hack introduced above.
+        if fixed_K_prior == 0:
+            Lambda[0] = (sigma_K0**2 / (1 - chunk[n, 2]**2)
+                         * (chunk[n, 0] / 365.)**(-2/3.))
+            Linv[0] = 1 / Lambda[0]
 
         # compute things needed for the ln(likelihood)
-        ll[n] = likelihood_worker(rv, jitter_ivar, M_T, mu, Lambda, Linv,
-                                  0, B, b, Ainv, a, Btmp, Atmp,
+        ll[n] = likelihood_worker(rv, s_ivar, M_T, mu, Lambda, Linv,
+                                  generate_samples, B, b, Ainv, a, Btmp, Atmp,
                                   npar_ipiv, ntime_ipiv, npar_work, ntime_work)
 
     return ll

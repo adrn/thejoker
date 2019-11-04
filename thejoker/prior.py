@@ -10,6 +10,7 @@ import exoplanet.units as xu
 
 # Project
 from .samples import JokerSamples
+from .utils.distributions import OneOver
 
 __all__ = ['JokerPrior']
 
@@ -97,8 +98,7 @@ def default_nonlinear_prior(P_min, P_max, model=None, pars=None, unpars=None):
             out_unpars['P'] = pm.Uniform('logP',
                                          np.log10(P_min.value),
                                          np.log10(P_max.value))
-            out_pars['P'] = xu.with_unit(pm.Deterministic('P',
-                                                          10**out_unpars['P']),
+            out_pars['P'] = xu.with_unit(OneOver('P', P_min.value, P_max.value),
                                          P_min.unit)
 
     return out_pars, {k: v for k, v in out_unpars.items() if v is not None}
@@ -168,7 +168,6 @@ def default_linear_prior(nonlinear_pars, sigma_K0, sigma_v0, model=None,
                                                     sigma_v0.value),
                                           K_unit)
 
-
     # return an empty dict for untransformed parameters, for consistency...
     return out_pars, {k: v for k, v in out_unpars.items() if v is not None}
 
@@ -176,7 +175,7 @@ def default_linear_prior(nonlinear_pars, sigma_K0, sigma_v0, model=None,
 class JokerPrior:
 
     def __init__(self, pars, unpars=None, poly_trend=1, v0_offsets=None,
-                 model=None):
+                 model=None, **kwargs):
         """This class controls the prior probability distributions for the
         parameters used in The Joker.
 
@@ -296,6 +295,18 @@ class JokerPrior:
                                  "distributions, not '{}'"
                                  .format(type(pars[name].distribution)))
 
+            # TODO: this is a hack because we don't currently support arbitrary
+            # linear prior parameter dependencies on the nonlinear parameters.
+            # But in the future we could!
+            if not kwargs.get('trust'):
+                if not isinstance(pars[name].distribution.mean,
+                                  tt.TensorConstant):
+                    raise NotImplementedError("TODO")
+
+                if not isinstance(pars[name].distribution.sd,
+                                  tt.TensorConstant):
+                    raise NotImplementedError("TODO")
+
         # TODO: enable support for this
         if v0_offsets is not None:
             raise NotImplementedError("Support for this is coming - sorry!")
@@ -320,6 +331,8 @@ class JokerPrior:
 
     @classmethod
     def from_default(cls, P_min, P_max, sigma_K0, sigma_v0, model=None):
+        # TODO: make sigma_v0 -> sigma_v and support polynomial trend coeffs
+
         if model is None:
             model = pm.Model()
 
@@ -329,8 +342,10 @@ class JokerPrior:
 
         pars = {**nl_pars, **l_pars}
         unpars = {**nl_unpars, **l_unpars}
+        obj = cls(pars=pars, unpars=unpars, model=model, trust=True)
+        obj._sigma_K0 = sigma_K0
 
-        return cls(pars=pars, unpars=unpars, model=model)
+        return obj
 
     @property
     def par_names(self):
@@ -341,13 +356,21 @@ class JokerPrior:
     def par_units(self):
         return {p.name: getattr(p, xu.UNIT_ATTR_NAME, u.one) for p in self.pars}
 
-    def sample(self, size=1, return_logprobs=False):
+    def __repr__(self):
+        return f'<JokerPrior [{", ".join(self.par_names)}]'
+
+    def __str__(self):
+        return ", ".join(self.par_names)
+
+    def sample(self, size=1, generate_linear=False, return_logprobs=False):
         """Generate random samples from the prior.
 
         Parameters
         ----------
         size : int (optional)
             The number of samples to generate.
+        generate_linear : bool (optional)
+            Also generate samples in the linear parameters.
         return_logprobs : bool (optional)
             Return the log-prior probability at the position of each sample, for
             each parameter separately
@@ -361,11 +384,23 @@ class JokerPrior:
             only returned if ``return_logprobs=True``.
 
         """
-        pars_list = list(self.pars.values())
+        sub_pars = {k: p for k, p in self.pars.items()
+                    if k in self._nonlinear_pars
+                    or (k in self._linear_pars and generate_linear)}
+
+        if generate_linear:
+            par_names = self.par_names
+        else:
+            par_names = list(self._nonlinear_pars.keys())
+
+        pars_list = list(sub_pars.values())
         npars = len(pars_list)
 
         log_prior = []
         if return_logprobs:
+            # TODO: warn that right now, this is slow. Waiting for upstream
+            # fixes to pymc3
+
             # Add deterministic variables to track the value of the prior at
             # each sample generated:
             with self.model:
@@ -395,8 +430,8 @@ class JokerPrior:
 
         # Apply units if they are specified:
         prior_samples = JokerSamples(prior=self)
-        for name in self.par_names:
-            p = self.pars[name]
+        for name in par_names:
+            p = sub_pars[name]
             unit = getattr(p, xu.UNIT_ATTR_NAME, u.one)
 
             if p.name not in prior_samples._valid_units.keys():
@@ -410,7 +445,7 @@ class JokerPrior:
         log_prior = {p.name: vals for p, vals in zip(pars_list,
                                                      samples_values[npars:])}
         log_prior = {k: np.atleast_1d(v)
-                        for k, v in log_prior.items()}
-        log_prior = Table(log_prior)[self.par_names]
+                     for k, v in log_prior.items()}
+        log_prior = Table(log_prior)[par_names]
 
         return prior_samples, log_prior

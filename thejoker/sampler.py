@@ -87,10 +87,9 @@ class TheJoker:
         self.tempfile_path = tempfile_path
 
     def marginal_ln_likelihood(self, prior_samples, data):
-        pass
+        get_constant_term_design_matrix
 
 
-    # TODO: rethink the in-memory vs. out-of-memory split below
 
     def _rejection_sample_from_cache(self, data, n_prior_samples, max_n_samples,
                                      cache_file, start_idx, seed,
