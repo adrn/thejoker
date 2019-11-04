@@ -162,14 +162,26 @@ class JokerPrior:
         self.poly_trend = int(poly_trend)
 
         # Store the names of the default parameters, used for validating input:
-        self._nonlinear_param_names = ['P', 'M0', 'e', 'omega', 'jitter']
+        # Note: these are not the units assumed internally by the code, but
+        # are only used to validate that the units for each parameter are
+        # equivalent to these
+        self._nonlinear_params = {
+            'P': u.day,
+            'e': u.one,
+            'omega': u.radian,
+            'M0': u.radian,
+            'jitter': u.m/u.s,
+        }
 
         self.poly_trend = int(poly_trend)
-        self._linear_param_names = ['K'] + ['v{0}'.format(i)
-                                            for i in range(self.poly_trend)]
+        self._linear_params = {
+            'K': u.m/u.s,
+            **{'v{0}'.format(i): u.m/u.s/u.day**i
+               for i in range(self.poly_trend)}
+        }
 
         # Enforce that the prior on linear parameters are gaussian
-        for name in self.param_names[5:]:
+        for name in self._linear_params.keys():
             if not isinstance(pars[name].distribution, pm.Normal):
                 raise ValueError("Priors on the linear parameters (K, v0, "
                                  "etc.) must be independent Normal "
@@ -212,7 +224,12 @@ class JokerPrior:
 
     @property
     def param_names(self):
-        return self._nonlinear_param_names + self._linear_param_names
+        return (list(self._nonlinear_params.keys()) +
+                     list(self._linear_params.keys()))
+
+    @property
+    def param_units(self):
+        return {p.name: getattr(p, xu.UNIT_ATTR_NAME) for p in self.pars}
 
     def sample(self, size=1, return_logprobs=False, as_table=True):
         """TODO
