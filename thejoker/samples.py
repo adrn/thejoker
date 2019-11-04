@@ -77,6 +77,14 @@ class JokerSamples:
     def __len__(self):
         return len(self.samples)
 
+    def __repr__(self):
+        # TODO:
+        super().__repr__(self)
+
+    def __str__(self):
+        # TODO:
+        super().__str__(self)
+
     ##########################################################################
     # Interaction with TwoBody
 
@@ -218,9 +226,9 @@ class JokerSamples:
             samples[k] = packed_samples[:, i] * unit
         return samples
 
-    def save(self, filename):
+    def save(self, filename, save_prior=True):
         pass
 
     @classmethod
-    def load(cls, filename):
+    def load(cls, filename, prior_filename=None):
         pass

@@ -2,7 +2,7 @@
 import numpy as np
 
 
-def get_linear_design_matrix(thejoker, data, ids=None):
+def get_constant_term_design_matrix(data, ids=None):
     """Construct the portion of the design matrix relevant for the linear
     parameters of The Joker beyond the amplitude, ``K``.
     """
