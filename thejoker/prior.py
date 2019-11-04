@@ -8,6 +8,9 @@ import theano.tensor as tt
 import exoplanet as xo
 import exoplanet.units as xu
 
+# Project
+from .samples import JokerSamples
+
 __all__ = ['JokerPrior']
 
 
@@ -229,23 +232,13 @@ class JokerPrior:
 
     @property
     def param_units(self):
-        return {p.name: getattr(p, xu.UNIT_ATTR_NAME) for p in self.pars}
+        return {p.name: getattr(p, xu.UNIT_ATTR_NAME, u.one) for p in self.pars}
 
-    def sample(self, size=1, return_logprobs=False, as_table=True):
+    def sample(self, size=1, return_logprobs=False):
         """TODO
 
         Parameters
         ----------
-        pars : dict
-            A dictionary of variables with keys set to the variable names. If
-            any of these variables are defined as deterministic transforms from
-            other variables, see the next parameter below.
-        unpars : dict (optional)
-            For parameters that have defined deterministic transforms that go
-            from the parameters used for sampling to the standard Joker
-            nonlinear parameters (P, e, omega, M0), you must also pass in the
-            un-transformed variables keyed on the name of the transformed
-            parameters through this argument.
         size : int (optional)
             The number of samples to generate.
         return_logprobs : bool (optional)
@@ -254,7 +247,7 @@ class JokerPrior:
 
         Returns
         -------
-        samples : dict
+        samples : `thejoker.Jokersamples`
             TODO
 
         """
@@ -286,31 +279,28 @@ class JokerPrior:
                     log_prior.append(logp_var)
 
         samples_values = draw_values(pars_list + log_prior, size=size)
-        prior_samples = {p.name: samples
-                         for p, samples in zip(pars_list,
-                                               samples_values[:npars])}
+        raw_samples = {p.name: samples
+                       for p, samples in zip(pars_list,
+                                             samples_values[:npars])}
 
         # Apply units if they are specified:
-        for p in pars_list:
-            if xu.has_unit(p):
-                unit = getattr(p, xu.UNIT_ATTR_NAME)
-            else:
-                unit = u.one
-            prior_samples[p.name] = prior_samples[p.name] * unit
+        prior_samples = JokerSamples(prior=self)
+        for name in self.param_names:
+            p = self.pars[name]
+            unit = getattr(p, xu.UNIT_ATTR_NAME, u.one)
 
-        if as_table:
-            prior_samples = {k: np.atleast_1d(v)
-                             for k, v in prior_samples.items()}
-            prior_samples = QTable(prior_samples)[self.param_names]
+            if p.name not in prior_samples._valid_units.keys():
+                continue
+
+            prior_samples[p.name] = np.atleast_1d(raw_samples[p.name]) * unit
 
         if not return_logprobs:
             return prior_samples
 
         log_prior = {p.name: vals for p, vals in zip(pars_list,
                                                      samples_values[npars:])}
-        if as_table:
-            log_prior = {k: np.atleast_1d(v)
-                         for k, v in log_prior.items()}
-            log_prior = Table(log_prior)[self.param_names]
+        log_prior = {k: np.atleast_1d(v)
+                        for k, v in log_prior.items()}
+        log_prior = Table(log_prior)[self.param_names]
 
         return prior_samples, log_prior
