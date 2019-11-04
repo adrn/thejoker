@@ -16,8 +16,29 @@ __all__ = ['JokerPrior']
 
 @u.quantity_input(P_min=u.day, P_max=u.day)
 def default_nonlinear_prior(P_min, P_max, model=None):
-    """TODO
-    model is required or need to be in a context
+    """Retrieve pymc3 variables that specify the default prior on the nonlinear
+    parameters of The Joker.
+
+    The nonlinear parameters an default prior forms are:
+
+    * ``P``, period: :math:`p(P) \propto 1/P`, over the domain
+      :math:`(P_{\rm min}, P_{\rm max})`
+    * ``e``, eccentricity: the short-period form from Kipping (2013)
+    * ``M0``, phase: uniform over the domain :math:`(0, 2\pi)`
+    * ``omega``, argument of pericenter: uniform over the domain
+      :math:`(0, 2\pi)`
+    * ``s``, additional extra variance added in quadrature to data
+      uncertainties: delta-function at 0
+
+    Parameters
+    ----------
+    P_min : `~astropy.units.Quantity`
+        Minimum period for the default 1/P prior.
+    P_max : `~astropy.units.Quantity`
+        Maximum period for the default 1/P prior.
+    model : `pymc3.Model`
+        This is either required, or this function must be called within a pymc3
+        model context.
     """
     model = pm.modelcontext(model)
 
@@ -36,8 +57,8 @@ def default_nonlinear_prior(P_min, P_max, model=None):
 
         # TODO: these default units are a little sloppy, but it doesn't matter
         #       in practice...
-        pars['jitter'] = xu.with_unit(pm.Constant('jitter', 0.),
-                                      u.m/u.s)
+        pars['s'] = xu.with_unit(pm.Constant('s', 0.),
+                                 u.m/u.s)
 
         # Default period prior is uniform in log period:
         unpars['P'] = pm.Uniform('logP',
@@ -51,8 +72,31 @@ def default_nonlinear_prior(P_min, P_max, model=None):
 
 @u.quantity_input(sigma_K0=u.km/u.s, sigma_v0=u.km/u.s)
 def default_linear_prior(nonlinear_pars, sigma_K0, sigma_v0, model=None):
-    """TODO
-    model is required or need to be in a context
+    """Retrieve pymc3 variables that specify the default prior on the linear
+    parameters of The Joker.
+
+    The linear parameters an default prior forms are:
+
+    * ``K``, velocity semi-amplitude: Normal distribution, but with a variance
+      that scales with period and eccentricity such that:
+
+      .. math::
+
+        \sigma_K^2 = \sigma_{K, 0}^2 \, (P/1~{\rm year})^{-2/3} \, (1-e^2)^{-1}
+
+    * ``v0``, systemic velocity: Normal distribution
+
+    Parameters
+    ----------
+    nonlinear_pars : `dict`
+        A dictionary with parameter name keys, and parameter object values.
+    sigma_K0 : `~astropy.units.Quantity`
+        The scale factor
+    sigma_v0 : `~astropy.units.Quantity`
+        The standard deviation of the constant velocity prior.
+    model : `pymc3.Model`
+        This is either required, or this function must be called within a pymc3
+        model context.
     """
     model = pm.modelcontext(model)
 
@@ -173,7 +217,7 @@ class JokerPrior:
             'e': u.one,
             'omega': u.radian,
             'M0': u.radian,
-            'jitter': u.m/u.s,
+            's': u.m/u.s,
         }
 
         self.poly_trend = int(poly_trend)
