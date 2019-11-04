@@ -15,7 +15,7 @@ __all__ = ['JokerPrior']
 
 
 @u.quantity_input(P_min=u.day, P_max=u.day)
-def default_nonlinear_prior(P_min, P_max, model=None):
+def default_nonlinear_prior(P_min, P_max, model=None, pars=None, unpars=None):
     """Retrieve pymc3 variables that specify the default prior on the nonlinear
     parameters of The Joker.
 
@@ -42,36 +42,50 @@ def default_nonlinear_prior(P_min, P_max, model=None):
     """
     model = pm.modelcontext(model)
 
-    pars = dict()
-    unpars = dict()
+    if pars is None:
+        pars = dict()
+
+    if unpars is None:
+        unpars = dict()
+
+    out_pars = dict()
+    out_unpars = dict()
 
     P_max = P_max.to(P_min.unit)
     with model:
         # Set up the default priors for parameters with defaults
-        pars['e'] = xo.distributions.eccentricity.kipping13('e')
-        pars['omega'] = xu.with_unit(pm.Uniform('omega',
-                                                lower=0, upper=2*np.pi),
-                                     u.radian)
-        pars['M0'] =  xu.with_unit(pm.Uniform('M0', lower=0, upper=2*np.pi),
-                                   u.radian)
+        out_pars['e'] = pars.get('e',
+                                 xo.distributions.eccentricity.kipping13('e'))
+        out_pars['omega'] = pars.get('omega',
+                                     xu.with_unit(pm.Uniform('omega',
+                                                             lower=0,
+                                                             upper=2*np.pi),
+                                                  u.radian))
+        out_pars['M0'] =  pars.get('M0',
+                                   xu.with_unit(pm.Uniform('M0', lower=0,
+                                                           upper=2*np.pi),
+                                                u.radian))
 
-        # TODO: these default units are a little sloppy, but it doesn't matter
-        #       in practice...
-        pars['s'] = xu.with_unit(pm.Constant('s', 0.),
-                                 u.m/u.s)
+        # These default units are a little sloppy, but it doesn't really matter
+        out_pars['s'] = pars.get('s',
+                                 xu.with_unit(pm.Constant('s', 0.), u.m/u.s))
 
         # Default period prior is uniform in log period:
-        unpars['P'] = pm.Uniform('logP',
-                                 np.log10(P_min.value),
-                                 np.log10(P_max.value))
-        pars['P'] = xu.with_unit(pm.Deterministic('P', 10**unpars['P']),
-                                 P_min.unit)
+        out_unpars['P'] = unpars.get('P',
+                                     pm.Uniform('logP',
+                                                np.log10(P_min.value),
+                                                np.log10(P_max.value)))
+        out_pars['P'] = pars.get('P',
+                                 xu.with_unit(pm.Deterministic('P',
+                                                               10**unpars['P']),
+                                              P_min.unit))
 
-    return pars, unpars
+    return out_pars, out_unpars
 
 
 @u.quantity_input(sigma_K0=u.km/u.s, sigma_v0=u.km/u.s)
-def default_linear_prior(nonlinear_pars, sigma_K0, sigma_v0, model=None):
+def default_linear_prior(nonlinear_pars, sigma_K0, sigma_v0, model=None,
+                         pars=None, unpars=None):
     """Retrieve pymc3 variables that specify the default prior on the linear
     parameters of The Joker.
 
@@ -100,7 +114,13 @@ def default_linear_prior(nonlinear_pars, sigma_K0, sigma_v0, model=None):
     """
     model = pm.modelcontext(model)
 
-    pars = dict()
+    if pars is None:
+        pars = dict()
+
+    if unpars is None:
+        unpars = dict()
+
+    out_pars = dict()
 
     K_unit = sigma_K0.unit
     sigma_v0 = sigma_v0.to(K_unit)
@@ -110,15 +130,18 @@ def default_linear_prior(nonlinear_pars, sigma_K0, sigma_v0, model=None):
         P = nonlinear_pars['P']
         e = nonlinear_pars['e']
         varK = sigma_K0.value**2 * (P / 365)**(-2/3) / (1 - e**2)
-        pars['K'] = xu.with_unit(pm.Normal('K', 0., tt.sqrt(varK)),
-                                 K_unit)
+        out_pars['K'] = pars.get('K',
+                                 xu.with_unit(pm.Normal('K', 0., tt.sqrt(varK)),
+                                              K_unit))
 
         # Default prior on constant velocity is a single gaussian component
-        pars['v0'] = xu.with_unit(pm.Normal('v0', 0., sigma_v0.value),
-                                  K_unit)
+        out_pars['v0'] = pars.get('v0',
+                                  xu.with_unit(pm.Normal('v0', 0.,
+                                                         sigma_v0.value),
+                                               K_unit))
 
     # return an empty dict for untransformed parameters, for consistency...
-    return pars, dict()
+    return out_pars, dict()
 
 
 class JokerPrior:
@@ -290,7 +313,7 @@ class JokerPrior:
         return {p.name: getattr(p, xu.UNIT_ATTR_NAME, u.one) for p in self.pars}
 
     def sample(self, size=1, return_logprobs=False):
-        """TODO
+        """Generate random samples from the prior.
 
         Parameters
         ----------
@@ -303,7 +326,10 @@ class JokerPrior:
         Returns
         -------
         samples : `thejoker.Jokersamples`
-            TODO
+            The random samples.
+        log_prior : `astropy.table.Table` (optional)
+            The log-prior probability at the position of each sample. This is
+            only returned if ``return_logprobs=True``.
 
         """
         pars_list = list(self.pars.values())

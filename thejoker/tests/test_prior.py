@@ -11,6 +11,23 @@ import theano.tensor as tt
 from ..prior import JokerPrior, default_nonlinear_prior, default_linear_prior
 
 
+def get_valid_default_pars(model, pars, unpars):
+    model = pm.modelcontext(model)
+    with model:
+        nl_pars, nl_unpars = default_nonlinear_prior(P_min=1*u.day,
+                                                     P_max=1e5*u.day,
+                                                     pars=pars, unpars=unpars)
+
+        l_pars, l_unpars = default_linear_prior(nl_pars,
+                                                sigma_K0=25*u.km/u.s,
+                                                sigma_v0=100*u.km/u.s,
+                                                pars=pars, unpars=unpars)
+        default_pars = {**nl_pars, **l_pars}
+        default_unpars = {**nl_unpars, **l_unpars}
+
+    return default_pars, default_unpars
+
+
 def get_valid_objs():
     """This function also implicitly tests valid initialization schemes, but
     below we use it to parametrize some tests that require valid prior objects.
@@ -30,15 +47,7 @@ def get_valid_objs():
                        sigma_K0=25*u.km/u.s, sigma_v0=100*u.km/u.s))
     expected_units.append(default_expected_units)
 
-    # Get default pars
-    with pm.Model() as model:
-        nl_pars, nl_unpars = default_nonlinear_prior(P_min=1*u.day,
-                                                     P_max=1e5*u.day)
-        l_pars, l_unpars = default_linear_prior(nl_pars,
-                                                sigma_K0=25*u.km/u.s,
-                                                sigma_v0=100*u.km/u.s)
-    default_pars = {**nl_pars, **l_pars}
-    default_unpars = {**nl_unpars, **l_unpars}
+    return priors, expected_units
 
     # No transformed parameters
     pars = {}  # pars to replace
@@ -56,12 +65,7 @@ def get_valid_objs():
                                      u.degree)
         units['omega'] = u.degree
 
-    for k in default_pars.keys():
-        if k not in pars:
-            pars[k] = default_pars[k]
-
-            if k in default_unpars:
-                unpars[k] = default_unpars[k]
+        pars, unpars = get_valid_default_pars(model, pars, unpars)
 
     priors.append(dict(pars=pars))
     expected_units.append(units)
@@ -79,14 +83,9 @@ def get_valid_objs():
                          u.km/u.s)
         unpars['s'] = logs
         pars['s'] = s
+        pars, unpars = get_valid_default_pars(model, pars, unpars)
+
     units['s'] = u.km/u.s
-
-    for k in default_pars.keys():
-        if k not in pars:
-            pars[k] = default_pars[k]
-
-            if k in default_unpars:
-                unpars[k] = default_unpars[k]
 
     priors.append(dict(pars=pars, unpars=unpars))
     expected_units.append(units)
@@ -108,3 +107,14 @@ def test_init_sample(kw, expected_units):
     for k in samples.par_names:
         assert hasattr(samples[k], 'unit')
         assert samples[k].unit == expected_units[k]
+
+    samples = prior.sample(size=10)
+    for k in samples.par_names:
+        assert hasattr(samples[k], 'unit')
+        assert samples[k].unit == expected_units[k]
+
+    samples, logprior = prior.sample(size=10, return_logprobs=True)
+    for k in samples.par_names:
+        assert hasattr(samples[k], 'unit')
+        assert samples[k].unit == expected_units[k]
+    assert len(logprior) == len(samples)
