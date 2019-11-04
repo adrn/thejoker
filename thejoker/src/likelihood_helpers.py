@@ -1,3 +1,6 @@
+# Third-party
+import numpy as np
+
 
 def get_linear_design_matrix(thejoker, data, ids=None):
     """Construct the portion of the design matrix relevant for the linear

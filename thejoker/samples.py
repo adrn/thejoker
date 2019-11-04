@@ -13,13 +13,13 @@ __all__ = ['JokerSamples']
 
 class JokerSamples:
 
-    def __init__(self, thejoker, samples=None, t0=None, **kwargs):
+    def __init__(self, prior, samples=None, t0=None, **kwargs):
         """A dictionary-like object for storing posterior samples from
         The Joker, with some extra functionality.
 
         Parameters
         ----------
-        thejoker : `thejoker.TheJoker`
+        prior : `thejoker.JokerPrior`
             TODO:
         samples : `~astropy.table.Table` or table-like
             TODO:
@@ -29,19 +29,19 @@ class JokerSamples:
             TODO: Stored as metadata.
         """
 
-        from .sampler import TheJoker
-        if not isinstance(thejoker, TheJoker):
+        from .prior import JokerPrior
+        if not isinstance(prior, JokerPrior):
             raise TypeError("TODO")
-        self.thejoker = thejoker
+        self.prior = prior
 
         self.samples = QTable(samples)
-        self.samples.meta['poly_trend'] = self.thejoker.prior.poly_trend
+        self.samples.meta['poly_trend'] = self.prior.poly_trend
         self.samples.meta['t0'] = t0
         for k, v in kwargs.items():
             self.samples.meta[k] = v
 
-        self._valid_units = {**self.thejoker.prior._nonlinear_params,
-                             **self.thejoker.prior._linear_params}
+        self._valid_units = {**self.prior._nonlinear_pars,
+                             **self.prior._linear_pars}
 
         self._cache = dict()
 
@@ -71,8 +71,11 @@ class JokerSamples:
         return self.samples.meta['t0']
 
     @property
-    def param_names(self):
+    def par_names(self):
         return self.samples.colnames
+
+    def __len__(self):
+        return len(self.samples)
 
     ##########################################################################
     # Interaction with TwoBody
@@ -186,18 +189,18 @@ class JokerSamples:
         """
         arrs = []
         units = OrderedDict()
-        for name in self.param_names:
+        for name in self.par_names:
             arrs.append(self.samples[name].value)
             units[name] = self.samples[name].unit
 
-        if 'jitter' not in self.param_names:
+        if 'jitter' not in self.par_names:
             jitter = np.zeros_like(arrs[0])
             units['jitter'] = u.m/u.s
 
         return np.stack(arrs, axis=1), units
 
     @classmethod
-    def unpack(cls, packed_samples, thejoker, t0=None):
+    def unpack(cls, packed_samples, prior, t0=None):
         """TODO:
 
         Parameters
@@ -209,7 +212,7 @@ class JokerSamples:
 
         nsamples, npars = packed_samples.shape
 
-        samples = cls(thejoker=thejoker, t0=t0)
+        samples = cls(prior=prior, t0=t0)
         for i, k in enumerate(list(units.keys())[:npars]):
             unit = units[k]
             samples[k] = packed_samples[:, i] * unit
