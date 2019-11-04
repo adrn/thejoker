@@ -123,17 +123,12 @@ def default_linear_prior(nonlinear_pars, sigma_K0, sigma_v0, model=None):
 
 class JokerPrior:
 
-    # TODO: inside TheJoker, when sampling, validate that number of RVData's passed in equals the number of (offsets+1)
-    # prior = JokerPrior.from_default(..., v0_offsets=[pm.Normal(...)])
-    # joker = TheJoker(prior)
-    # joker.rejection_sample([data1, data2], ...)
     def __init__(self, pars, unpars=None, poly_trend=1, v0_offsets=None,
                  model=None):
         """This class controls the prior probability distributions for the
         parameters used in The Joker.
 
-        TODO: words
-        TODO: note, use uniform_logP for old functionality
+        TODO: use from_default() to get default prior
 
         Retrieve the prior parameters for the nonlinear Joker parameters as
         pymc3 variables. If not specified, most parameters have sensible
@@ -160,6 +155,12 @@ class JokerPrior:
             default here is ``polytrend=1``, meaning one term: the (constant)
             systemtic velocity. For example, ``poly_trend=3`` will sample over
             parameters of a long-term quadratic velocity trend.
+        v0_offsets : list (optional)
+            A list of additional Gaussian parameters that set systematic offsets
+            of subsets of the data. TODO: link to tutorial here
+        model : `pymc3.Model`
+            This is either required, or this function must be called within a
+            pymc3 model context.
 
         Examples
         --------
@@ -200,10 +201,18 @@ class JokerPrior:
                                  "The input `unpars` must be a dictionary, not"
                                  " '{}'".format(type(unpars)))
 
-        # TODO: validate that this is a pymc3 model
+        # validate input model
         if model is None:
-            model = pm.Model()
+            try:
+                # check to see if we are in a context
+                model = pm.modelcontext(None)
+            except TypeError:  # we are not!
+                # if no model is specified, create one and hold onto it
+                model = pm.Model()
         self.model = model
+        if not isinstance(self.model, pm.Model):
+            raise TypeError("Input model must be a pymc3.Model instance, not "
+                            "a {}".format(type(self.model)))
 
         # Set the number of polynomial trend parameters
         self.poly_trend = int(poly_trend)
@@ -212,7 +221,7 @@ class JokerPrior:
         # Note: these are not the units assumed internally by the code, but
         # are only used to validate that the units for each parameter are
         # equivalent to these
-        self._nonlinear_params = {
+        self._nonlinear_pars = {
             'P': u.day,
             'e': u.one,
             'omega': u.radian,
@@ -221,22 +230,24 @@ class JokerPrior:
         }
 
         self.poly_trend = int(poly_trend)
-        self._linear_params = {
+        self._linear_pars = {
             'K': u.m/u.s,
             **{'v{0}'.format(i): u.m/u.s/u.day**i
                for i in range(self.poly_trend)}
         }
 
         # Enforce that the prior on linear parameters are gaussian
-        for name in self._linear_params.keys():
+        for name in self._linear_pars.keys():
             if not isinstance(pars[name].distribution, pm.Normal):
                 raise ValueError("Priors on the linear parameters (K, v0, "
                                  "etc.) must be independent Normal "
                                  "distributions, not '{}'"
                                  .format(type(pars[name].distribution)))
 
-        # TODO: internally, need to use these to construct the constant part of # the design matrix
+        # TODO: enable support for this
         if v0_offsets is not None:
+            raise NotImplementedError("Support for this is coming - sorry!")
+
             try:
                 v0_offsets = list(v0_offsets)
             except Exception:
@@ -270,12 +281,12 @@ class JokerPrior:
         return cls(pars=pars, unpars=unpars, model=model)
 
     @property
-    def param_names(self):
-        return (list(self._nonlinear_params.keys()) +
-                     list(self._linear_params.keys()))
+    def par_names(self):
+        return (list(self._nonlinear_pars.keys()) +
+                list(self._linear_pars.keys()))
 
     @property
-    def param_units(self):
+    def par_units(self):
         return {p.name: getattr(p, xu.UNIT_ATTR_NAME, u.one) for p in self.pars}
 
     def sample(self, size=1, return_logprobs=False):
@@ -329,7 +340,7 @@ class JokerPrior:
 
         # Apply units if they are specified:
         prior_samples = JokerSamples(prior=self)
-        for name in self.param_names:
+        for name in self.par_names:
             p = self.pars[name]
             unit = getattr(p, xu.UNIT_ATTR_NAME, u.one)
 
@@ -345,6 +356,6 @@ class JokerPrior:
                                                      samples_values[npars:])}
         log_prior = {k: np.atleast_1d(v)
                         for k, v in log_prior.items()}
-        log_prior = Table(log_prior)[self.param_names]
+        log_prior = Table(log_prior)[self.par_names]
 
         return prior_samples, log_prior

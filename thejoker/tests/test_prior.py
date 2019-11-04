@@ -22,7 +22,7 @@ def get_valid_objs():
     # default units expected for output
     default_expected_units = {'P': u.day, 'e': u.one,
                               'omega': u.radian, 'M0': u.radian,
-                              'jitter': u.m/u.s,
+                              's': u.m/u.s,
                               'K': u.km/u.s, 'v0': u.km/u.s}
 
     # Default prior with standard parameters:
@@ -75,11 +75,11 @@ def get_valid_objs():
     units = default_expected_units.copy()
     with pm.Model() as model:
         logs = pm.Normal('logs', -1, 0.5)
-        jitter = xu.with_unit(pm.Deterministic('jitter', tt.exp(logs)),
-                              u.km/u.s)
-        unpars['jitter'] = logs
-        pars['jitter'] = jitter
-    units['jitter'] = u.km/u.s
+        s = xu.with_unit(pm.Deterministic('s', tt.exp(logs)),
+                         u.km/u.s)
+        unpars['s'] = logs
+        pars['s'] = s
+    units['s'] = u.km/u.s
 
     for k in default_pars.keys():
         if k not in pars:
@@ -90,6 +90,8 @@ def get_valid_objs():
 
     priors.append(dict(pars=pars, unpars=unpars))
     expected_units.append(units)
+
+    # TODO: also try specifying v0_offsets
 
     return priors, expected_units
 
@@ -103,6 +105,6 @@ def test_init_sample(kw, expected_units):
         prior = JokerPrior(**kw)
 
     samples = prior.sample()
-    for k in samples.param_names:
+    for k in samples.par_names:
         assert hasattr(samples[k], 'unit')
         assert samples[k].unit == expected_units[k]
