@@ -127,6 +127,14 @@ class RVData:
         """
         return Time(self._t_bmjd, scale='tcb', format='mjd')
 
+    @property
+    def ivar(self):
+        """Inverse-variance."""
+        if self._has_cov:
+            return np.linalg.inv(self.rv_err.value) / self.rv_err.unit
+        else:
+            return 1 / self.rv_err ** 2
+
     # ------------------------------------------------------------------------
     # Other initialization methods:
 
