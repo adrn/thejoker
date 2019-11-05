@@ -79,11 +79,11 @@ class JokerSamples:
 
     def __repr__(self):
         # TODO:
-        super().__repr__(self)
+        return super().__repr__()
 
     def __str__(self):
         # TODO:
-        super().__str__(self)
+        return super().__str__()
 
     ##########################################################################
     # Interaction with TwoBody
@@ -208,7 +208,7 @@ class JokerSamples:
         return np.stack(arrs, axis=1), units
 
     @classmethod
-    def unpack(cls, packed_samples, prior, t0=None):
+    def unpack(cls, packed_samples, prior, units, t0=None):
         """TODO:
 
         Parameters
