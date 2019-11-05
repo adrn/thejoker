@@ -299,6 +299,7 @@ class JokerPrior:
             # linear prior parameter dependencies on the nonlinear parameters.
             # But in the future we could!
             if not kwargs.get('trust'):
+                # TODO: turn this trust bullshit into a check of the actual distribution, otherwise we make this way too strict
                 if not isinstance(pars[name].distribution.mean,
                                   tt.TensorConstant):
                     raise NotImplementedError("TODO")
