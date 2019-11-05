@@ -4,8 +4,7 @@ import numpy as np
 
 # Project
 from ..utils.logging import logger
-from .fast_likelihood import (batch_marginal_ln_likelihood,
-                              batch_get_posterior_samples)
+from .fast_likelihood import CJokerHelper
 
 __all__ = ['compute_likelihoods', 'get_good_sample_indices',
            'sample_indices_to_full_samples']
@@ -83,7 +82,7 @@ def _marginal_ll_worker(task):
         Array of log-likelihood values.
 
     """
-    start_stop, chunk_index, prior_cache_file, data, jparams = task
+    start_stop, chunk_index, prior_cache_file, joker_helper = task
 
     # read a chunk of the prior samples
     with h5py.File(prior_cache_file, 'r') as f:
@@ -92,12 +91,12 @@ def _marginal_ll_worker(task):
     chunk = chunk.astype(np.float64)
 
     # memoryview is returned
-    ll = batch_marginal_ln_likelihood(chunk, data, jparams)
+    ll = joker_helper.batch_marginal_ln_likelihood(chunk)
     return np.array(ll)
 
 
 def compute_likelihoods(n_prior_samples, prior_cache_file, start_idx, data,
-                        joker_params, pool, n_batches=None):
+                        prior, trend_M, pool, n_batches=None):
     """
     Return the indices of 'good' samples by computing the log-likelihood
     for ``n_prior_samples`` prior samples and doing rejection sampling.
@@ -139,7 +138,10 @@ def compute_likelihoods(n_prior_samples, prior_cache_file, start_idx, data,
         the likelihood values instead?
 
     """
-    args = [prior_cache_file, data, joker_params]
+    # TODO: get trend_M from prior
+    joker_helper = CJokerHelper(data, prior, trend_M)
+
+    args = [prior_cache_file, joker_helper]
     if n_batches is None:
         n_batches = pool.size
     tasks = chunk_tasks(n_prior_samples, n_batches=n_batches, args=args,
@@ -191,7 +193,7 @@ def _sample_vector_worker(task):
         is not supposed to be in the public API.
     """
 
-    (idx, chunk_index, prior_cache_file, data, joker_params, global_seed,
+    (idx, chunk_index, prior_cache_file, joker_helper, global_seed,
      return_logprobs) = task
 
     if global_seed is not None:
@@ -214,15 +216,15 @@ def _sample_vector_worker(task):
 
     chunk = chunk.astype(np.float64)
 
-    pars = batch_get_posterior_samples(chunk, data, joker_params,
-                                       rnd, return_logprobs)
+    pars = joker_helper.batch_get_posterior_samples(chunk, rnd, return_logprobs)
+
     if return_logprobs:
         pars = np.hstack((pars[:, :-1], ln_prior[:, None], pars[:, -1:]))
     return pars
 
 
 def sample_indices_to_full_samples(good_samples_idx, prior_cache_file, data,
-                                   joker_params, max_n_samples, pool,
+                                   prior, trend_M, max_n_samples, pool,
                                    global_seed=None, return_logprobs=False,
                                    n_batches=None):
     """
@@ -258,9 +260,12 @@ def sample_indices_to_full_samples(good_samples_idx, prior_cache_file, data,
 
     """
 
+    # TODO: get trend_M from prior
+    joker_helper = CJokerHelper(data, prior, trend_M)
+
     good_samples_idx = good_samples_idx[:max_n_samples]
     n_samples = len(good_samples_idx)
-    args = [prior_cache_file, data, joker_params, global_seed, return_logprobs]
+    args = [prior_cache_file, joker_helper, global_seed, return_logprobs]
     if n_batches is None:
         n_batches = pool.size
     tasks = chunk_tasks(n_samples, n_batches=n_batches, arr=good_samples_idx,
