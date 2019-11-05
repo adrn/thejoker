@@ -1,3 +1,5 @@
+"""Tests for data.py and data_helpers.py"""
+
 # Third-party
 from astropy.table import Table
 from astropy.time import Time
@@ -19,7 +21,21 @@ except ImportError:
     HAS_FUZZY = False
 
 # Package
-from ..data import RVData, guess_time_format
+from ..data import RVData
+from ..data_helpers import guess_time_format
+
+
+def test_guess_time_format():
+    for yr in np.arange(1975, 2040, 5):
+        assert guess_time_format(Time(f'{yr}-05-23').jd) == 'jd'
+        assert guess_time_format(Time(f'{yr}-05-23').mjd) == 'mjd'
+
+    with pytest.raises(NotImplementedError):
+        guess_time_format('asdfasdf')
+
+    for bad_val in np.array([0., 1450., 2500., 5000.]):
+        with pytest.raises(ValueError):
+            guess_time_format(bad_val)
 
 
 def get_valid_input(rnd=None):
@@ -214,16 +230,3 @@ def test_plotting(inputs):
     data.plot(ecolor='r')
 
     plt.close('all')
-
-
-def test_guess_time_format():
-    for yr in np.arange(1975, 2040, 5):
-        assert guess_time_format(Time(f'{yr}-05-23').jd) == 'jd'
-        assert guess_time_format(Time(f'{yr}-05-23').mjd) == 'mjd'
-
-    with pytest.raises(NotImplementedError):
-        guess_time_format('asdfasdf')
-
-    for bad_val in np.array([0., 1450., 2500., 5000.]):
-        with pytest.raises(ValueError):
-            guess_time_format(bad_val)

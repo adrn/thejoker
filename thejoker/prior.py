@@ -10,7 +10,7 @@ import exoplanet.units as xu
 
 # Project
 from .samples import JokerSamples
-from .utils.distributions import OneOver
+from .prior_helpers import OneOver
 
 __all__ = ['JokerPrior']
 
