@@ -5,46 +5,9 @@ NOTE: this is only used for testing the cython / c implementation.
 # Third-party
 import astropy.units as u
 import numpy as np
-from twobody.wrap import cy_rv_from_elements
 from scipy.stats import multivariate_normal
 
-# Package
-# from ..utils.stats import beta_logpdf, norm_logpdf
-
-__all__ = ['ln_prior', 'get_ivar', 'design_matrix',
-           'likelihood_worker', 'marginal_ln_likelihood']
-
-
-def ln_prior(samples, joker_params):
-    """
-    Evaluate The Joker prior for the nonlinear parameters.
-    """
-    size = len(samples)
-    ln_prior_val = np.zeros(size)
-    a, b = (np.log(joker_params.P_min.to(u.day).value),
-            np.log(joker_params.P_max.to(u.day).value))
-
-    # P
-    ln_prior_val += -np.log(b - a) - np.log(samples['P'].to(u.day).value)
-
-    # M0
-    ln_prior_val += -np.log(2 * np.pi)
-
-    # e - MAGIC NUMBERS below: Kipping et al. 2013 (MNRAS 434 L51)
-    ln_prior_val += beta_logpdf(np.array(samples['e']), 0.867, 3.03)
-
-    # omega
-    ln_prior_val += -np.log(2 * np.pi)
-
-    # jitter
-    if not joker_params._fixed_jitter:
-        Jac = np.log(2 / samples['jitter'].value)  # Jacobian
-        log_s2 = np.log(samples['jitter'].value ** 2)
-        ln_prior_val += norm_logpdf(log_s2,
-                                    joker_params.jitter[0],
-                                    joker_params.jitter[1]) + Jac
-
-    return ln_prior_val
+__all__ = ['get_ivar', 'likelihood_worker', 'marginal_ln_likelihood']
 
 
 def get_ivar(data, s):
@@ -60,41 +23,6 @@ def get_ivar(data, s):
 
     """
     return data.ivar.value / (1 + s**2 * data.ivar.value)
-
-
-def design_matrix(nonlinear_p, data, joker_params):
-    """Compute the design matrix, M.
-
-    Parameters
-    ----------
-    nonlinear_p : array_like
-        Array of non-linear parameter values. For the default case,
-        these are P (period, day), M0 (phase at pericenter, rad),
-        ecc (eccentricity), omega (argument of perihelion, rad).
-        May also contain log(jitter^2) as the last index.
-    data : `~thejoker.data.RVData`
-        The observations.
-    joker_params : `~thejoker.sampler.params.JokerParams`
-        The specification of parameters to infer with The Joker.
-
-    Returns
-    -------
-    M : `numpy.ndarray`
-        The design matrix with shape ``(n_times, n_params)``.
-
-    """
-    P, M0, ecc, omega = nonlinear_p[:4]  # we don't need the jitter here
-
-    t = data._t_bmjd
-    t0 = data._t0_bmjd
-    zdot = cy_rv_from_elements(t, P, 1., ecc, omega, M0, t0,
-                               joker_params.anomaly_tol,
-                               joker_params.anomaly_maxiter)
-
-    M1 = np.vander(t - t0, N=joker_params.poly_trend, increasing=True)
-    M = np.hstack((zdot[:, None], M1))
-
-    return M
 
 
 def likelihood_worker(y, ivar, M, mu, Lambda, make_aAinv=False):
