@@ -22,7 +22,7 @@ except ImportError:
 
 # Package
 from ..data import RVData
-from ..data_helpers import guess_time_format
+from ..data_helpers import guess_time_format, _prepare_multi_data
 
 
 def test_guess_time_format():
@@ -38,11 +38,11 @@ def test_guess_time_format():
             guess_time_format(bad_val)
 
 
-def get_valid_input(rnd=None):
+def get_valid_input(rnd=None, size=32):
     if rnd is None:
         rnd = np.random.RandomState(42)
 
-    t_arr = rnd.uniform(55555., 56012., size=32)
+    t_arr = rnd.uniform(55555., 56012., size=size)
     t_obj = Time(t_arr, format='mjd')
 
     rv = 100 * np.sin(2*np.pi * t_arr / 15.) * u.km / u.s
@@ -234,3 +234,44 @@ def test_plotting(inputs):
     data.plot(ecolor='r')
 
     plt.close('all')
+
+
+def test_multi_data():
+    rnd = np.random.RandomState(42)
+
+    # Set up mulitple valid data objects:
+    _, raw1 = get_valid_input(rnd=rnd)
+    data1 = RVData(raw1['t_obj'], raw1['rv'], raw1['err'])
+
+    _, raw2 = get_valid_input(rnd=rnd, size=8)
+    data2 = RVData(raw2['t_obj'], raw2['rv'], raw2['err'])
+
+    _, raw3 = get_valid_input(rnd=rnd, size=4)
+    data3 = RVData(raw3['t_obj'], raw3['rv'], raw3['err'])
+
+    # Object should return input:
+    multi_data, ids = _prepare_multi_data(data1)
+    assert np.allclose(multi_data.rv.value, data1.rv.value)
+    assert ids is None
+
+    # Three valid objects as a list:
+    datas = [data1, data2, data3]
+    multi_data, ids = _prepare_multi_data(datas)
+    assert len(np.unique(ids)) == 3
+    assert len(multi_data) == sum([len(d) for d in datas])
+    assert 0 in ids and 1 in ids and 2 in ids
+
+    # Three valid objects with names:
+    datas = {'apogee': data1, 'lamost': data2, 'weave': data3}
+    multi_data, ids = _prepare_multi_data(datas)
+    assert len(np.unique(ids)) == 3
+    assert len(multi_data) == sum([len(d) for d in datas.values()])
+    assert 'apogee' in ids and 'lamost' in ids and 'weave' in ids
+
+    # Check that this fails if one has a covariance matrix
+    data_cov = RVData(raw3['t_obj'], raw3['rv'], raw3['cov'])
+    with pytest.raises(NotImplementedError):
+        _prepare_multi_data({'apogee': data1, 'weave': data_cov})
+
+    with pytest.raises(NotImplementedError):
+        _prepare_multi_data([data1, data_cov])
