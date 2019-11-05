@@ -170,6 +170,10 @@ def test_data_methods(inputs):
     phase2 = data1.phase(P=15.*u.day, t0=Time(58585.24, format='mjd'))
     assert not np.allclose(phase1, phase2)
 
+    # compute inverse variance
+    ivar = data1.ivar
+    assert ivar.unit == (1 / data1.rv.unit**2)
+
 
 def test_guess_from_table():
     """TODO: this is not an exhaustive set of tests, but at least checks a few
