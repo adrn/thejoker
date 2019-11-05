@@ -9,7 +9,7 @@ import h5py
 import numpy as np
 
 # Project
-from .utils import logger
+from .logging import logger
 from .data import RVData
 from .prior import JokerPrior
 from .src.multiproc_helpers import (get_good_sample_indices,

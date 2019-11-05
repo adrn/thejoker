@@ -3,7 +3,7 @@ import h5py
 import numpy as np
 
 # Project
-from ..utils.logging import logger
+from ..logging import logger
 from .fast_likelihood import CJokerHelper
 
 __all__ = ['compute_likelihoods', 'get_good_sample_indices',

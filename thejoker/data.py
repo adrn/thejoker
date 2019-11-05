@@ -5,8 +5,8 @@ import astropy.units as u
 import numpy as np
 
 # Project
-from .utils.logging import logger
-from .utils.data import guess_time_format
+from .logging import logger
+from .data_helpers import guess_time_format
 
 __all__ = ['RVData']
 
