@@ -50,10 +50,9 @@ cdef void get_ivar(double[::1] ivar, double s, double[::1] new_ivar):
 
     """
     cdef:
-        int n = ivar.shape[0]
         int i
 
-    for i in range(n):
+    for i in range(ivar.shape[0]):
         new_ivar[i] = ivar[i] / (1 + s*s * ivar[i])
 
 
@@ -93,10 +92,10 @@ cdef class CJokerHelper:
         double[::1] ntime_work
 
         # Needed for internal work / output from likelihood_worker:
-        double[:, ::1] B
-        double[::1] b
-        double[:, ::1] Ainv
-        double[::1] a
+        public double[:, ::1] B
+        public double[::1] b
+        public double[:, ::1] Ainv
+        public double[::1] a
 
 
     def __init__(self, data, prior, double[:, ::1] trend_M):
@@ -115,10 +114,19 @@ cdef class CJokerHelper:
         self.ivar = np.ascontiguousarray(data.ivar.value, dtype='f8')
         self.trend_M = trend_M
 
+        # ivar with jitter included
+        self.s_ivar = np.zeros(self.n_times, dtype='f8')
+
         # Transpose of design matrix: Fill the columns for the linear part of M
+        if (trend_M.shape[0] != self.n_times
+                or trend_M.shape[1] != self.n_linear):
+            raise ValueError("Invalid design matrix shape: {}, expected: {}"
+                             .format(trend_M.shape,
+                                     (self.n_times, self.n_linear)))
+
         self.M_T = np.zeros((self.n_linear, self.n_times))
         for n in range(self.n_times):
-            for i in range(self.n_linear):
+            for i in range(self.n_linear-1):
                 self.M_T[1 + i, n] = trend_M[n, i]
 
         # Needed for temporary storage in likelihood_worker:
@@ -160,9 +168,9 @@ cdef class CJokerHelper:
             self.Lambda[i] = prior.model[name].distribution.sd.eval()
         # ---------------------------------------------------------------------
 
-    cdef double likelihood_worker(self,
-                                  double[::1] mu, double[::1] Lambda,
-                                  int make_aAinv):  # whether to make a, Ainv
+    cdef double likelihood_worker(self, int make_aAinv):
+        """The argument controls whether to make a, Ainv"""
+
         cdef:
             int i, j, n, m  # i,j used below for n_pars, n,m used for n_times
 
@@ -190,17 +198,18 @@ cdef class CJokerHelper:
         # Make the vector b:
         for n in range(self.n_times):
             for i in range(self.n_linear):
-                self.b[n] += self.M_T[i, n] * mu[i]
+                self.b[n] += self.M_T[i, n] * self.mu[i]
 
         for n in range(self.n_times):
-            self.B[n, n] = 1 / self.ivar[n]  # Assumes diagonal data covariance
+            self.B[n, n] = 1 / self.ivar[n]  # TODO: Assumes diagonal covariance
             for m in range(self.n_times):
                 # TODO: this now assumes diagonal Lambda
                 # for i in range(self.n_linear):
                 #     for j in range(self.n_linear):
                 #         B[n, m] += M_T[j, n] * Lambda[i, j] * M_T[i, m]
                 for i in range(self.n_linear):
-                    self.B[n, m] += self.M_T[i, n] * Lambda[i] * self.M_T[i, m]
+                    self.B[n, m] += (self.M_T[i, n] * self.Lambda[i]
+                                     * self.M_T[i, m])
 
                 # Make a copy because in-place shit below
                 self.Btmp[n, m] = self.B[n, m]
@@ -238,7 +247,7 @@ cdef class CJokerHelper:
             # Ainv = Λinv + M.T @ Cinv @ M
             # First construct Ainv using the temp 2D array:
             for i in range(self.n_linear):
-                self.Ainv[i, j] = 1 / Lambda[i]
+                self.Ainv[i, j] = 1 / self.Lambda[i]
                 for j in range(self.n_linear):
                     # TODO: with line above, this now assumes diagonal Lambda
                     # Ainv[i, j] = Lambda_inv[i, j]
@@ -259,7 +268,7 @@ cdef class CJokerHelper:
                 # TODO: this now assumes diagonal Lambda
                 # for j in range(self.n_linear):
                 #     a[i] += Lambda_inv[i, j] * mu[j]
-                self.a[i] += mu[j] / Lambda[i]
+                self.a[i] += self.mu[j] / self.Lambda[i]
 
             # `a` on input is actually the RHS (e.g., b in Ax=b), but on output
             # is the vector we want!
@@ -297,11 +306,17 @@ cdef class CJokerHelper:
             # the log-likelihood values
             double[::1] ll = np.full(n_samples, np.nan)
 
+            double P, e, om, M0
+
         for n in range(n_samples):
-            # TODO: audit order of chunk[...]'s and what c_rv_from_elements
-            c_rv_from_elements(&self.t[0], &self.M_T[0, 0], self.t.shape[0],
-                               chunk[n, 0], 1., chunk[n, 1],
-                               chunk[n, 2], chunk[n, 3], self.t0,
+            # TODO: need to make sure the chunk is always in this order!
+            P = chunk[n, 0]
+            e = chunk[n, 1]
+            om = chunk[n, 2]
+            M0 = chunk[n, 3]
+
+            c_rv_from_elements(&self.t[0], &self.M_T[0, 0], self.n_times,
+                               P, 1., e, om, M0, self.t0,
                                anomaly_tol, anomaly_maxiter)
 
             # Note: jitter must be in same units as the data RV's / ivar!
@@ -316,7 +331,7 @@ cdef class CJokerHelper:
                                   * (chunk[n, 0] / 365.)**(-2/3.))
 
             # compute things needed for the ln(likelihood)
-            ll[n] = self.likelihood_worker(self.mu, self.Lambda, 0)
+            ll[n] = self.likelihood_worker(0)
 
         return ll
 
@@ -351,9 +366,9 @@ cdef class CJokerHelper:
 
         for n in range(n_samples):
             pars[n, 0] = chunk[n, 0] # P
-            pars[n, 1] = chunk[n, 1] # M0
-            pars[n, 2] = chunk[n, 2] # e
-            pars[n, 3] = chunk[n, 3] # omega
+            pars[n, 1] = chunk[n, 1] # e
+            pars[n, 2] = chunk[n, 2] # omega
+            pars[n, 3] = chunk[n, 3] # M0
             pars[n, 4] = chunk[n, 4] # jitter
 
             # TODO: audit order of chunk[...]'s and what c_rv_from_elements
@@ -374,7 +389,7 @@ cdef class CJokerHelper:
                                   * (chunk[n, 0] / 365.)**(-2/3.))
 
             # compute likelihood, but also generate a, Ainv
-            ll = self.likelihood_worker(self.mu, self.Lambda, 1)
+            ll = self.likelihood_worker(1)
 
             # TODO: this calls back to numpy!
             # TODO: https://github.com/bashtage/randomgen instead?
