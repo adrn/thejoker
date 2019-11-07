@@ -205,3 +205,5 @@ extensions += ['IPython.sphinxext.ipython_console_highlighting']
 #     source_parsers['.ipynb'] = 'nbsphinx.NotebookParser'
 # except NameError:
 #     source_parsers = {'.ipynb': 'nbsphinx.NotebookParser'}
+
+nbsphinx_timeout = 300
