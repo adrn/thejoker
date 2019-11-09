@@ -11,6 +11,7 @@ from twobody import KeplerOrbit, PolynomialRVTrend
 __all__ = ['JokerSamples']
 
 
+# TODO: rename .samples -> .tbl or .table?
 class JokerSamples:
 
     def __init__(self, prior, samples=None, t0=None, **kwargs):
@@ -78,12 +79,11 @@ class JokerSamples:
         return len(self.samples)
 
     def __repr__(self):
-        # TODO:
-        return super().__repr__()
+        return (f'<JokerSamples [{", ".join(self.par_names)}] '
+                f'({len(self)} samples)>')
 
     def __str__(self):
-        # TODO:
-        return super().__str__()
+        return self.__repr__()
 
     ##########################################################################
     # Interaction with TwoBody
