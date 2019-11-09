@@ -15,7 +15,7 @@ def get_constant_term_design_matrix(data, ids=None):
     constant_part = np.zeros((len(data), len(unq_ids)))
 
     constant_part[:, 0] = 1.
-    for id_ in unq_ids:
+    for id_ in unq_ids[1:]:
         constant_part[ids == id_, 1] = 1.
 
     return constant_part

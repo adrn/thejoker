@@ -100,6 +100,6 @@ def _prepare_multi_data(data):
     ids = np.concatenate(ids)
 
     all_data = RVData(t=Time(t, format='mjd', scale='tcb'),
-                        rv=rv, rv_err=err)
+                      rv=rv, rv_err=err)
 
     return all_data, ids

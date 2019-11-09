@@ -11,7 +11,6 @@ from twobody import KeplerOrbit, PolynomialRVTrend
 __all__ = ['JokerSamples']
 
 
-# TODO: rename .samples -> .tbl or .table?
 class JokerSamples:
 
     def __init__(self, prior, samples=None, t0=None, **kwargs):
@@ -35,11 +34,11 @@ class JokerSamples:
             raise TypeError("TODO")
         self.prior = prior
 
-        self.samples = QTable(samples)
-        self.samples.meta['poly_trend'] = self.prior.poly_trend
-        self.samples.meta['t0'] = t0
+        self.tbl = QTable(samples)
+        self.tbl.meta['poly_trend'] = self.prior.poly_trend
+        self.tbl.meta['t0'] = t0
         for k, v in kwargs.items():
-            self.samples.meta[k] = v
+            self.tbl.meta[k] = v
 
         self._valid_units = {**self.prior._nonlinear_pars,
                              **self.prior._linear_pars}
@@ -47,7 +46,7 @@ class JokerSamples:
         self._cache = dict()
 
     def __getitem__(self, key):
-        return self.samples[key]
+        return self.tbl[key]
 
     def __setitem__(self, key, val):
         if key not in self._valid_units:
@@ -59,24 +58,25 @@ class JokerSamples:
 
         expected_unit = self._valid_units[key]
         if not val.unit.is_equivalent(expected_unit):
-            raise u.UnitsError(f"Units of '{key}' must be convertable to {expected_unit}")
+            raise u.UnitsError(f"Units of '{key}' must be convertable to "
+                               f"{expected_unit}")
 
-        self.samples[key] = val
+        self.tbl[key] = val
 
     @property
     def poly_trend(self):
-        return self.samples.meta['poly_trend']
+        return self.tbl.meta['poly_trend']
 
     @property
     def t0(self):
-        return self.samples.meta['t0']
+        return self.tbl.meta['t0']
 
     @property
     def par_names(self):
-        return self.samples.colnames
+        return self.tbl.colnames
 
     def __len__(self):
-        return len(self.samples)
+        return len(self.tbl)
 
     def __repr__(self):
         return (f'<JokerSamples [{", ".join(self.par_names)}] '
@@ -169,10 +169,10 @@ class JokerSamples:
         cls = self.__class__
 
         new_samples = dict()
-        for k in self.samples.colnames:
+        for k in self.tbl.colnames:
             new_samples[k] = func(self[k])
 
-        return cls(new_samples, **self.meta)
+        return cls(self.prior, tbl=new_samples, **self.meta)
 
     def mean(self):
         """Return a new scalar object by taking the mean across all samples"""
@@ -183,11 +183,12 @@ class JokerSamples:
         return self._apply(np.mean)
 
     def std(self):
-        """Return a new scalar object by taking the standard deviation across all samples"""
+        """Return a new scalar object by taking the standard deviation across
+        all samples"""
         return self._apply(np.std)
 
     # Packing and unpacking
-    def pack(self, nonlinear_only=True):
+    def pack(self, units=None, nonlinear_only=True):
         """TODO:
 
         Parameters
@@ -195,15 +196,18 @@ class JokerSamples:
         nonlinear_only : bool (optional)
             TODO
         """
-        arrs = []
-        units = OrderedDict()
-        for name in self.par_names:
-            arrs.append(self.samples[name].value)
-            units[name] = self.samples[name].unit
+        if units is None:
+            units = OrderedDict()
 
-        if 'jitter' not in self.par_names:
-            jitter = np.zeros_like(arrs[0])
-            units['jitter'] = u.m/u.s
+        arrs = []
+        for name in self.par_names:
+            unit = units.get(name, self.tbl[name].unit)
+            arrs.append(self.tbl[name].to_value(unit))
+            units[name] = unit
+
+        if 's' not in self.par_names:
+            arrs.append(np.zeros_like(arrs[0]))
+            units['s'] = u.m/u.s
 
         return np.stack(arrs, axis=1), units
 

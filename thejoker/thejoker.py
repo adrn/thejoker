@@ -1,7 +1,6 @@
 # Standard library
 import sys
 import tempfile
-import time
 
 # Third-party
 import astropy.units as u
@@ -11,11 +10,13 @@ import numpy as np
 # Project
 from .logging import logger
 from .data import RVData
+from .data_helpers import _prepare_multi_data
 from .prior import JokerPrior
-from .src.multiproc_helpers import (get_good_sample_indices,
-                                    compute_likelihoods,
-                                    sample_indices_to_full_samples)
 from .samples import JokerSamples
+from .src.likelihood_helpers import get_constant_term_design_matrix
+from .src.fast_likelihood import CJokerHelper
+from .src.multiproc_helpers import (get_good_sample_indices,
+                                    sample_indices_to_full_samples)
 
 __all__ = ['TheJoker']
 
@@ -87,9 +88,31 @@ class TheJoker:
         self.tempfile_path = tempfile_path
 
     def marginal_ln_likelihood(self, prior_samples, data):
-        get_constant_term_design_matrix
+        """TODO
 
+        Parameters
+        ----------
+        prior_samples : `thejoker.JokerSamples`
+        data : `thejoker.RVData`, iterable, dict
+        """
 
+        # TODO: validate data vs. v0_offsets
+        try:
+            all_data, ids = _prepare_multi_data(data)
+        except Exception:
+            raise TypeError("Failed to parse input data: data must either be "
+                            "an RVData instance, an iterable of RVData "
+                            "instances, or a dictionary with RVData instances "
+                            "as values. Received: {}".format(type(data)))
+
+        trend_M = get_constant_term_design_matrix(data, ids)
+        helper = CJokerHelper(data, self.prior, trend_M)
+
+        chunk, _ = prior_samples.pack(units={'K': data.rv.unit,
+                                             's': data.rv.unit})
+        ll = helper.batch_marginal_ln_likelihood(chunk)
+
+        return np.array(ll)
 
     def _rejection_sample_from_cache(self, data, n_prior_samples, max_n_samples,
                                      cache_file, start_idx, seed,

@@ -55,6 +55,7 @@ cdef void get_ivar(double[::1] ivar, double s, double[::1] new_ivar):
     for i in range(ivar.shape[0]):
         new_ivar[i] = ivar[i] / (1 + s*s * ivar[i])
 
+# TODO: now that I have the FixedCompanionMass distribution, check for that and use it to set fixed_K_prior or whatever. And read sigma from that distr rather than from prior itself...
 
 cdef class CJokerHelper:
     cdef:
@@ -119,10 +120,10 @@ cdef class CJokerHelper:
 
         # Transpose of design matrix: Fill the columns for the linear part of M
         if (trend_M.shape[0] != self.n_times
-                or trend_M.shape[1] != self.n_linear):
+                or trend_M.shape[1] != (self.n_linear-1)):
             raise ValueError("Invalid design matrix shape: {}, expected: {}"
                              .format(trend_M.shape,
-                                     (self.n_times, self.n_linear)))
+                                     (self.n_times, self.n_linear-1)))
 
         self.M_T = np.zeros((self.n_linear, self.n_times))
         for n in range(self.n_times):
