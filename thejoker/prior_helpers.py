@@ -12,6 +12,10 @@ __all__ = ['UniformLog', 'FixedCompanionMass']
 class UniformLog(pm.Continuous):
 
     def __init__(self, a, b, **kwargs):
+        """A distribution over a value, x, that is uniform in log(x) over the
+        domain :math:`(a, b)`.
+        """
+
         self.a = float(a)
         self.b = float(b)
         assert (self.a > 0) and (self.b > 0)
@@ -45,6 +49,19 @@ class FixedCompanionMass(pm.Normal):
 
     @u.quantity_input(sigma_K0=u.km/u.s, P0=u.day)
     def __init__(self, P, e, sigma_K0, P0, mu=0., K_unit=None, **kwargs):
+        r"""A distribution over velocity semi-amplitude, :math:`K`, that, at
+        fixed primary mass, is a fixed Normal distribution in companion mass.
+        This has the form:
+
+        .. math::
+
+            p(K) \propto \mathcal{N}(K \,|\, \mu_K, \sigma_K)
+            \sigma_K = \sigma_{K, 0} \, \left(\frac{P}{P_0}\right)^{-1/3} \, \left(1 - e^2\right)^{-1}
+
+        where :math:`P` and :math:`e` are period and eccentricity, and
+        :math:`\sigma_{K, 0}` and :math:`P_0` are parameters of this
+        distribution that must be specified (here as ``sigma_K0`` and ``P0``).
+        """
         self._sigma_K0 = sigma_K0
         self._P0 = P0
 
