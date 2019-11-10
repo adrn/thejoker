@@ -1,11 +1,8 @@
 # Third-party
 import astropy.units as u
-import numpy as np
 import pymc3 as pm
-import exoplanet as xo
 import exoplanet.units as xu
 import pytest
-import theano.tensor as tt
 
 # Project
 from ..prior import JokerPrior, default_nonlinear_prior, default_linear_prior
