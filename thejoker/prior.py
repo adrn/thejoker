@@ -5,7 +5,7 @@ import numpy as np
 import pymc3 as pm
 from pymc3.distributions import draw_values
 import theano.tensor as tt
-import exoplanet as xo
+from exoplanet.distributions.eccentricity import kipping13
 import exoplanet.units as xu
 
 # Project
@@ -16,7 +16,8 @@ __all__ = ['JokerPrior']
 
 
 @u.quantity_input(P_min=u.day, P_max=u.day, s=u.km/u.s)
-def default_nonlinear_prior(P_min, P_max, s=None, model=None, pars=None):
+def default_nonlinear_prior(P_min=None, P_max=None, s=None,
+                            model=None, pars=None):
     r"""
     Retrieve pymc3 variables that specify the default prior on the nonlinear
     parameters of The Joker. See docstring of `JokerPrior.default()` for more
@@ -47,59 +48,96 @@ def default_nonlinear_prior(P_min, P_max, s=None, model=None, pars=None):
     if pars is None:
         pars = dict()
 
+    # dictionary of parameters to return
     out_pars = dict()
-
-    if s is None:
-        s = 0 * u.m/u.s
 
     with model:
         # Set up the default priors for parameters with defaults
 
         # Note: we have to do it this way (as opposed to with .get(..., default)
         # because this can only get executed if the param is not already
-        # defined, otherwise a pymc3 error is thrown
-        if 'e' in pars:
-            out_pars['e'] = pars['e']
-        else:
-            out_pars['e'] = xo.distributions.eccentricity.kipping13('e')
+        # defined, otherwise variables are defined twice in the model
+        if 'e' not in pars:
+            out_pars['e'] = xu.with_unit(kipping13('e'),
+                                         u.one)
 
-        if 'omega' in pars:
-            out_pars['omega'] = pars['omega']
-        else:
-
+        if 'omega' not in pars:
             out_pars['omega'] = xu.with_unit(pm.Uniform('omega',
                                                         lower=0,
                                                         upper=2*np.pi),
                                              u.radian)
 
-        if 'M0' in pars:
-            out_pars['M0'] = pars['M0']
-        else:
+        if 'M0' not in pars:
             out_pars['M0'] = xu.with_unit(pm.Uniform('M0',
-                                                     lower=0, upper=2*np.pi),
+                                                     lower=0,
+                                                     upper=2*np.pi),
                                           u.radian)
 
-        if 's' in pars:
-            out_pars['s'] = pars['s']
-        else:
+        if 's' not in pars:
+            if s is None:
+                s = 0 * u.m/u.s
             out_pars['s'] = xu.with_unit(pm.Constant('s', s.value),
                                          s.unit)
 
-        if 'P' in pars:
-            out_pars['P'] = pars['P']
-        else:
-            # Default period prior is uniform in log period:
+        if 'P' not in pars:
+            if P_min is None or P_max is None:
+                raise ValueError("If you are using the default period prior, "
+                                 "you must pass in both P_min and P_max to set "
+                                 "the period prior domain.")
             out_pars['P'] = xu.with_unit(UniformLog('P',
                                                     P_min.value,
                                                     P_max.to_value(P_min.unit)),
                                          P_min.unit)
 
+    for k in pars.keys():
+        out_pars[k] = pars[k]
+
     return out_pars
 
 
-@u.quantity_input(sigma_K0=u.km/u.s)
-def default_linear_prior(nonlinear_pars, sigma_K0, P0, sigma_v, poly_trend=1,
-                         mu_v=None, model=None, pars=None):
+def _validate_polytrend(poly_trend):
+    poly_trend = int(poly_trend)
+    v_names = ['v{0}'.format(i) for i in range(poly_trend)]
+    return poly_trend, v_names
+
+
+def _validate_sigma_v(sigma_v, poly_trend, v_names):
+    if isinstance(sigma_v, u.Quantity):
+        if not sigma_v.isscalar:
+            raise ValueError("You must pass in a scalar value for sigma_v if "
+                             "passing in a single quantity.")
+        sigma_v = {'v0': sigma_v}
+
+    if hasattr(sigma_v, 'keys'):
+        for name in v_names:
+            if name not in sigma_v.keys():
+                raise ValueError("If specifying the standard-deviations of "
+                                 "the polynomial trend parameter prior, you "
+                                 "must pass in values for all parameter names."
+                                 "Expected keys: {}, received: {}"
+                                 .format(v_names, sigma_v.keys()))
+        return sigma_v
+
+    try:
+        if len(sigma_v) != poly_trend:
+            raise ValueError("You must pass in a single sigma value for "
+                             "each velocity trend parameter: You passed in "
+                             "{} values, but poly_trend={}"
+                             .format(len(sigma_v), poly_trend))
+        sigma_v = {name: val for name, val in zip(v_names, sigma_v)}
+
+    except TypeError:
+        raise TypeError("Invalid input for velocity trend prior sigma "
+                        "values. This must either be a scalar Quantity (if "
+                        "poly_trend=1) or an iterable of Quantity objects "
+                        "(if poly_trend>1)")
+
+    return sigma_v
+
+
+@u.quantity_input(sigma_K0=u.km/u.s, P0=u.day)
+def default_linear_prior(sigma_K0=None, P0=None, sigma_v=None,
+                         poly_trend=1, model=None, pars=None):
     r"""
     Retrieve pymc3 variables that specify the default prior on the linear
     parameters of The Joker. See docstring of `JokerPrior.default()` for more
@@ -114,8 +152,6 @@ def default_linear_prior(nonlinear_pars, sigma_K0, P0, sigma_v, poly_trend=1,
 
     Parameters
     ----------
-    nonlinear_pars : `dict`
-        A dictionary with parameter name keys, and parameter object values.
     sigma_K0 : `~astropy.units.Quantity` [speed]
     P0 : `~astropy.units.Quantity` [time]
     sigma_v : iterable of `~astropy.units.Quantity`
@@ -125,68 +161,56 @@ def default_linear_prior(nonlinear_pars, sigma_K0, P0, sigma_v, poly_trend=1,
     """
     model = pm.modelcontext(model)
 
-    poly_trend = int(poly_trend)
-    v_names = ['v{0}'.format(i) for i in range(poly_trend)]
-
-    if isinstance(sigma_v, u.Quantity):
-        if not sigma_v.isscalar:
-            raise ValueError("If poly_trend=1, i.e. the velocity trend "
-                             "model is a constant velocity offset only, "
-                             "you must pass in a scalar value for sigma_v")
-        sigma_v = (sigma_v, )
-
-    try:
-        if len(sigma_v) != poly_trend:
-            raise ValueError("You must pass in a single sigma value for each "
-                             "velocity trend parameter: You passed in "
-                             "{} values, but poly_trend={}"
-                             .format(len(sigma_v), poly_trend))
-
-    except TypeError:
-        raise TypeError("Invalid input for velocity trend prior sigma "
-                        "values. This must either be a scalar Quantity (if "
-                        "poly_trend=1) or an iterable of Quantity objects "
-                        "(if poly_trend>1)")
-
     if pars is None:
         pars = dict()
 
+    # dictionary of parameters to return
     out_pars = dict()
 
+    # set up poly. trend names:
+    poly_trend, v_names = _validate_polytrend(poly_trend)
+
+    # get period/ecc from dict of nonlinear parameters
+    P = model.named_vars.get('P', None)
+    e = model.named_vars.get('e', None)
+    if P is None or e is None:
+        raise ValueError("Period P and eccentricity e must both be defined as "
+                         "nonlinear parameters on the model.")
+    P_unit = getattr(P, xu.UNIT_ATTR_NAME)
+
+    if v_names and 'v0' not in pars:
+        sigma_v = _validate_sigma_v(sigma_v, poly_trend, v_names)
+
     with model:
-        if 'K' in pars:
-            out_pars['K'] = pars['K']
-        else:
+        if 'K' not in pars:
             # Default prior on semi-amplitude: scales with period and
             # eccentricity such that it is flat with companion mass
-            P = nonlinear_pars['P']
-            e = nonlinear_pars['e']
+            v_unit = sigma_K0.unit
             out_pars['K'] = xu.with_unit(FixedCompanionMass('K', P=P, e=e,
                                                             sigma_K0=sigma_K0,
                                                             P0=P0),
-                                         sigma_K0.unit)
+                                         v_unit)
+        else:
+            v_unit = getattr(pars['K'], xu.UNIT_ATTR_NAME, u.one)
 
-        P_unit = getattr(P, xu.UNIT_ATTR_NAME)
         for i, name in enumerate(v_names):
-            if name in pars:
-                out_pars[name] = pars[name]
-            else:
-                unit = sigma_K0.unit / P_unit**i
-
+            if name not in pars:
                 # Default priors are independent gaussians
                 # TODO: FIXME: make mean, mu_v, customizable
                 out_pars[name] = xu.with_unit(
                     pm.Normal(name, 0.,
-                              sigma_v[i].to_value(unit)),
-                    unit)
+                              sigma_v[name].value),
+                    sigma_v[name].unit)
 
-    # return an empty dict for untransformed parameters, for consistency...
+    for k in pars.keys():
+        out_pars[k] = pars[k]
+
     return out_pars
 
 
 class JokerPrior:
 
-    def __init__(self, pars, poly_trend=1, v0_offsets=None, model=None):
+    def __init__(self, pars=None, poly_trend=1, v0_offsets=None, model=None):
         """This class controls the prior probability distributions for the
         parameters used in The Joker.
 
@@ -218,9 +242,23 @@ class JokerPrior:
 
         """
 
+        # validate input model
+        if model is None:
+            try:
+                # check to see if we are in a context
+                model = pm.modelcontext(None)
+            except TypeError:  # we are not!
+                # if no model is specified, create one and hold onto it
+                model = pm.Model()
+        self.model = model
+        if not isinstance(self.model, pm.Model):
+            raise TypeError("Input model must be a pymc3.Model instance, not "
+                            "a {}".format(type(self.model)))
+
         # Parse and clean up the input pars
         if pars is None:
             pars = dict()
+            pars.update(model.named_vars)
 
         elif isinstance(pars, tt.TensorVariable):  # a single variable
             # Note: this has to go before the next clause because TensorVariable
@@ -240,21 +278,8 @@ class JokerPrior:
                                      "list, or a single pymc3 variable, not a "
                                      "'{}'.".format(type(pars)))
 
-        # validate input model
-        if model is None:
-            try:
-                # check to see if we are in a context
-                model = pm.modelcontext(None)
-            except TypeError:  # we are not!
-                # if no model is specified, create one and hold onto it
-                model = pm.Model()
-        self.model = model
-        if not isinstance(self.model, pm.Model):
-            raise TypeError("Input model must be a pymc3.Model instance, not "
-                            "a {}".format(type(self.model)))
-
         # Set the number of polynomial trend parameters
-        self.poly_trend = int(poly_trend)
+        self.poly_trend, v_names = _validate_polytrend(poly_trend)
 
         # Store the names of the default parameters, used for validating input:
         # Note: these are *not* the units assumed internally by the code, but
@@ -268,26 +293,32 @@ class JokerPrior:
             's': u.m/u.s,
         }
 
-        self.poly_trend = int(poly_trend)
         self._linear_pars = {
             'K': u.m/u.s,
-            **{'v{0}'.format(i): u.m/u.s/u.day**i
-               for i in range(self.poly_trend)}
+            **{name: u.m/u.s/u.day**i for i, name in enumerate(v_names)}
         }
+        all_pars = {**self._nonlinear_pars, **self._linear_pars}
 
         # At this point, pars must be a dictionary: validate that all
         # parameters are specified and that they all have units
         for name in self.par_names:
             if name not in pars:
-                raise ValueError(r"Missing prior for parameter '{name}': "
+                raise ValueError(f"Missing prior for parameter '{name}': "
                                  "you must specify a prior distribution for "
                                  "all parameters.")
 
             if not hasattr(pars[name], xu.UNIT_ATTR_NAME):
-                raise ValueError(r"Parameter '{name}' does not have associated "
+                raise ValueError(f"Parameter '{name}' does not have associated "
                                  "units: Use exoplanet.units to specify units "
                                  "for your pymc3 variables. See the "
                                  "documentation for examples: thejoker.rtfd.io")
+
+            equiv_unit = all_pars[name]
+            if not getattr(pars[name],
+                           xu.UNIT_ATTR_NAME).is_equivalent(equiv_unit):
+                raise ValueError(f"Parameter '{name}' has an invalid unit: "
+                                 f"The units for this parameter must be "
+                                 f"transformable to '{equiv_unit}'")
 
         # Enforce that the priors on all linear parameters are Normal (or normal subclass)
         for name in self._linear_pars.keys():
@@ -381,9 +412,9 @@ class JokerPrior:
         if model is None:
             model = pm.Model()
 
-        nl_pars = default_nonlinear_prior(P_min, P_max, model=model, pars=pars)
-        l_pars = default_linear_prior(nl_pars, sigma_K0=sigma_K0, P0=P0,
-                                      sigma_v=sigma_v, s=s,
+        nl_pars = default_nonlinear_prior(P_min, P_max, s=s,
+                                          model=model, pars=pars)
+        l_pars = default_linear_prior(sigma_K0=sigma_K0, P0=P0, sigma_v=sigma_v,
                                       poly_trend=poly_trend, model=model)
 
         pars = {**nl_pars, **l_pars}

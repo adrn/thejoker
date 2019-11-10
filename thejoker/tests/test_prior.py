@@ -11,98 +11,110 @@ import theano.tensor as tt
 from ..prior import JokerPrior, default_nonlinear_prior, default_linear_prior
 
 
-def get_valid_default_pars(model, pars, unpars):
-    model = pm.modelcontext(model)
-    with model:
-        nl_pars, nl_unpars = default_nonlinear_prior(P_min=1*u.day,
-                                                     P_max=1e5*u.day,
-                                                     pars=pars, unpars=unpars)
-
-        l_pars, l_unpars = default_linear_prior(nl_pars,
-                                                sigma_K0=25*u.km/u.s,
-                                                sigma_v0=100*u.km/u.s,
-                                                pars=pars, unpars=unpars)
-        default_pars = {**nl_pars, **l_pars}
-        default_unpars = {**nl_unpars, **l_unpars}
-
-    return default_pars, default_unpars
-
-
-def get_valid_objs():
-    """This function also implicitly tests valid initialization schemes, but
-    below we use it to parametrize some tests that require valid prior objects.
-    """
-
-    priors = []
-    expected_units = []
-
-    # default units expected for output
+def init_helper(case=None):
     default_expected_units = {'P': u.day, 'e': u.one,
                               'omega': u.radian, 'M0': u.radian,
                               's': u.m/u.s,
                               'K': u.km/u.s, 'v0': u.km/u.s}
 
-    # Default prior with standard parameters:
-    priors.append(dict(P_min=1*u.day, P_max=100*u.day,
-                       sigma_K0=25*u.km/u.s, sigma_v0=100*u.km/u.s))
-    expected_units.append(default_expected_units)
+    if case == 0:
+        # Default prior with standard parameters:
+        with pm.Model() as model:
+            default_nonlinear_prior(P_min=1*u.day, P_max=10*u.year)
+            default_linear_prior(sigma_K0=25*u.km/u.s,
+                                 P0=1*u.year,
+                                 sigma_v=10*u.km/u.s)
+            prior = JokerPrior(model=model)
 
-    # No transformed parameters
-    pars = {}  # pars to replace
-    unpars = {}
-    units = default_expected_units.copy()
-    with pm.Model() as model:
-        pars['P'] = xu.with_unit(pm.Normal('P', 10, 0.5),
-                                 u.year)
-        units['P'] = u.year
+        return prior, default_expected_units
 
-        pars['e'] = xu.with_unit(pm.Uniform('e', 0, 1),
-                                 u.one)
+    elif case == 1:
+        # Replace a nonlinear parameter
+        units = default_expected_units.copy()
+        with pm.Model() as model:
+            P = xu.with_unit(pm.Normal('P', 10, 0.5),
+                             u.year)
+            units['P'] = u.year
 
-        pars['omega'] = xu.with_unit(pm.Normal('omega', 25., 1),
-                                     u.degree)
-        units['omega'] = u.degree
+            default_nonlinear_prior(pars={'P': P})
+            default_linear_prior(sigma_K0=25*u.km/u.s,
+                                 P0=1*u.year,
+                                 sigma_v=10*u.km/u.s)
 
-        pars, unpars = get_valid_default_pars(model, pars, unpars)
+        prior = JokerPrior(model=model)
 
-    priors.append(dict(pars=pars))
-    expected_units.append(units)
+        return prior, units
 
-    priors.append(dict(pars=pars, unpars=unpars))
-    expected_units.append(units)
+    elif case == 2:
+        # Replace a linear parameter
+        units = default_expected_units.copy()
+        with pm.Model() as model:
+            K = xu.with_unit(pm.Normal('K', 10, 0.5),
+                             u.m/u.s)
+            units['K'] = u.m/u.s
 
-    # Additional transformed parameter
-    pars = {}  # pars to replace
-    unpars = {}
-    units = default_expected_units.copy()
-    with pm.Model() as model:
-        logs = pm.Normal('logs', -1, 0.5)
-        s = xu.with_unit(pm.Deterministic('s', tt.exp(logs)),
-                         u.km/u.s)
-        unpars['s'] = logs
-        pars['s'] = s
-        pars, unpars = get_valid_default_pars(model, pars, unpars)
+            default_nonlinear_prior(P_min=1*u.day, P_max=10*u.day)
+            default_linear_prior(sigma_v=10*u.km/u.s,
+                                 pars={'K': K})
 
-    units['s'] = u.km/u.s
+        prior = JokerPrior(model=model)
 
-    priors.append(dict(pars=pars, unpars=unpars))
-    expected_units.append(units)
+        return prior, units
 
-    # TODO: check valid input for linear parameters too (i.e. must be gaussian,
-    # untransformed )
+    elif case == 3:
+        # Pass pars instead of relying on model
+        with pm.Model() as model:
+            nl_pars = default_nonlinear_prior(P_min=1*u.day, P_max=10*u.year)
+            l_pars = default_linear_prior(sigma_K0=25*u.km/u.s,
+                                          P0=1*u.year,
+                                          sigma_v=10*u.km/u.s)
+        pars = {**nl_pars, **l_pars}
+        prior = JokerPrior(pars=pars)
 
-    # TODO: also try specifying v0_offsets
+        return prior, default_expected_units
 
-    return priors, expected_units
+    elif case == 4:
+        # Try with more poly_trends
+        units = default_expected_units.copy()
+        with pm.Model() as model:
+            nl_pars = default_nonlinear_prior(P_min=1*u.day, P_max=10*u.year)
+            l_pars = default_linear_prior(sigma_K0=25*u.km/u.s,
+                                          P0=1*u.year,
+                                          sigma_v=[10*u.km/u.s,
+                                                   0.1*u.km/u.s/u.year],
+                                          poly_trend=2)
+        pars = {**nl_pars, **l_pars}
+        prior = JokerPrior(pars=pars)
+        units['v1'] = u.km/u.s/u.year
+
+        return prior, units
+
+    elif case == 5:
+        # Default prior with .default()
+        prior = JokerPrior.default(P_min=1*u.day, P_max=10*u.year,
+                                   sigma_K0=25*u.km/u.s,
+                                   P0=1*u.year,
+                                   sigma_v=10*u.km/u.s)
+        return prior, default_expected_units
+
+    elif case == 6:
+        # poly_trend with .default()
+        units = default_expected_units.copy()
+        prior = JokerPrior.default(P_min=1*u.day, P_max=10*u.year,
+                                   sigma_K0=25*u.km/u.s,
+                                   P0=1*u.year,
+                                   sigma_v=[10*u.km/u.s,
+                                            0.1*u.km/u.s/u.year],
+                                   poly_trend=2)
+        units['v1'] = u.km/u.s/u.year
+        return prior, units
+
+    return 7
 
 
-@pytest.mark.parametrize('kw,expected_units', list(zip(*get_valid_objs())))
-def test_init_sample(kw, expected_units):
-    # Running this function is enough to test valid initialization schemes:
-    if 'P_min' in kw:
-        prior = JokerPrior.from_default(**kw)
-    else:
-        prior = JokerPrior(**kw)
+@pytest.mark.parametrize('case', range(init_helper()))
+def test_init_sample(case):
+    prior, expected_units = init_helper(case)
 
     samples = prior.sample()
     for k in samples.par_names:
@@ -115,6 +127,13 @@ def test_init_sample(kw, expected_units):
         assert samples[k].unit == expected_units[k]
 
     samples, logprior = prior.sample(size=10, return_logprobs=True)
+    for k in samples.par_names:
+        assert hasattr(samples[k], 'unit')
+        assert samples[k].unit == expected_units[k]
+    assert len(logprior) == len(samples)
+
+    samples, logprior = prior.sample(size=10, generate_linear=True,
+                                     return_logprobs=True)
     for k in samples.par_names:
         assert hasattr(samples[k], 'unit')
         assert samples[k].unit == expected_units[k]
