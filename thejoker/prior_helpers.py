@@ -45,22 +45,27 @@ class UniformLog(pm.Continuous):
         return tt.ones_like(value) * -np.log(self._fac)
 
 
+Kprior_str = r"p(K) \propto \mathcal{N}(K \,|\, \mu_K, \sigma_K)"
+sigmaK_str = (r"\sigma_K = \sigma_{K, 0} \, \left(\frac{P}{P_0}\right)^{-1/3} "
+              r"\, \left(1 - e^2\right)^{-1}")
+
+
 class FixedCompanionMass(pm.Normal):
 
     @u.quantity_input(sigma_K0=u.km/u.s, P0=u.day)
     def __init__(self, P, e, sigma_K0, P0, mu=0., K_unit=None, **kwargs):
-        r"""A distribution over velocity semi-amplitude, :math:`K`, that, at
+        f"""A distribution over velocity semi-amplitude, :math:`K`, that, at
         fixed primary mass, is a fixed Normal distribution in companion mass.
         This has the form:
 
         .. math::
 
-            p(K) \propto \mathcal{N}(K \,|\, \mu_K, \sigma_K)
-            \sigma_K = \sigma_{K, 0} \, \left(\frac{P}{P_0}\right)^{-1/3} \, \left(1 - e^2\right)^{-1}
+            {Kprior_str}
+            {sigmaK_str}
 
         where :math:`P` and :math:`e` are period and eccentricity, and
-        :math:`\sigma_{K, 0}` and :math:`P_0` are parameters of this
-        distribution that must be specified (here as ``sigma_K0`` and ``P0``).
+        ``sigma_K0`` and ``P0`` are parameters of this distribution that must
+        be specified.
         """
         self._sigma_K0 = sigma_K0
         self._P0 = P0

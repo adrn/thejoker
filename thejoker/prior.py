@@ -15,10 +15,12 @@ from .prior_helpers import UniformLog, FixedCompanionMass
 __all__ = ['JokerPrior']
 
 
-@u.quantity_input(P_min=u.day, P_max=u.day)
-def default_nonlinear_prior(P_min, P_max, model=None, pars=None):
-    r"""Retrieve pymc3 variables that specify the default prior on the nonlinear
-    parameters of The Joker.
+@u.quantity_input(P_min=u.day, P_max=u.day, s=u.km/u.s)
+def default_nonlinear_prior(P_min, P_max, s=None, model=None, pars=None):
+    r"""
+    Retrieve pymc3 variables that specify the default prior on the nonlinear
+    parameters of The Joker. See docstring of `JokerPrior.default()` for more
+    information.
 
     The nonlinear parameters an default prior forms are:
 
@@ -33,10 +35,9 @@ def default_nonlinear_prior(P_min, P_max, model=None, pars=None):
 
     Parameters
     ----------
-    P_min : `~astropy.units.Quantity`
-        Minimum period for the default 1/P prior.
-    P_max : `~astropy.units.Quantity`
-        Maximum period for the default 1/P prior.
+    P_min : `~astropy.units.Quantity` [time]
+    P_max : `~astropy.units.Quantity` [time]
+    s : `~astropy.units.Quantity` [speed]
     model : `pymc3.Model`
         This is either required, or this function must be called within a pymc3
         model context.
@@ -48,12 +49,14 @@ def default_nonlinear_prior(P_min, P_max, model=None, pars=None):
 
     out_pars = dict()
 
-    P_max = P_max.to(P_min.unit)
+    if s is None:
+        s = 0 * u.m/u.s
+
     with model:
         # Set up the default priors for parameters with defaults
 
-        # Note: we have to do it this way (as opposed to with .get(...,
-        # default)because this can only get executed if the param is not already
+        # Note: we have to do it this way (as opposed to with .get(..., default)
+        # because this can only get executed if the param is not already
         # defined, otherwise a pymc3 error is thrown
         if 'e' in pars:
             out_pars['e'] = pars['e']
@@ -79,8 +82,8 @@ def default_nonlinear_prior(P_min, P_max, model=None, pars=None):
         if 's' in pars:
             out_pars['s'] = pars['s']
         else:
-            # These default units are a little sloppy, but it's 0 so ...
-            out_pars['s'] = xu.with_unit(pm.Constant('s', 0.), u.m/u.s)
+            out_pars['s'] = xu.with_unit(pm.Constant('s', s.value),
+                                         s.unit)
 
         if 'P' in pars:
             out_pars['P'] = pars['P']
@@ -88,7 +91,7 @@ def default_nonlinear_prior(P_min, P_max, model=None, pars=None):
             # Default period prior is uniform in log period:
             out_pars['P'] = xu.with_unit(UniformLog('P',
                                                     P_min.value,
-                                                    P_max.value),
+                                                    P_max.to_value(P_min.unit)),
                                          P_min.unit)
 
     return out_pars
@@ -97,18 +100,15 @@ def default_nonlinear_prior(P_min, P_max, model=None, pars=None):
 @u.quantity_input(sigma_K0=u.km/u.s)
 def default_linear_prior(nonlinear_pars, sigma_K0, P0, sigma_v, poly_trend=1,
                          mu_v=None, model=None, pars=None):
-    r"""Retrieve pymc3 variables that specify the default prior on the linear
-    parameters of The Joker.
+    r"""
+    Retrieve pymc3 variables that specify the default prior on the linear
+    parameters of The Joker. See docstring of `JokerPrior.default()` for more
+    information.
 
     The linear parameters an default prior forms are:
 
     * ``K``, velocity semi-amplitude: Normal distribution, but with a variance
-      that scales with period and eccentricity such that:
-
-      .. math::
-
-        \sigma_K^2 = \sigma_{K, 0}^2 \, (P/P_0)^{-2/3} \, (1-e^2)^{-1}
-
+      that scales with period and eccentricity.
     * ``v0``, ``v1``, etc. polynomial velocity trend parameters: Independent
       Normal distributions.
 
@@ -117,11 +117,8 @@ def default_linear_prior(nonlinear_pars, sigma_K0, P0, sigma_v, poly_trend=1,
     nonlinear_pars : `dict`
         A dictionary with parameter name keys, and parameter object values.
     sigma_K0 : `~astropy.units.Quantity` [speed]
-        The scale factor, :math:`\sigma_{K, 0}` in the equation above.
     P0 : `~astropy.units.Quantity` [time]
-        The reference period, :math:`P_0` in the equation above.
     sigma_v : iterable of `~astropy.units.Quantity`
-        The standard deviations of the velocity trend priors.
     model : `pymc3.Model`
         This is either required, or this function must be called within a pymc3
         model context.
@@ -151,10 +148,6 @@ def default_linear_prior(nonlinear_pars, sigma_K0, P0, sigma_v, poly_trend=1,
                         "poly_trend=1) or an iterable of Quantity objects "
                         "(if poly_trend>1)")
 
-    # TODO: validate if not None! Currently, this just trusts...
-    if mu_v is None:
-        mu_v = [0*u.m/u.s/u.day**i for i in range(poly_trend)]
-
     if pars is None:
         pars = dict()
 
@@ -181,10 +174,9 @@ def default_linear_prior(nonlinear_pars, sigma_K0, P0, sigma_v, poly_trend=1,
                 unit = sigma_K0.unit / P_unit**i
 
                 # Default priors are independent gaussians
-                # TODO: FIXME: make mean (0. below) customizable
+                # TODO: FIXME: make mean, mu_v, customizable
                 out_pars[name] = xu.with_unit(
-                    pm.Normal(name,
-                              mu_v[i].to_value(unit),
+                    pm.Normal(name, 0.,
                               sigma_v[i].to_value(unit)),
                     unit)
 
@@ -226,8 +218,7 @@ class JokerPrior:
 
         """
 
-        # Parse and clean up the input
-        # pars can be a dict or list
+        # Parse and clean up the input pars
         if pars is None:
             pars = dict()
 
@@ -249,8 +240,6 @@ class JokerPrior:
                                      "list, or a single pymc3 variable, not a "
                                      "'{}'.".format(type(pars)))
 
-        # TODO: validate that input pars have units!
-
         # validate input model
         if model is None:
             try:
@@ -268,7 +257,7 @@ class JokerPrior:
         self.poly_trend = int(poly_trend)
 
         # Store the names of the default parameters, used for validating input:
-        # Note: these are not the units assumed internally by the code, but
+        # Note: these are *not* the units assumed internally by the code, but
         # are only used to validate that the units for each parameter are
         # equivalent to these
         self._nonlinear_pars = {
@@ -286,7 +275,21 @@ class JokerPrior:
                for i in range(self.poly_trend)}
         }
 
-        # Enforce that the prior on linear parameters are gaussian
+        # At this point, pars must be a dictionary: validate that all
+        # parameters are specified and that they all have units
+        for name in self.par_names:
+            if name not in pars:
+                raise ValueError(r"Missing prior for parameter '{name}': "
+                                 "you must specify a prior distribution for "
+                                 "all parameters.")
+
+            if not hasattr(pars[name], xu.UNIT_ATTR_NAME):
+                raise ValueError(r"Parameter '{name}' does not have associated "
+                                 "units: Use exoplanet.units to specify units "
+                                 "for your pymc3 variables. See the "
+                                 "documentation for examples: thejoker.rtfd.io")
+
+        # Enforce that the priors on all linear parameters are Normal (or normal subclass)
         for name in self._linear_pars.keys():
             if not isinstance(pars[name].distribution, pm.Normal):
                 raise ValueError("Priors on the linear parameters (K, v0, "
@@ -294,9 +297,8 @@ class JokerPrior:
                                  "distributions, not '{}'"
                                  .format(type(pars[name].distribution)))
 
-        # TODO: enable support for this
+        # TODO: FIXME: enable support for this
         if v0_offsets is not None:
-            # TODO: FIXME
             raise NotImplementedError("Support for this is coming - sorry!")
 
             try:
@@ -317,16 +319,71 @@ class JokerPrior:
         self.pars = pars
 
     @classmethod
-    def default(cls, P_min, P_max, sigma_K0, sigma_v, P0=1*u.year, mu_v=None,
-                poly_trend=1, model=None):
-        """TODO:"""
+    def default(cls, P_min, P_max, sigma_K0, P0=1*u.year, sigma_v=None, s=None,
+                poly_trend=1, model=None, pars=None):
+        r"""An alternative initializer to set up the default prior for The
+        Joker.
+
+        The default prior is:
+
+        .. math::
+
+            p(P) \propto \frac{1}{P} \quad \elem (P_{\rm min}, P_{\rm max})
+            p(e) = B(a_e, b_e)
+            p(\omega) = \mathcal{U}(0, 2\pi)
+            p(M_0) = \mathcal{U}(0, 2\pi)
+            p(s) = \delta(s)
+            p(K) \propto \mathcal{N}(K \,|\, \mu_K, \sigma_K)
+            \sigma_K = \sigma_{K, 0} \, \left(\frac{P}{P_0}\right)^{-1/3} \, \left(1 - e^2\right)^{-1}
+
+        and the priors on any polynomial trend parameters are assumed to be
+        independent, univariate Normals.
+
+        This prior has sensible choices for typical binary star or exoplanet
+        use cases, but if you need more control over the prior distributions
+        you might need to use the standard initializer (i.e.
+        ``JokerPrior(...)```) and specify all parameter distributions manually.
+        See `the documentation <http://thejoker.readthedocs.io>`_ for tutorials
+        that demonstrate this functionality.
+
+        Parameters
+        ----------
+        P_min : `~astropy.units.Quantity` [time]
+            Minimum period for the default period prior.
+        P_max : `~astropy.units.Quantity` [time]
+            Maximum period for the default period prior.
+        sigma_K0 : `~astropy.units.Quantity` [speed]
+            The scale factor, :math:`\sigma_{K, 0}` in the equation above that
+            sets the scale of the semi-amplitude prior at the reference period,
+            ``P0``.
+        P0 : `~astropy.units.Quantity` [time]
+            The reference period, :math:`P_0`, used in the prior on velocity
+            semi-amplitude (see equation above).
+        sigma_v : `~astropy.units.Quantity` (or iterable of)
+            The standard deviations of the velocity trend priors.
+        s : `~astropy.units.Quantity` [speed]
+            The jitter value, assuming it is constant.
+        poly_trend : int (optional)
+            Specifies the number of coefficients in an additional polynomial
+            velocity trend, meant to capture long-term trends in the data. The
+            default here is ``polytrend=1``, meaning one term: the (constant)
+            systemtic velocity. For example, ``poly_trend=3`` will sample over
+            parameters of a long-term quadratic velocity trend.
+        model : `pymc3.Model` (optional)
+            If not specified, this will create a model instance and store it on the prior object.
+        pars : dict, list (optional)
+            Either a list of pymc3 variables, or a dictionary of variables with
+            keys set to the variable names. If any of these variables are
+            defined as deterministic transforms from other variables, see the
+            next parameter below.
+        """
 
         if model is None:
             model = pm.Model()
 
-        nl_pars = default_nonlinear_prior(P_min, P_max, model=model)
+        nl_pars = default_nonlinear_prior(P_min, P_max, model=model, pars=pars)
         l_pars = default_linear_prior(nl_pars, sigma_K0=sigma_K0, P0=P0,
-                                      sigma_v=sigma_v, mu_v=mu_v,
+                                      sigma_v=sigma_v, s=s,
                                       poly_trend=poly_trend, model=model)
 
         pars = {**nl_pars, **l_pars}
@@ -351,6 +408,13 @@ class JokerPrior:
 
     def sample(self, size=1, generate_linear=False, return_logprobs=False):
         """Generate random samples from the prior.
+
+        .. note::
+
+            Right now, generating samples with the prior values is slow (i.e.
+            with ``return_logprobs=True``) because of pymc3 issues (see
+            discussion here: https://discourse.pymc.io/t/draw-values-speed-scaling-with-transformed-variables/4076).
+            This will hopefully be resolved in the future...
 
         Parameters
         ----------
@@ -386,8 +450,7 @@ class JokerPrior:
 
         log_prior = []
         if return_logprobs:
-            # TODO: warn that right now, this is slow. Waiting for upstream
-            # fixes to pymc3
+            # Note: This is really slow! Waiting for upstream fixes to pymc3...
 
             # Add deterministic variables to track the value of the prior at
             # each sample generated:
