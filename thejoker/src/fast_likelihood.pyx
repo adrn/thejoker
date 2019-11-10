@@ -15,10 +15,14 @@ np.import_array()
 import cython
 cimport cython
 cimport scipy.linalg.cython_lapack as lapack
-import theano.tensor as tt
+import exoplanet.units as xu
 
 # from libc.stdio cimport printf
 from libc.math cimport pow, log, fabs, pi
+
+# Project
+from ..prior_helpers import FixedCompanionMass
+
 
 cdef extern from "src/twobody.h":
     void c_rv_from_elements(double *t, double *rv, int N_t,
@@ -83,6 +87,7 @@ cdef class CJokerHelper:
         double[::1] Lambda
         int fixed_K_prior  # TODO: total HACK
         double sigma_K0  # TODO: total HACK
+        double P0  # TODO: total HACK
 
         # Needed for temporary storage in likelihood_worker:
         double[:, ::1] Btmp
@@ -98,8 +103,11 @@ cdef class CJokerHelper:
         public double[:, ::1] Ainv
         public double[::1] a
 
+        # Random number generation
+        public object rnd
 
-    def __init__(self, data, prior, double[:, ::1] trend_M):
+
+    def __init__(self, data, prior, double[:, ::1] trend_M, rnd):
         cdef int i, n
 
         # Counting:
@@ -114,6 +122,9 @@ cdef class CJokerHelper:
         self.rv = np.ascontiguousarray(data.rv.value, dtype='f8')
         self.ivar = np.ascontiguousarray(data.ivar.value, dtype='f8')
         self.trend_M = trend_M
+
+        # Random numbers:
+        self.rnd = rnd
 
         # ivar with jitter included
         self.s_ivar = np.zeros(self.n_times, dtype='f8')
@@ -150,23 +161,23 @@ cdef class CJokerHelper:
         self.Lambda = np.zeros(self.n_linear)
 
         # ---------------------------------------------------------------------
-        # TODO: This is a hack that is totally inconsistent with the flexible
-        # prior specification allowed through pymc3. However, we currently only
-        # support constant values for the mean, and only support constant or one
-        # special scaled prior with the variance
-        for i, name in enumerate(prior._linear_pars.keys()):
-            self.mu[i] = prior.model[name].distribution.mean.eval()
-            if not isinstance(prior.model[name].distribution.sd,
-                              tt.TensorConstant):
-                self.fixed_K_prior = 0
-                self.sigma_K0 = prior._sigma_K0.to_value(data.rv.unit)
+        # TODO: This is a bit of a hack:
+        if isinstance(prior.pars['K'].distribution, FixedCompanionMass):
+            self.fixed_K_prior = 0
+        else:
+            self.fixed_K_prior = 1
 
         for i, name in enumerate(prior._linear_pars.keys()):
-            if self.fixed_K_prior == 0 and i == 0:
-                # Skip K term: the prior on K is scaled with P, e, so we set it in # the loop over nonlinear samples below
-                continue
+            dist = prior.model[name].distribution
+            self.mu[i] = dist.mean.eval()
 
-            self.Lambda[i] = prior.model[name].distribution.sd.eval()
+            if name == 'K' and self.fixed_K_prior == 0:
+                # TODO: here's the major hack
+                self.sigma_K0 = dist._sigma_K0.to_value(data.rv.unit)
+                self.P0 = dist._P0.to_value(getattr(prior.pars['P'],
+                                                    xu.UNIT_ATTR_NAME))
+            else:
+                self.Lambda[i] = dist.sd.eval()
         # ---------------------------------------------------------------------
 
     cdef double likelihood_worker(self, int make_aAinv):
@@ -291,23 +302,16 @@ cdef class CJokerHelper:
         Parameters
         ----------
         chunk : numpy.ndarray
-            A chunk of nonlinear parameter prior samples. For the default case,
-            these are P (period, day), phi0 (phase at pericenter, rad), ecc
-            (eccentricity), omega (argument of perihelion, rad). May also contain
-            jitter as the last index.
-        data : `~thejoker.data.RVData`
-            The radial velocity data.
-        joker_params : `~thejoker.sampler.params.JokerParams`
-            The specification of parameters to infer with The Joker.
+            A chunk of nonlinear parameter prior samples.
+            Expected order: P, e, omega, M0, s (jitter).
         """
         cdef:
-            int n, i
+            int n
             int n_samples = chunk.shape[0]
+            double P, e, om, M0
 
             # the log-likelihood values
             double[::1] ll = np.full(n_samples, np.nan)
-
-            double P, e, om, M0
 
         for n in range(n_samples):
             # TODO: need to make sure the chunk is always in this order!
@@ -320,91 +324,90 @@ cdef class CJokerHelper:
                                P, 1., e, om, M0, self.t0,
                                anomaly_tol, anomaly_maxiter)
 
-            # Note: jitter must be in same units as the data RV's / ivar!
-            # TODO: a consequence here is that the jitter must always be
-            # defined in the chunk, so it can't be fixed to a value not set in
-            # the prior cache
+            # Note: jitter must be in same units as the data RV's / ivar
             get_ivar(self.ivar, chunk[n, 4], self.s_ivar)
 
             # TODO: this is a continuation of the massive hack introduced above.
             if self.fixed_K_prior == 0:
-                self.Lambda[0] = (self.sigma_K0**2 / (1 - chunk[n, 2]**2)
-                                  * (chunk[n, 0] / 365.)**(-2/3.))
+                self.Lambda[0] = (self.sigma_K0**2 / (1 - e**2)
+                                  * (P / self.P0)**(-2/3.))
 
             # compute things needed for the ln(likelihood)
             ll[n] = self.likelihood_worker(0)
 
         return ll
 
-    cpdef batch_get_posterior_samples(self, double[:,::1] chunk, rnd,
-                                      return_logprobs):
+    cpdef batch_get_posterior_samples(self, double[:, ::1] chunk,
+                                      int n_linear_samples_per):
         """TODO:
 
         Parameters
         ----------
         chunk : numpy.ndarray
-            A chunk of nonlinear parameter prior samples. For the default case,
-            these are P (period, day), phi0 (phase at pericenter, rad), ecc
-            (eccentricity), omega (argument of perihelion, rad). May also contain
-            jitter as the last index.
-        data : `~thejoker.data.RVData`
-            The radial velocity data.
-        joker_params : `~thejoker.sampler.params.JokerParams`
-            The specification of parameters to infer with The Joker.
+            A chunk of nonlinear parameter prior samples.
+            Expected order: P, e, omega, M0, s (jitter).
         """
 
         cdef:
-            int n, j
+            int n, j, k
+            int i = 0
             int n_samples = chunk.shape[0]
+            double P, e, om, M0
 
             # Transpose of design matrix
-            double[:,::1] M_T = np.zeros((self.n_linear, self.n_times))
-            double ll
+            double[:, ::1] M_T = np.zeros((self.n_linear, self.n_times))
 
-            double[:,::1] pars = np.zeros((n_samples,
-                self.n_pars + int(return_logprobs)))
-            double[::1] linear_pars
+            # the log-likelihood values
+            double[::1] ll = np.full(n_samples * n_linear_samples_per, np.nan)
+
+            # The samples
+            double[:, :, ::1] samples = np.zeros((n_samples, self.n_pars,
+                                                  n_linear_samples_per))
+            double[:, ::1] linear_pars = np.zeros((n_linear_samples_per,
+                                                   self.n_linear))
 
         for n in range(n_samples):
-            pars[n, 0] = chunk[n, 0] # P
-            pars[n, 1] = chunk[n, 1] # e
-            pars[n, 2] = chunk[n, 2] # omega
-            pars[n, 3] = chunk[n, 3] # M0
-            pars[n, 4] = chunk[n, 4] # jitter
+            # TODO: need to make sure the chunk is always in this order!
+            P = chunk[n, 0]
+            e = chunk[n, 1]
+            om = chunk[n, 2]
+            M0 = chunk[n, 3]
 
             # TODO: audit order of chunk[...]'s and what c_rv_from_elements
-            c_rv_from_elements(&self.t[0], &self.M_T[0, 0], self.t.shape[0],
-                               chunk[n, 0], 1., chunk[n, 1],
-                               chunk[n, 2], chunk[n, 3], self.t0,
+            c_rv_from_elements(&self.t[0], &self.M_T[0, 0], self.n_times,
+                               P, 1., e, om, M0, self.t0,
                                anomaly_tol, anomaly_maxiter)
 
-            # Note: jitter must be in same units as the data RV's / ivar!
-            # TODO: a consequence here is that the jitter must always be
-            # defined in the chunk, so it can't be fixed to a value not set in
-            # the prior cache
+            # Note: jitter must be in same units as the data RV's / ivar
             get_ivar(self.ivar, chunk[n, 4], self.s_ivar)
 
             # TODO: this is a continuation of the massive hack introduced above.
             if self.fixed_K_prior == 0:
-                self.Lambda[0] = (self.sigma_K0**2 / (1 - chunk[n, 2]**2)
-                                  * (chunk[n, 0] / 365.)**(-2/3.))
+                self.Lambda[0] = (self.sigma_K0**2 / (1 - e**2)
+                                  * (P / self.P0)**(-2/3.))
 
             # compute likelihood, but also generate a, Ainv
-            ll = self.likelihood_worker(1)
+            ll[i] = self.likelihood_worker(1)  # the 1 is "True"
 
-            # TODO: this calls back to numpy!
-            # TODO: https://github.com/bashtage/randomgen instead?
-            linear_pars = rnd.multivariate_normal(self.a,
-                                                  np.linalg.inv(self.Ainv))
+            # TODO: FIXME: this calls back to numpy at the Python layer
+            # - use https://github.com/bashtage/randomgen instead?
+            # a and Ainv are populated by the likelihood_worker()
+            linear_pars = self.rnd.multivariate_normal(
+                self.a, np.linalg.inv(self.Ainv), size=n_linear_samples_per)
 
-            pars[n, 5] = linear_pars[0]
-            for j in range(self.n_poly):
-                pars[n, 6+j] = linear_pars[1+j]
+            for j in range(n_linear_samples_per):
+                samples[i, 0, j] = P
+                samples[i, 1, j] = e
+                samples[i, 2, j] = om
+                samples[i, 3, j] = M0
+                samples[i, 4, j] = chunk[n, 4] # s, jitter
 
-            if return_logprobs:
-                pars[n, 6+self.n_poly] = ll
+                for k in range(self.n_linear):
+                    samples[i, 5 + k, j] = linear_pars[j, k]
 
-        return np.array(pars)
+                i += 1
+
+        return np.array(samples).reshape(n_samples, -1), ll
 
 
 # cpdef test_likelihood_worker(self, M, mu, Lambda, make_aAinv):
