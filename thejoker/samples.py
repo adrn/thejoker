@@ -14,14 +14,14 @@ __all__ = ['JokerSamples']
 class JokerSamples:
 
     def __init__(self, prior, samples=None, t0=None, **kwargs):
-        """A dictionary-like object for storing posterior samples from
+        """A dictionary-like object for storing prior and posterior samples from
         The Joker, with some extra functionality.
 
         Parameters
         ----------
         prior : `thejoker.JokerPrior`
-            TODO:
-        samples : `~astropy.table.Table` or table-like
+            TODO
+        samples : `~astropy.table.Table`, table-like
             TODO:
         t0 : `astropy.time.Time`, numeric (optional)
             The reference time for the orbital parameters.
@@ -189,39 +189,58 @@ class JokerSamples:
 
     # Packing and unpacking
     def pack(self, units=None, nonlinear_only=True):
-        """TODO:
+        """Pack the sample data into a single numpy array (i.e. strip the units
+        and return those separately).
 
         Parameters
         ----------
         nonlinear_only : bool (optional)
-            TODO
+            Only pack the data for the nonlinear parameters into the returned
+            array.
+
+        Returns
+        -------
+        packed_samples : `numpy.ndarray`
+            The samples data packed into a single numpy array with no units.
+        units : `~collections.OrderedDict`
+            The units of the packed sample data.
+
         """
         if units is None:
-            units = OrderedDict()
+            units = dict()
+        out_units = OrderedDict()
 
         arrs = []
         for name in self.par_names:
             unit = units.get(name, self.tbl[name].unit)
             arrs.append(self.tbl[name].to_value(unit))
-            units[name] = unit
+            out_units[name] = unit
 
         if 's' not in self.par_names:
             arrs.append(np.zeros_like(arrs[0]))
-            units['s'] = u.m/u.s
+            out_units['s'] = u.m/u.s
 
-        return np.stack(arrs, axis=1), units
+        return np.stack(arrs, axis=1), out_units
 
     @classmethod
-    def unpack(cls, packed_samples, prior, units, t0=None):
+    def unpack(cls, packed_samples, units, prior, t0=None):
         """TODO:
 
         Parameters
         ----------
-        packed_samples :
+        packed_samples : array_like
         units : `~collections.OrderedDict`, dict_like
             TODO: sets the order of packed_samples...
-        """
+        prior : `~thejoker.JokerPrior`
+            The prior instance.
 
+        Returns
+        -------
+        samples : `~thejoker.JokerSamples`
+            TODO:
+
+        """
+        packed_samples = np.array(packed_samples)
         nsamples, npars = packed_samples.shape
 
         samples = cls(prior=prior, t0=t0)
