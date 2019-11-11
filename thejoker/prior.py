@@ -17,6 +17,23 @@ from .prior_helpers import (UniformLog, FixedCompanionMass,
 __all__ = ['JokerPrior']
 
 
+def _validate_model(model):
+    # validate input model
+    if model is None:
+        try:
+            # check to see if we are in a context
+            model = pm.modelcontext(None)
+        except TypeError:  # we are not!
+            # if no model is specified, create one and hold onto it
+            model = pm.Model()
+
+    if not isinstance(model, pm.Model):
+        raise TypeError("Input model must be a pymc3.Model instance, not "
+                        "a {}".format(type(model)))
+
+    return model
+
+
 @u.quantity_input(P_min=u.day, P_max=u.day, s=u.km/u.s)
 def default_nonlinear_prior(P_min=None, P_max=None, s=None,
                             model=None, pars=None):
@@ -237,18 +254,7 @@ class JokerPrior:
 
         """
 
-        # validate input model
-        if model is None:
-            try:
-                # check to see if we are in a context
-                model = pm.modelcontext(None)
-            except TypeError:  # we are not!
-                # if no model is specified, create one and hold onto it
-                model = pm.Model()
-        self.model = model
-        if not isinstance(self.model, pm.Model):
-            raise TypeError("Input model must be a pymc3.Model instance, not "
-                            "a {}".format(type(self.model)))
+        self.model = _validate_model(model)
 
         # Parse and clean up the input pars
         if pars is None:
@@ -335,8 +341,8 @@ class JokerPrior:
         self.pars = pars
 
     @classmethod
-    def default(cls, P_min, P_max, sigma_K0, P0=1*u.year, sigma_v=None, s=None,
-                poly_trend=1, model=None, pars=None):
+    def default(cls, P_min, P_max, sigma_K0=None, P0=1*u.year, sigma_v=None,
+                s=None, poly_trend=1, model=None, pars=None):
         r"""An alternative initializer to set up the default prior for The
         Joker.
 
@@ -394,13 +400,13 @@ class JokerPrior:
             next parameter below.
         """
 
-        if model is None:
-            model = pm.Model()
+        model = _validate_model(model)
 
         nl_pars = default_nonlinear_prior(P_min, P_max, s=s,
                                           model=model, pars=pars)
         l_pars = default_linear_prior(sigma_K0=sigma_K0, P0=P0, sigma_v=sigma_v,
-                                      poly_trend=poly_trend, model=model)
+                                      poly_trend=poly_trend, model=model,
+                                      pars=pars)
 
         pars = {**nl_pars, **l_pars}
         obj = cls(pars=pars, model=model, poly_trend=poly_trend)

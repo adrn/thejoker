@@ -65,8 +65,8 @@ def init_helper(case=None):
             l_pars = default_linear_prior(sigma_K0=25*u.km/u.s,
                                           P0=1*u.year,
                                           sigma_v=10*u.km/u.s)
-        pars = {**nl_pars, **l_pars}
-        prior = JokerPrior(pars=pars)
+            pars = {**nl_pars, **l_pars}
+            prior = JokerPrior(pars=pars)
 
         return prior, default_expected_units
 
@@ -80,9 +80,10 @@ def init_helper(case=None):
                                           sigma_v=[10*u.km/u.s,
                                                    0.1*u.km/u.s/u.year],
                                           poly_trend=2)
-        pars = {**nl_pars, **l_pars}
-        prior = JokerPrior(pars=pars)
-        units['v1'] = u.km/u.s/u.year
+
+            pars = {**nl_pars, **l_pars}
+            prior = JokerPrior(pars=pars)
+            units['v1'] = u.km/u.s/u.year
 
         return prior, units
 
@@ -106,12 +107,28 @@ def init_helper(case=None):
         units['v1'] = u.km/u.s/u.year
         return prior, units
 
-    return 7
+    elif case == 7:
+        # Replace a linear parameter with .default()
+        units = default_expected_units.copy()
+        with pm.Model() as model:
+            K = xu.with_unit(pm.Normal('K', 10, 0.5),
+                             u.m/u.s)
+            units['K'] = u.m/u.s
+
+            prior = JokerPrior.default(P_min=1*u.day, P_max=10*u.day,
+                                       sigma_v=100*u.km/u.s,
+                                       pars={'K': K})
+        return prior, units
+
+    return 8
 
 
 @pytest.mark.parametrize('case', range(init_helper()))
 def test_init_sample(case):
     prior, expected_units = init_helper(case)
+
+    for k in expected_units.keys():
+        assert k in prior.model.named_vars
 
     samples = prior.sample()
     for k in samples.par_names:
