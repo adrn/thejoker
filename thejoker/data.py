@@ -128,6 +128,14 @@ class RVData:
         return Time(self._t_bmjd, scale='tcb', format='mjd')
 
     @property
+    def cov(self):
+        """Covariance matrix"""
+        if self._has_cov:
+            return self.rv_err
+        else:
+            return np.diag(self.rv_err.value**2) * self.rv_err.unit**2
+
+    @property
     def ivar(self):
         """Inverse-variance."""
         if self._has_cov:

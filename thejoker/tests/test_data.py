@@ -174,6 +174,9 @@ def test_data_methods(inputs):
     ivar = data1.ivar
     assert ivar.unit == (1 / data1.rv.unit**2)
 
+    cov = data1.cov
+    assert cov.shape == (len(data1), len(data1))
+
 
 def test_guess_from_table():
     """TODO: this is not an exhaustive set of tests, but at least checks a few
