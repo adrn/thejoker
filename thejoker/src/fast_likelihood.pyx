@@ -88,6 +88,7 @@ cdef class CJokerHelper:
         int fixed_K_prior  # TODO: total HACK
         double sigma_K0  # TODO: total HACK
         double P0  # TODO: total HACK
+        double max_K  # TODO: total HACK
 
         # Needed for temporary storage in likelihood_worker:
         double[:, ::1] Btmp
@@ -99,7 +100,9 @@ cdef class CJokerHelper:
 
         # Needed for internal work / output from likelihood_worker:
         public double[:, ::1] B
+        public double[:, ::1] Binv
         public double[::1] b
+        public double[:, ::1] A
         public double[:, ::1] Ainv
         public double[::1] a
 
@@ -151,8 +154,10 @@ cdef class CJokerHelper:
 
         # Needed for internal work / output from likelihood_worker:
         self.B = np.zeros((self.n_times, self.n_times), dtype=np.float64)
+        self.Binv = np.zeros((self.n_times, self.n_times), dtype=np.float64)
         self.b = np.zeros(self.n_times, dtype=np.float64)
         self.Ainv = np.zeros((self.n_linear, self.n_linear), dtype=np.float64)
+        self.A = np.zeros((self.n_linear, self.n_linear), dtype=np.float64)
         self.a = np.zeros(self.n_linear, dtype=np.float64)
 
         # TODO: Lambda should be a matrix, but we currently only support
@@ -167,18 +172,125 @@ cdef class CJokerHelper:
         else:
             self.fixed_K_prior = 1
 
+        v_unit = data.rv.unit
         for i, name in enumerate(prior._linear_pars.keys()):
             dist = prior.model[name].distribution
-            self.mu[i] = dist.mean.eval()
+            _unit = getattr(prior.model[name], xu.UNIT_ATTR_NAME)
+            self.mu[i] = (dist.mean.eval() * _unit).to_value(v_unit)
 
             if name == 'K' and self.fixed_K_prior == 0:
                 # TODO: here's the major hack
-                self.sigma_K0 = dist._sigma_K0.to_value(data.rv.unit)
+                self.sigma_K0 = dist._sigma_K0.to_value(v_unit)
                 self.P0 = dist._P0.to_value(getattr(prior.pars['P'],
                                                     xu.UNIT_ATTR_NAME))
+                self.max_K = dist._max_K.to_value(v_unit)
             else:
-                self.Lambda[i] = dist.sd.eval()
+                self.Lambda[i] = (dist.sd.eval() * _unit).to_value(v_unit) ** 2
         # ---------------------------------------------------------------------
+
+    cdef int make_AAinv(self):
+        cdef:
+            int i, j
+            int info = 0
+            int lwork = self.n_linear
+
+        # Zero-out array:
+        for i in range(self.n_linear):
+            for j in range(self.n_linear):
+                self.Ainv[i, j] = 0.
+
+        # Ainv = Λinv + M.T @ Cinv @ M
+        # First construct Ainv using the temp 2D array:
+        for i in range(self.n_linear):
+            self.Ainv[i, i] = 1 / self.Lambda[i]
+            for j in range(self.n_linear):
+                # TODO: with line above, this now assumes diagonal Lambda
+                # Ainv[i, j] = Lambda_inv[i, j]
+                for n in range(self.n_times):
+                    self.Ainv[i, j] += (self.M_T[j, n] * self.ivar[n]
+                                        * self.M_T[i, n])
+
+                # Make a copy because we do in-place LU decomp. below
+                self.Atmp[i, j] = self.Ainv[i, j]
+
+        # LU factorization of Ainv, used for inverting to compute A:
+        lapack.dgetrf(&(self.n_linear), &(self.n_linear), &(self.Atmp[0, 0]),
+                      &(self.n_linear), &(self.npar_ipiv)[0], &info)
+        if info != 0:
+            return -1
+        # Atmp is now the LU-decomposed Ainv
+
+        # Compute A from Ainv - Atmp is now A:
+        lapack.dgetri(&(self.n_linear), &(self.Atmp[0, 0]), &self.n_linear,
+                      &self.npar_ipiv[0], &self.npar_work[0], &lwork, &info)
+        if info != 0:
+            return -1
+
+        for i in range(self.n_linear):
+            for j in range(self.n_linear):
+                self.A[i, j] = self.Atmp[i, j]
+
+        return 0
+
+    cdef double make_bBBinv(self):
+        cdef:
+            int i, j, n, m
+            int info = 0
+            double log_det_val
+
+        # Make the vector b:
+        for n in range(self.n_times):
+            self.b[n] = 0.
+            for i in range(self.n_linear):
+                self.b[n] += self.M_T[i, n] * self.mu[i]
+
+            # zero out B
+            for m in range(self.n_times):
+                self.B[n, m] = 0.
+
+        # First make B:
+        for n in range(self.n_times):
+            self.B[n, n] = 1 / self.ivar[n]  # TODO: Assumes diagonal covariance
+            for m in range(self.n_times):
+                self.Binv[n, m] = 0.
+                # TODO: this now assumes diagonal Lambda
+                # for i in range(self.n_linear):
+                #     for j in range(self.n_linear):
+                #         B[n, m] += M_T[j, n] * Lambda[i, j] * M_T[i, m]
+                for i in range(self.n_linear):
+                    self.B[n, m] += (self.M_T[i, n] * self.Lambda[i]
+                                     * self.M_T[i, m])
+
+                self.Btmp[n, m] = self.B[n, m]
+
+        # Compute Binv using A and the Woodbury matrix identity:
+        # Binv = Cinv + Cinv @ M @ A @ M.T @ Cinv
+        for n in range(self.n_times):
+            self.Binv[n, n] = self.ivar[n]
+            for i in range(self.n_linear):
+                for m in range(self.n_times):
+                    for j in range(self.n_linear):
+                        self.Binv[n, m] -= (self.ivar[n] * self.M_T[i, n]
+                                            * self.A[i, j] * self.M_T[j, m]
+                                            * self.ivar[m])
+
+        # Binv_py = np.diag(self.ivar) - np.diag(self.ivar) @ self.M_T.T @ self.A @ self.M_T @ np.diag(self.ivar)
+        # print(np.allclose(Binv_py, np.array(self.Binv)))
+
+        # LU factorization of B, used for determinant and inverse:
+        lapack.dgetrf(&(self.n_times), &(self.n_times), &(self.Btmp[0, 0]),
+                      &(self.n_times), &(self.ntime_ipiv)[0], &info)
+        if info != 0:
+            return INF
+
+        # Compute log-determinant:
+        log_det_val = 0.
+        for i in range(self.n_times):
+            log_det_val += log(2*pi * fabs(self.Btmp[i, i]))
+        # print(np.allclose(log_det_val,
+        #                   np.linalg.slogdet(2*np.pi*np.array(self.B))[1]))
+
+        return log_det_val
 
     cdef double likelihood_worker(self, int make_aAinv):
         """The argument controls whether to make a, Ainv"""
@@ -201,73 +313,21 @@ cdef class CJokerHelper:
         # B = C + M @ Λ @ M.T
         # b = M @ µ
 
-        # First zero-out arrays
-        for n in range(self.n_times):
-            self.b[n] = 0.
-            for m in range(self.n_times):
-                self.B[n, m] = 0.
-
-        # Make the vector b:
-        for n in range(self.n_times):
-            for i in range(self.n_linear):
-                self.b[n] += self.M_T[i, n] * self.mu[i]
-
-        for n in range(self.n_times):
-            self.B[n, n] = 1 / self.ivar[n]  # TODO: Assumes diagonal covariance
-            for m in range(self.n_times):
-                # TODO: this now assumes diagonal Lambda
-                # for i in range(self.n_linear):
-                #     for j in range(self.n_linear):
-                #         B[n, m] += M_T[j, n] * Lambda[i, j] * M_T[i, m]
-                for i in range(self.n_linear):
-                    self.B[n, m] += (self.M_T[i, n] * self.Lambda[i]
-                                     * self.M_T[i, m])
-
-                # Make a copy because in-place shit below
-                self.Btmp[n, m] = self.B[n, m]
-
-        # LU factorization of B, used for determinant and inverse:
-        lapack.dgetrf(&(self.n_times), &(self.n_times), &(self.Btmp[0, 0]),
-                      &(self.n_times), &(self.ntime_ipiv)[0], &info)
-        if info != 0:
+        info = self.make_AAinv()
+        if info < 0:
             return INF
 
-        # Compute log-determinant:
-        log_det_val = 0.
-        for i in range(self.n_times):
-            log_det_val += log(2*pi * fabs(self.Btmp[i, i]))
-        # print(np.allclose(log_det_val,
-        #                   np.linalg.slogdet(2*np.pi*np.array(B))[1]))
-
-        # Compute Binv - Btmp is now Binv:
-        lapack.dgetri(&(self.n_times), &(self.Btmp[0, 0]), &self.n_times,
-                      &self.ntime_ipiv[0], &self.ntime_work[0], &lwork, &info)
-        if info != 0:
-            return INF
-        # print(np.allclose(np.array(Btmp).ravel(),
-        #                   np.linalg.inv(np.array(B)).ravel()))
+        log_det_val = self.make_bBBinv()
 
         # Compute the chi2 term of the marg. likelihood
         chi2 = 0.
         for n in range(self.n_times):
             for m in range(self.n_times):
                 chi2 += ((self.b[m] - self.rv[m])
-                         * self.Btmp[n, m]
+                         * self.Binv[n, m]
                          * (self.b[n] - self.rv[n]))
 
         if make_aAinv == 1:
-            # Ainv = Λinv + M.T @ Cinv @ M
-            # First construct Ainv using the temp 2D array:
-            for i in range(self.n_linear):
-                self.Ainv[i, j] = 1 / self.Lambda[i]
-                for j in range(self.n_linear):
-                    # TODO: with line above, this now assumes diagonal Lambda
-                    # Ainv[i, j] = Lambda_inv[i, j]
-                    for n in range(self.n_times):
-                        self.Ainv[i, j] += (self.M_T[j, n] * self.ivar[n]
-                                            * self.M_T[i, n])
-                    self.Atmp[i, j] = self.Ainv[i, j]
-
             # Construct the RHS using the variable `a`:
             for i in range(self.n_linear):
                 self.a[i] = 0.
@@ -280,10 +340,15 @@ cdef class CJokerHelper:
                 # TODO: this now assumes diagonal Lambda
                 # for j in range(self.n_linear):
                 #     a[i] += Lambda_inv[i, j] * mu[j]
-                self.a[i] += self.mu[j] / self.Lambda[i]
+                self.a[i] += self.mu[i] / self.Lambda[i]
 
             # `a` on input is actually the RHS (e.g., b in Ax=b), but on output
             # is the vector we want!
+
+            for i in range(self.n_linear):
+                for j in range(self.n_linear):
+                    self.Atmp[i, j] = self.Ainv[i, j]
+
             lapack.dsysv(uplo, &self.n_linear, &nrhs,
                          &self.Atmp[0, 0], &self.n_linear, # lda = same as n
                          &self.npar_ipiv[0], &self.a[0], &self.n_linear,
@@ -331,6 +396,7 @@ cdef class CJokerHelper:
             if self.fixed_K_prior == 0:
                 self.Lambda[0] = (self.sigma_K0**2 / (1 - e**2)
                                   * (P / self.P0)**(-2/3.))
+                self.Lambda[0] = min(self.max_K**2, self.Lambda[0])
 
             # compute things needed for the ln(likelihood)
             ll[n] = self.likelihood_worker(0)
@@ -409,37 +475,33 @@ cdef class CJokerHelper:
 
         return np.array(samples).reshape(n_samples, -1), ll
 
+    cpdef test_likelihood_worker(self, double[::1] chunk_row):
+        cdef:
+            double P, e, om, M0
 
-# cpdef test_likelihood_worker(self, M, mu, Lambda, make_aAinv):
-    #     """Used for testing the likelihood_worker function"""
+            # Transpose of design matrix
+            double[:, ::1] M_T = np.zeros((self.n_linear, self.n_times))
 
-    #     cdef:
-    #         int n_times = len(ivar)
-    #         int n_pars = len(mu)
+        # TODO: need to make sure the chunk is always in this order!
+        P = chunk_row[0]
+        e = chunk_row[1]
+        om = chunk_row[2]
+        M0 = chunk_row[3]
 
-    #         double[:, ::1] B = np.zeros((n_times, n_times), dtype=np.float64)
-    #         double[::1] b = np.zeros(n_times, dtype=np.float64)
-    #         double[:, ::1] Ainv = np.zeros((n_pars, n_pars), dtype=np.float64)
-    #         double[::1] a = np.zeros(n_pars, dtype=np.float64)
+        # TODO: audit order of chunk[...]'s and what c_rv_from_elements
+        c_rv_from_elements(&self.t[0], &self.M_T[0, 0], self.n_times,
+                            P, 1., e, om, M0, self.t0,
+                            anomaly_tol, anomaly_maxiter)
 
-    #         double[::1] _ivar = np.ascontiguousarray(ivar)
-    #         double[::1] _y = np.ascontiguousarray(y)
-    #         double[:, ::1] _M_T = np.ascontiguousarray(M.T)
-    #         double[::1] _mu = np.ascontiguousarray(mu)
-    #         double[:, ::1] _Lambda = np.ascontiguousarray(Lambda)
+        # Note: jitter must be in same units as the data RV's / ivar
+        get_ivar(self.ivar, chunk_row[4], self.s_ivar)
 
-    #         # Needed for temporary storage in likelihood_worker:
-    #         double[:, ::1] Btmp = np.zeros((n_times, n_times), dtype=np.float64)
-    #         double[:, ::1] Atmp = np.zeros((n_pars, n_pars), dtype=np.float64)
-    #         double[:, ::1] Linv = np.linalg.inv(Lambda)
-    #         int[::1] npar_ipiv = np.zeros(n_pars, dtype=np.int32)
-    #         int[::1] ntime_ipiv = np.zeros(n_times, dtype=np.int32)
-    #         double[::1] npar_work = np.zeros(n_pars, dtype=np.float64)
-    #         double[::1] ntime_work = np.zeros(n_times, dtype=np.float64)
+        # TODO: this is a continuation of the massive hack introduced above.
+        if self.fixed_K_prior == 0:
+            self.Lambda[0] = (self.sigma_K0**2 / (1 - e**2)
+                              * (P / self.P0)**(-2/3.))
 
-    #     likelihood_worker(_y, _ivar, _M_T, _mu, _Lambda, Linv,
-    #                     int(make_aAinv), B, b, Ainv, a,
-    #                     Btmp, Atmp,
-    #                     npar_ipiv, ntime_ipiv, npar_work, ntime_work)
+        # compute likelihood, but also generate a, A, etc.
+        ll = self.likelihood_worker(1)  # the 1 is "True"
 
-    #     return np.array(b), np.array(B), np.array(a), np.array(Ainv)
+        return ll

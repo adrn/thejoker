@@ -2,112 +2,126 @@
 import astropy.units as u
 import numpy as np
 import time
+import pymc3 as pm
+import exoplanet.units as xu
 
 # Package
 from ...data import RVData
-from ..likelihood import marginal_ln_likelihood
-from ..likelihood import likelihood_worker as py_likelihood_worker
-from ..fast_likelihood import (batch_marginal_ln_likelihood,
-                               test_likelihood_worker)
-from .. import JokerParams, TheJoker
+from ...prior import JokerPrior
+from ..fast_likelihood import CJokerHelper
+from ..likelihood_helpers import get_constant_term_design_matrix
+from .py_likelihood import marginal_ln_likelihood, likelihood_worker, get_aAbB
+
+
+# TODO: horrible copy-pasta code below
 
 
 def test_against_py():
-    joker_params = JokerParams(P_min=8*u.day, P_max=32768*u.day,
-                               jitter=0*u.m/u.s,
-                               linear_par_Lambda=np.diag([1e4, 1e4]))
-    joker = TheJoker(joker_params)
+    rnd = np.random.RandomState(42)
+
+    with pm.Model():
+        K = xu.with_unit(pm.Normal('K', 0, 10.),
+                         u.km/u.s)
+
+        prior = JokerPrior.default(P_min=8*u.day, P_max=32768*u.day,
+                                   s=0*u.m/u.s,
+                                   sigma_v=100*u.km/u.s,
+                                   pars={'K': K})
 
     # t = np.random.uniform(0, 250, 16) + 56831.324
-    t = np.random.uniform(0, 250, 3) + 56831.324
-    t.sort()
-
+    t = np.sort(np.random.uniform(0, 250, 3)) + 56831.324
     rv = np.cos(t)
     rv_err = np.random.uniform(0.1, 0.2, t.size)
+    data = RVData(t=t, rv=rv*u.km/u.s, rv_err=rv_err*u.km/u.s)
+    trend_M = get_constant_term_design_matrix(data)
 
-    data = RVData(t=t, rv=rv*u.km/u.s, stddev=rv_err*u.km/u.s)
+    samples = prior.sample(size=8192)
+    chunk, _ = samples.pack()
+    chunk = np.ascontiguousarray(chunk)
 
-    samples = joker.sample_prior(size=16384)
-
-    chunk = []
-    for k in samples:
-        chunk.append(np.array(samples[k]))
-
-    chunk = np.ascontiguousarray(np.vstack(chunk).T)
+    helper = CJokerHelper(data, prior, trend_M, rnd)
 
     t0 = time.time()
-    cy_ll = batch_marginal_ln_likelihood(chunk, data, joker_params)
+    cy_ll = helper.batch_marginal_ln_likelihood(chunk)
     print("Cython:", time.time() - t0)
 
     t0 = time.time()
-    n_chunk = len(chunk)
-    py_ll = np.zeros(n_chunk)
-    for i in range(n_chunk):
-        py_ll[i] = marginal_ln_likelihood(chunk[i], data, joker_params)
+    py_ll = marginal_ln_likelihood(samples, prior, data)
     print("Python:", time.time() - t0)
 
     assert np.allclose(np.array(cy_ll), py_ll)
 
 
-def test_against_py_scale_varK():
-    joker_params = JokerParams(P_min=8*u.day, P_max=32768*u.day,
-                               jitter=0*u.km/u.s,
-                               scale_K_prior_with_P=True,
-                               linear_par_Lambda=np.diag([1e2])**2)
-    joker = TheJoker(joker_params)
+def test_scale_varK_against_py():
+    rnd = np.random.RandomState(42)
+
+    prior = JokerPrior.default(P_min=8*u.day, P_max=32768*u.day,
+                               s=0*u.m/u.s,
+                               sigma_K0=25*u.km/u.s,
+                               sigma_v=100*u.km/u.s)
 
     # t = np.random.uniform(0, 250, 16) + 56831.324
-    t = np.random.uniform(0, 250, 3) + 56831.324
-    t.sort()
-
+    t = np.sort(np.random.uniform(0, 250, 3)) + 56831.324
     rv = np.cos(t)
     rv_err = np.random.uniform(0.1, 0.2, t.size)
+    data = RVData(t=t, rv=rv*u.km/u.s, rv_err=rv_err*u.km/u.s)
+    trend_M = get_constant_term_design_matrix(data)
 
-    data = RVData(t=t, rv=rv*u.km/u.s, stddev=rv_err*u.km/u.s)
+    samples = prior.sample(size=8192)
+    chunk, _ = samples.pack()
+    chunk = np.ascontiguousarray(chunk)
 
-    samples = joker.sample_prior(size=16384)
-
-    chunk = []
-    for k in samples:
-        chunk.append(np.array(samples[k]))
-
-    chunk = np.ascontiguousarray(np.vstack(chunk).T)
+    helper = CJokerHelper(data, prior, trend_M, rnd)
 
     t0 = time.time()
-    n_chunk = len(chunk)
-    py_ll = np.zeros(n_chunk)
-    for i in range(n_chunk):
-        py_ll[i] = marginal_ln_likelihood(chunk[i], data, joker_params)
-    print("Python:", time.time() - t0)
-
-    t0 = time.time()
-    cy_ll = batch_marginal_ln_likelihood(chunk, data, joker_params)
+    cy_ll = helper.batch_marginal_ln_likelihood(chunk)
     print("Cython:", time.time() - t0)
+
+    t0 = time.time()
+    py_ll = marginal_ln_likelihood(samples, prior, data)
+    print("Python:", time.time() - t0)
 
     assert np.allclose(np.array(cy_ll), py_ll)
 
 
 def test_likelihood_helpers():
-    np.random.seed(42)
+    rnd = np.random.RandomState(42)
 
-    ndata = 16
-    npars = 2
-    ivar = 1 / np.random.uniform(0.1, 0.3, size=ndata) ** 2
+    with pm.Model():
+        K = xu.with_unit(pm.Normal('K', 0, 1.),
+                         u.km/u.s)
 
-    t = np.linspace(0, 100, ndata)
-    y = np.zeros(ndata)
-    M = np.stack((np.ones(ndata),
-                  np.cos(2*np.pi*t/1.))).T
+        prior = JokerPrior.default(P_min=8*u.day, P_max=32768*u.day,
+                                   s=0*u.m/u.s,
+                                   sigma_v=1*u.km/u.s,
+                                   pars={'K': K})
 
-    mu = np.random.normal(size=npars)
-    Lambda = np.diag([1e1, 1e1]) ** 2
+    # t = np.random.uniform(0, 250, 16) + 56831.324
+    t = np.sort(np.random.uniform(0, 250, 3)) + 56831.324
+    rv = np.cos(t)
+    rv_err = np.random.uniform(0.1, 0.2, t.size)
+    data = RVData(t=t, rv=rv*u.km/u.s, rv_err=rv_err*u.km/u.s)
+    trend_M = get_constant_term_design_matrix(data)
 
-    b, B, a, Ainv = test_likelihood_worker(y, ivar, M, mu, Lambda,
-                                           make_aAinv=True)
-    _, *py_bBaAinv = py_likelihood_worker(y, ivar, M, mu, Lambda,
-                                          make_aAinv=True)
+    samples = prior.sample(size=16)  # HACK: MAGIC NUMBER 16!
+    chunk, _ = samples.pack()
 
-    assert np.allclose(py_bBaAinv[0], b)
-    assert np.allclose(py_bBaAinv[1], B)
-    assert np.allclose(py_bBaAinv[2], a)
-    assert np.allclose(py_bBaAinv[3], Ainv)
+    helper = CJokerHelper(data, prior, trend_M, rnd)
+
+    py_vals = get_aAbB(samples, prior, data)
+
+    for i in range(len(samples)):
+        ll = helper.test_likelihood_worker(np.ascontiguousarray(chunk[i]))
+        assert np.abs(ll) < 1e8
+
+        cy_vals = {}
+        for k in py_vals.keys():
+            cy_vals[k] = np.array(getattr(helper, k))
+
+        for k in py_vals:
+            # print(i, k)
+            # print('cy', cy_vals[k])
+            # print('py', py_vals[k][i])
+            # print(np.allclose(cy_vals[k], py_vals[k][i]))
+            # print()
+            assert np.allclose(cy_vals[k], py_vals[k][i])
