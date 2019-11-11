@@ -14,20 +14,28 @@ def test_joker_samples(tmpdir):
     N = 100
 
     # Generate some fake samples
-    samples = JokerSamples(P=np.random.random(size=N)*u.day)
-    assert 'P' in samples
+    samples = JokerSamples(dict(P=np.random.random(size=N)*u.day))
+    assert 'P' in samples.par_names
     assert len(samples) == N
 
     # Test slicing with a number
     s2 = samples[:10]
     assert len(s2) == 10
 
+    # Slicing with arrays:
+    s3 = samples[np.array([0, 1, 5])]
+    assert len(s3) == 3
+    idx = np.zeros(len(samples)).astype(bool)
+    idx[:3] = True
+    s4 = samples[idx]
+    assert len(s4) == 3
+
     # Invalid name
     with pytest.raises(ValueError):
-        samples = JokerSamples(derp=15.)
+        JokerSamples(dict(derp=[15.]*u.kpc))
 
     # Length conflicts with previous length
-    samples = JokerSamples(P=np.random.random(size=N)*u.day)
+    samples = JokerSamples({'P': np.random.random(size=N)*u.day})
     with pytest.raises(ValueError):
         samples['v0'] = np.random.random(size=10)*u.km/u.s
 
@@ -39,13 +47,10 @@ def test_joker_samples(tmpdir):
     samples['omega'] = 2*np.pi*np.random.random(size=N)*u.radian
 
     fn = str(tmpdir / 'test.hdf5')
-    with h5py.File(fn, 'w') as f:
-        samples.to_hdf5(f)
+    samples.write(fn)
+    samples2 = JokerSamples.read(fn)
 
-    with h5py.File(fn, 'r') as f:
-        samples2 = JokerSamples.from_hdf5(f)
-
-    for k in samples.keys():
+    for k in samples.par_names:
         assert quantity_allclose(samples[k], samples2[k])
 
     new_samples = samples[samples['P'].argmin()]
@@ -59,12 +64,10 @@ def test_joker_samples(tmpdir):
     samples['e'] = np.random.random(size=N)
     samples['omega'] = 2*np.pi*np.random.random(size=N)*u.radian
 
-    fn = str(tmpdir / 'test.hdf5')
-    with h5py.File(fn, 'w') as f:
-        samples.to_hdf5(f)
-
-    with h5py.File(fn, 'r') as f:
-        samples2 = JokerSamples.from_hdf5(f)
+    fn = str(tmpdir / 'test2.hdf5')
+    samples.write(fn)
+    samples.write(fn, overwrite=True)
+    samples2 = JokerSamples.read(fn)
 
     assert samples2.t0 is not None
     assert np.isclose(samples2.t0.mjd, Time('J2000').mjd)
@@ -76,9 +79,7 @@ def test_joker_samples(tmpdir):
     samples['e'] = np.random.random(size=N)
     samples['omega'] = 2*np.pi*np.random.random(size=N)*u.radian
     new_samples = samples[0]
-
-    assert new_samples.shape == ()
-    assert new_samples.size == 1
+    assert len(new_samples) == 1
 
     # Check that polynomial trends work
     samples = JokerSamples(t0=Time('J2015.5'),
@@ -96,7 +97,7 @@ def test_joker_samples(tmpdir):
     orb = samples.get_orbit(0)
     orb.radial_velocity(Time('J2015.6'))
 
-    orb = new_samples.get_orbit(0)
+    orb = new_samples.get_orbit()
     orb.radial_velocity(Time('J2015.6'))
 
 
@@ -139,15 +140,13 @@ def test_table(tmp_path, t0, poly_trend):
 
     d = tmp_path / "table"
     d.mkdir()
-    path = str(d / "t_{t0}_{pt}.fits".format(t0=str(t0), pt=poly_trend))
+    path = str(d / "t_{t0}_{pt}.hdf5".format(t0=str(t0), pt=poly_trend))
 
-    tbl = samples.to_table()
-    tbl.write(path)
-
-    samples2 = JokerSamples.from_table(path)
+    samples.write(path)
+    samples2 = JokerSamples.read(path)
     assert samples2.poly_trend == samples.poly_trend
     if t0 is not None:
         assert np.allclose(samples2.t0.mjd, samples.t0.mjd)
 
-    for k in samples.keys():
+    for k in samples.par_names:
         assert u.allclose(samples2[k], samples[k])

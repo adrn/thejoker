@@ -1,52 +1,80 @@
 # Standard library
 from collections import OrderedDict
 import copy
+import os
 
 # Third-party
 import astropy.units as u
-from astropy.table import QTable
+from astropy.table import Table, QTable
 import numpy as np
 from twobody import KeplerOrbit, PolynomialRVTrend
+
+# Project
+from .prior_helpers import (_validate_polytrend, _get_nonlinear_equiv_units,
+                            _get_linear_equiv_units)
 
 __all__ = ['JokerSamples']
 
 
 class JokerSamples:
 
-    def __init__(self, prior, samples=None, t0=None, **kwargs):
-        """A dictionary-like object for storing prior and posterior samples from
+    def __init__(self, samples=None, poly_trend=1, t0=None, **kwargs):
+        """A dictionary-like object for storing prior or posterior samples from
         The Joker, with some extra functionality.
 
         Parameters
         ----------
-        prior : `thejoker.JokerPrior`
-            TODO
-        samples : `~astropy.table.Table`, table-like
-            TODO:
+        samples : `~astropy.table.QTable`, table-like (optional)
+            The samples data as an Astropy table object, or something
+            convertable to an Astropy table (e.g., a dictionary with
+            `~astropy.units.Quantity` object values). This is optional because
+            the samples data can be added later by setting keys on the resulting
+            instance.
+        poly_trend : int (optional)
+            Specifies the number of coefficients in an additional polynomial
+            velocity trend, meant to capture long-term trends in the data. See
+            the docstring for `thejoker.JokerPrior` for more details.
         t0 : `astropy.time.Time`, numeric (optional)
             The reference time for the orbital parameters.
-        **kwargs :
-            TODO: Stored as metadata.
+        **kwargs
+            Additional keyword arguments are stored internally as metadata.
         """
+        self.tbl = QTable()
 
-        from .prior import JokerPrior
-        if not isinstance(prior, JokerPrior):
-            raise TypeError("TODO")
-        self.prior = prior
+        if isinstance(samples, Table):
+            poly_trend = samples.meta.pop('poly_trend', poly_trend)
+            t0 = samples.meta.pop('t0', t0)
+            kwargs.update(samples.meta)
 
-        self.tbl = QTable(samples)
-        self.tbl.meta['poly_trend'] = self.prior.poly_trend
+        poly_trend, v_trend_names = _validate_polytrend(poly_trend)
+
+        self._valid_units = {**_get_nonlinear_equiv_units(),
+                             **_get_linear_equiv_units(v_trend_names)}
+
+        self.tbl.meta['poly_trend'] = poly_trend
         self.tbl.meta['t0'] = t0
         for k, v in kwargs.items():
             self.tbl.meta[k] = v
 
-        self._valid_units = {**self.prior._nonlinear_pars,
-                             **self.prior._linear_pars}
+        # Doing this here validates the input:
+        if samples is not None:
+            _tbl = QTable(samples)
+            for colname in _tbl.colnames:
+                self[colname] = _tbl[colname]
 
+        # used for speed-ups below
         self._cache = dict()
 
     def __getitem__(self, key):
-        return self.tbl[key]
+        if isinstance(key, int):
+            key = slice(key, key+1)
+            return self.__class__(samples=self.tbl[key])
+
+        elif isinstance(key, str) and key in self.par_names:
+            return self.tbl[key]
+
+        else:
+            return self.__class__(samples=self.tbl[key])
 
     def __setitem__(self, key, val):
         if key not in self._valid_units:
@@ -54,7 +82,7 @@ class JokerSamples:
                              "of: {0}".format(list(self._valid_units.keys())))
 
         if not hasattr(val, 'unit'):
-            raise TypeError("Values must be added an astropy Quantity object.")
+            val = val * u.one  # eccentricity
 
         expected_unit = self._valid_units[key]
         if not val.unit.is_equivalent(expected_unit):
@@ -124,11 +152,13 @@ class JokerSamples:
         M0 = self['M0']
         a = kwargs.pop('a', P * K / (2*np.pi) * np.sqrt(1 - e**2))
 
+        _, v_trend_names = _validate_polytrend(self.poly_trend)
+        names = list(_get_linear_equiv_units(v_trend_names).keys())
         if len(self) == 1:
             if index is not None and index > 0:
                 raise ValueError('Samples are scalar-valued!')
 
-            trend_coeffs = [self[x] for x in self._trend_names]
+            trend_coeffs = [self[x] for x in names[1:]]  # skip K
 
         else:
             P = P[index]
@@ -136,7 +166,8 @@ class JokerSamples:
             a = a[index]
             omega = omega[index]
             M0 = M0[index]
-            trend_coeffs = [self[x][index] for x in self._trend_names]
+
+            trend_coeffs = [self[x][index] for x in names[1:]]  # skip K
 
         orbit.elements._P = P
         orbit.elements._e = e * u.dimensionless_unscaled
@@ -170,9 +201,9 @@ class JokerSamples:
 
         new_samples = dict()
         for k in self.tbl.colnames:
-            new_samples[k] = func(self[k])
+            new_samples[k] = np.atleast_1d(func(self[k]))
 
-        return cls(self.prior, tbl=new_samples, **self.meta)
+        return cls(samples=new_samples, **self.tbl.meta)
 
     def mean(self):
         """Return a new scalar object by taking the mean across all samples"""
@@ -194,6 +225,9 @@ class JokerSamples:
 
         Parameters
         ----------
+        units : `dict` (optional)
+            If specified, this controls the units that the samples are converted
+            to before packing into a single array.
         nonlinear_only : bool (optional)
             Only pack the data for the nonlinear parameters into the returned
             array.
@@ -223,35 +257,66 @@ class JokerSamples:
         return np.stack(arrs, axis=1), out_units
 
     @classmethod
-    def unpack(cls, packed_samples, units, prior, t0=None):
-        """TODO:
+    def unpack(cls, packed_samples, units, poly_trend=1, t0=None, **kwargs):
+        """Unpack the array of packed (prior) samples and return a
+        `~thejoker.JokerSamples` instance.
 
         Parameters
         ----------
         packed_samples : array_like
         units : `~collections.OrderedDict`, dict_like
-            TODO: sets the order of packed_samples...
-        prior : `~thejoker.JokerPrior`
-            The prior instance.
+            The units of each column in the packed samples array. The order of
+            columns in this dictionary determines the assumed order of the
+            columns in the packed samples array.
+        **kwargs
+            Additional keyword arguments are stored internally as metadata.
 
         Returns
         -------
         samples : `~thejoker.JokerSamples`
-            TODO:
+            The unpacked samples.
 
         """
         packed_samples = np.array(packed_samples)
         nsamples, npars = packed_samples.shape
 
-        samples = cls(prior=prior, t0=t0)
+        samples = cls(poly_trend=poly_trend, t0=t0, **kwargs)
         for i, k in enumerate(list(units.keys())[:npars]):
             unit = units[k]
             samples[k] = packed_samples[:, i] * unit
         return samples
 
-    def save(self, filename, save_prior=True):
-        pass
+    def write(self, filename, overwrite=False):
+        """
+        Save the samples data to a file. This is a thin wrapper around the
+        ``astropy.table`` write machinery, so the output format is inferred from
+        the filename extension, and all kwargs are passed to
+        `astropy.table.Table.write()`.
+
+        Currently, we only support writing to / reading from HDF5 files, so the
+        filename must end in a .hdf5 or .h5 extension.
+
+        Parameters
+        ----------
+        filename : str
+            The output filename.
+        """
+        # To get the table metadata / units:
+        # from astropy.table import meta
+        # test = meta.get_header_from_yaml(
+        #     h.decode('utf-8') for h in f['__astropy_table__.__table_column_meta__'])
+        # units = {k: self.tbl[k].unit for k in self.par_names}
+
+        ext = os.path.splitext(filename)[1]
+        if ext not in ['.hdf5', '.h5']:
+            raise NotImplementedError("We currently only support writing to "
+                                      "HDF5 files, with extension .hdf5 or .h5")
+
+        self.tbl.write(filename, format='hdf5',
+                       path='samples', serialize_meta=True,
+                       overwrite=overwrite)
 
     @classmethod
-    def load(cls, filename, prior_filename=None):
-        pass
+    def read(cls, filename):
+        tbl = QTable.read(filename, path='samples')
+        return cls(samples=tbl, **tbl.meta)

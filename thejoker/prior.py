@@ -489,7 +489,7 @@ class JokerPrior:
                                              samples_values[:npars])}
 
         # Apply units if they are specified:
-        prior_samples = JokerSamples(prior=self)
+        prior_samples = JokerSamples(poly_trend=self.poly_trend)
         for name in par_names:
             p = sub_pars[name]
             unit = getattr(p, xu.UNIT_ATTR_NAME, u.one)
