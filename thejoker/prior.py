@@ -10,7 +10,9 @@ import exoplanet.units as xu
 
 # Project
 from .samples import JokerSamples
-from .prior_helpers import UniformLog, FixedCompanionMass
+from .prior_helpers import (UniformLog, FixedCompanionMass,
+                            _validate_polytrend, _get_nonlinear_equiv_units,
+                            _get_linear_equiv_units)
 
 __all__ = ['JokerPrior']
 
@@ -93,12 +95,6 @@ def default_nonlinear_prior(P_min=None, P_max=None, s=None,
         out_pars[k] = pars[k]
 
     return out_pars
-
-
-def _validate_polytrend(poly_trend):
-    poly_trend = int(poly_trend)
-    v_names = ['v{0}'.format(i) for i in range(poly_trend)]
-    return poly_trend, v_names
 
 
 def _validate_sigma_v(sigma_v, poly_trend, v_names):
@@ -285,18 +281,8 @@ class JokerPrior:
         # Note: these are *not* the units assumed internally by the code, but
         # are only used to validate that the units for each parameter are
         # equivalent to these
-        self._nonlinear_pars = {
-            'P': u.day,
-            'e': u.one,
-            'omega': u.radian,
-            'M0': u.radian,
-            's': u.m/u.s,
-        }
-
-        self._linear_pars = {
-            'K': u.m/u.s,
-            **{name: u.m/u.s/u.day**i for i, name in enumerate(v_names)}
-        }
+        self._nonlinear_pars = _get_nonlinear_equiv_units()
+        self._linear_pars = _get_linear_equiv_units(v_names)
         all_pars = {**self._nonlinear_pars, **self._linear_pars}
 
         # At this point, pars must be a dictionary: validate that all

@@ -81,3 +81,26 @@ class FixedCompanionMass(pm.Normal):
 
         sigma = sigma_K0 * (P/P0)**(-1/3) / np.sqrt(1-e**2)
         super().__init__(mu=mu, sigma=sigma)
+
+
+def _validate_polytrend(poly_trend):
+    poly_trend = int(poly_trend)
+    v_names = ['v{0}'.format(i) for i in range(poly_trend)]
+    return poly_trend, v_names
+
+
+def _get_nonlinear_equiv_units():
+    return {
+        'P': u.day,
+        'e': u.one,
+        'omega': u.radian,
+        'M0': u.radian,
+        's': u.m/u.s,
+    }
+
+
+def _get_linear_equiv_units(v_names):
+    return {
+        'K': u.m/u.s,
+        **{name: u.m/u.s/u.day**i for i, name in enumerate(v_names)}
+    }
