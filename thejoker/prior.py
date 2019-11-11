@@ -172,7 +172,6 @@ def default_linear_prior(sigma_K0=None, P0=None, sigma_v=None,
     if P is None or e is None:
         raise ValueError("Period P and eccentricity e must both be defined as "
                          "nonlinear parameters on the model.")
-    P_unit = getattr(P, xu.UNIT_ATTR_NAME)
 
     if v_names and 'v0' not in pars:
         sigma_v = _validate_sigma_v(sigma_v, poly_trend, v_names)
