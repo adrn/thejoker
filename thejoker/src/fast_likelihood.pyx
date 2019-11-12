@@ -108,10 +108,18 @@ cdef class CJokerHelper:
 
         # Random number generation
         public object rnd
+        public object prior
+        public object data
 
+    def __reduce__(self):
+        return (CJokerHelper, (self.data, self.prior,
+                               np.array(self.trend_M), self.rnd))
 
     def __init__(self, data, prior, double[:, ::1] trend_M, rnd):
         cdef int i, n
+
+        self.prior = prior
+        self.data = data
 
         # Counting:
         self.n_times = len(data)  # number of data pints
@@ -416,7 +424,6 @@ cdef class CJokerHelper:
 
         cdef:
             int n, j, k
-            int i = 0
             int n_samples = chunk.shape[0]
             double P, e, om, M0
 
@@ -424,11 +431,14 @@ cdef class CJokerHelper:
             double[:, ::1] M_T = np.zeros((self.n_linear, self.n_times))
 
             # the log-likelihood values
-            double[::1] ll = np.full(n_samples * n_linear_samples_per, np.nan)
+            double[:, ::1] ll = np.full((n_samples, n_linear_samples_per),
+                                        np.nan)
+            double _ll
 
             # The samples
-            double[:, :, ::1] samples = np.zeros((n_samples, self.n_pars,
-                                                  n_linear_samples_per))
+            double[:, :, ::1] samples = np.zeros((n_samples,
+                                                  n_linear_samples_per,
+                                                  self.n_pars))
             double[:, ::1] linear_pars = np.zeros((n_linear_samples_per,
                                                    self.n_linear))
 
@@ -453,7 +463,7 @@ cdef class CJokerHelper:
                                   * (P / self.P0)**(-2/3.))
 
             # compute likelihood, but also generate a, Ainv
-            ll[i] = self.likelihood_worker(1)  # the 1 is "True"
+            _ll = self.likelihood_worker(1)  # the 1 is "True"
 
             # TODO: FIXME: this calls back to numpy at the Python layer
             # - use https://github.com/bashtage/randomgen instead?
@@ -462,18 +472,19 @@ cdef class CJokerHelper:
                 self.a, np.linalg.inv(self.Ainv), size=n_linear_samples_per)
 
             for j in range(n_linear_samples_per):
-                samples[i, 0, j] = P
-                samples[i, 1, j] = e
-                samples[i, 2, j] = om
-                samples[i, 3, j] = M0
-                samples[i, 4, j] = chunk[n, 4] # s, jitter
+                ll[n, j] = _ll
+
+                samples[n, j, 0] = P
+                samples[n, j, 1] = e
+                samples[n, j, 2] = om
+                samples[n, j, 3] = M0
+                samples[n, j, 4] = chunk[n, 4] # s, jitter
 
                 for k in range(self.n_linear):
-                    samples[i, 5 + k, j] = linear_pars[j, k]
+                    samples[n, j, 5 + k] = linear_pars[j, k]
 
-                i += 1
-
-        return np.array(samples).reshape(n_samples, -1), ll
+        return (np.array(samples).reshape(n_samples * n_linear_samples_per, -1),
+                np.array(ll).reshape(n_samples * n_linear_samples_per))
 
     cpdef test_likelihood_worker(self, double[::1] chunk_row):
         cdef:
