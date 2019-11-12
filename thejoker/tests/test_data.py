@@ -15,7 +15,7 @@ except ImportError:
     HAS_MPL = False
 
 try:
-    import fuzzywuzzy
+    import fuzzywuzzy  # noqa
     HAS_FUZZY = True
 except ImportError:
     HAS_FUZZY = False

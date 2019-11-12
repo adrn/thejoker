@@ -7,7 +7,7 @@ import astropy.units as u
 import numpy as np
 from twobody.wrap import cy_rv_from_elements
 from astroML.utils import log_multivariate_gaussian
-from scipy.stats import multivariate_normal
+# from scipy.stats import multivariate_normal
 
 # Project
 from ...samples import JokerSamples
