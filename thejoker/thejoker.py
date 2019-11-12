@@ -1,3 +1,8 @@
+# TODO: inside TheJoker, when sampling, validate that number of RVData's passed in equals the number of (offsets+1)
+# prior = JokerPrior.from_default(..., v0_offsets=[pm.Normal(...)])
+# joker = TheJoker(prior)
+# joker.rejection_sample([data1, data2], ...)
+
 # Standard library
 import sys
 import tempfile
@@ -10,7 +15,7 @@ import numpy as np
 # Project
 from .logging import logger
 from .data import RVData
-from .data_helpers import _prepare_multi_data
+from .data_helpers import _validate_data
 from .prior import JokerPrior
 from .samples import JokerSamples
 from .src.likelihood_helpers import get_constant_term_design_matrix
@@ -20,10 +25,6 @@ from .src.multiproc_helpers import (get_good_sample_indices,
 
 __all__ = ['TheJoker']
 
-# TODO: inside TheJoker, when sampling, validate that number of RVData's passed in equals the number of (offsets+1)
-# prior = JokerPrior.from_default(..., v0_offsets=[pm.Normal(...)])
-# joker = TheJoker(prior)
-# joker.rejection_sample([data1, data2], ...)
 
 class TheJoker:
     """A custom Monte-Carlo sampler for two-body systems.
@@ -31,27 +32,17 @@ class TheJoker:
     Parameters
     ----------
     prior : `~thejoker.JokerPrior`
-        TODO: stuff
+        The specification of the prior probability distribution over all
+        parameters used in The Joker.
     pool : ``schwimmbad.BasePool`` (optional)
         A processing pool (default is a ``schwimmbad.SerialPool`` instance).
     random_state : `numpy.random.RandomState` (optional)
         A ``RandomState`` instance to serve as a parent for the random
         number generators. See the :ref:`random numbers <random-numbers>` page
         for more information.
-    n_batches : int (optional)
-        When using multiprocessing to split the likelihood evaluations, this
-        sets the number of batches to split the work into. Defaults to
-        ``pool.size``, meaning equal work to each worker. For very large prior
-        sample caches, you may need to set this to a larger number (e.g.,
-        ``100*pool.size``) to avoid memory issues.
-    tempfile_path : str (optional)
-        Path to create temporary files needed for executing the sampler.
-        Defaults to whatever Python's ``tempfile`` thinks is a good temporary
-        directory.
     """
 
-    def __init__(self, prior, pool=None, random_state=None,
-                 n_batches=None, tempfile_path=None):
+    def __init__(self, prior, pool=None, random_state=None):
 
         # set the processing pool
         if pool is None:
@@ -81,38 +72,70 @@ class TheJoker:
 
         # check if a JokerParams instance was passed in to specify the state
         if not isinstance(prior, JokerPrior):
-            raise TypeError("TODO: prior must be a prior...")
+            raise TypeError("The input prior must be a JokerPrior instance.")
         self.prior = prior
 
-        self.n_batches = n_batches
-        self.tempfile_path = tempfile_path
-
     def marginal_ln_likelihood(self, prior_samples, data):
-        """TODO
+        """
+        Compute the marginal log-likelihood at each of the input prior samples.
 
         Parameters
         ----------
         prior_samples : `thejoker.JokerSamples`
+            The input prior samples.
         data : `thejoker.RVData`, iterable, dict
+            The radial velocity data to compute the likelihood with.
+
+        Returns
+        -------
+        ln_likelihood : `numpy.ndarray`
+            The marginal log-likelihood computed at the location of each prior
+            sample.
         """
 
-        # TODO: validate data vs. v0_offsets
-        try:
-            all_data, ids = _prepare_multi_data(data)
-        except Exception:
-            raise TypeError("Failed to parse input data: data must either be "
-                            "an RVData instance, an iterable of RVData "
-                            "instances, or a dictionary with RVData instances "
-                            "as values. Received: {}".format(type(data)))
+        # TODO: validate number of unique ids vs. number of v0_offsets in prior
+        all_data, ids, trend_M = _validate_data(data)
+        helper = CJokerHelper(data, self.prior, trend_M, self.random_state)
 
-        trend_M = get_constant_term_design_matrix(data, ids)
-        helper = CJokerHelper(data, self.prior, trend_M)
-
-        chunk, _ = prior_samples.pack(units={'K': data.rv.unit,
-                                             's': data.rv.unit})
+        chunk, _ = prior_samples.pack(units={'s': data.rv.unit})
         ll = helper.batch_marginal_ln_likelihood(chunk)
 
         return np.array(ll)
+
+    def rejection_sample(self, data, n_prior_samples,
+                         max_posterior_samples=None,
+                         n_linear_samples_per=1, return_logprobs=False):
+        """Run the sampler in memory
+        """
+        if max_posterior_samples is None:
+            max_posterior_samples = n_prior_samples
+
+        # Generate prior samples
+        prior_samples = self.prior.sample(size=n_prior_samples)
+
+        # TODO: validate data vs. v0_offsets
+        all_data, ids, trend_M = _validate_data(data)
+
+        helper = CJokerHelper(data, self.prior, trend_M, self.random_state)
+
+        chunk, units = prior_samples.pack(units={'s': data.rv.unit})
+        ll = helper.batch_marginal_ln_likelihood(chunk)
+        ll = np.array(ll)
+
+        uu = self.random_state.uniform(size=ll.size)
+        mask = np.exp(ll - ll.max()) > uu
+
+        chunk2 = chunk[mask]
+        full_samples, ll = helper.batch_get_posterior_samples(
+            chunk2, n_linear_samples_per)
+
+        # TODO: hack
+        units['K'] = data.rv.unit
+        units['v0'] = data.rv.unit
+        samples = JokerSamples.unpack(full_samples, units,
+                                      self.prior.poly_trend, t0=data.t0)
+
+        return samples
 
     def _rejection_sample_from_cache(self, data, n_prior_samples, max_n_samples,
                                      cache_file, start_idx, seed,
@@ -180,7 +203,7 @@ class TheJoker:
 
         return n_prior_samples, cache_exists
 
-    def rejection_sample(self, data, n_prior_samples=None, max_n_samples=None,
+    def __rejection_sample(self, data, n_prior_samples=None, max_n_samples=None,
                          prior_cache_file=None, return_logprobs=False,
                          start_idx=0):
         """Run The Joker's rejection sampling on prior samples to get posterior
