@@ -10,7 +10,7 @@ from ...data import RVData
 from ...prior import JokerPrior
 from ..fast_likelihood import CJokerHelper
 from ..likelihood_helpers import get_constant_term_design_matrix
-from .py_likelihood import marginal_ln_likelihood, likelihood_worker, get_aAbB
+from .py_likelihood import marginal_ln_likelihood, get_aAbB
 
 
 # TODO: horrible copy-pasta code below
