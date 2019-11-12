@@ -1,6 +1,7 @@
 # Third-party
 import h5py
 import numpy as np
+import tables as tb
 
 # Project
 from ..logging import logger
@@ -283,3 +284,54 @@ def sample_indices_to_full_samples(good_samples_idx, prior_cache_file, data,
 
     else:
         return samples
+
+
+# -----------------------------------------------------------------------------
+from ..data_helpers import _validate_data
+
+
+def read_chunk(prior_samples_file, start, stop):
+    # TODO: units and shit!
+
+    # TODO: get order from elsewhere...like set on helper?
+    names = ['P', 'e', 'omega', 'M0']
+
+    chunk = np.zeros((stop-start, len(names)))
+    with tb.open_file(prior_samples_file, mode='r') as f:
+        for i, name in enumerate(names):
+            chunk[:, i] = f.root.samples.read(start, stop, field=name)
+
+    return chunk
+
+
+def marginal_ln_likelihood_worker(task):
+    start_stop, task_id, prior_samples_file, joker_helper = task
+
+    # read this chunk of the prior samples
+    chunk = read_chunk(prior_samples_file, *start_stop)
+
+    # memoryview is returned
+    ll = joker_helper.batch_marginal_ln_likelihood(chunk)
+
+    return np.array(ll)
+
+
+def marginal_ln_likelihood_helper(data, prior, prior_samples_file, pool,
+                                  n_batches=None):
+    all_data, ids, trend_M = _validate_data(data, prior)
+    joker_helper = CJokerHelper(data, prior, trend_M, None)
+
+    with tb.open_file(prior_samples_file, mode='r') as f:
+        n_samples = f.root.samples.shape[0]
+
+    if n_batches is None:
+        n_batches = max(1, pool.size)
+
+    tasks = chunk_tasks(n_samples, n_batches=n_batches,
+                        args=(prior_samples_file, joker_helper))
+
+    all_ll = []
+    for res in pool.map(marginal_ln_likelihood_worker, tasks):
+        all_ll.append(res)
+
+    return np.concatenate(all_ll)

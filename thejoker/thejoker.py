@@ -4,8 +4,9 @@
 # joker.rejection_sample([data1, data2], ...)
 
 # Standard library
+import os
 import sys
-import tempfile
+from tempfile import NamedTemporaryFile
 
 # Third-party
 import astropy.units as u
@@ -18,12 +19,35 @@ from .data import RVData
 from .data_helpers import _validate_data
 from .prior import JokerPrior
 from .samples import JokerSamples
-from .src.likelihood_helpers import get_constant_term_design_matrix
 from .src.fast_likelihood import CJokerHelper
 from .src.multiproc_helpers import (get_good_sample_indices,
                                     sample_indices_to_full_samples)
 
 __all__ = ['TheJoker']
+
+
+def _marginal_ll_worker(task):
+    """
+    Compute the marginal log-likelihood, i.e. the likelihood integrated over
+    the linear parameters. This is meant to be ``map``ped using a processing
+    pool` within the functions below and is not supposed to be in the
+    public API.
+
+    Parameters
+    ----------
+    task : iterable
+        An array containing the indices of samples to be operated on, the
+        filename containing the prior samples, and the data.
+
+    Returns
+    -------
+    ll : `numpy.ndarray`
+        Array of log-likelihood values.
+
+    """
+    chunk, i, joker_helper = task
+    ll = joker_helper.batch_marginal_ln_likelihood(chunk)
+    return np.array(ll)
 
 
 class TheJoker:
@@ -40,9 +64,14 @@ class TheJoker:
         A ``RandomState`` instance to serve as a parent for the random
         number generators. See the :ref:`random numbers <random-numbers>` page
         for more information.
+    tempfile_path : str (optional)
+        A location on disk where The Joker may store some temporary files. Any
+        files written here by The Joker should be cleaned up: If any files in
+        this path persist, something must have gone wrong within The Joker.
+        Default: ``~/.thejoker``
     """
 
-    def __init__(self, prior, pool=None, random_state=None):
+    def __init__(self, prior, pool=None, random_state=None, tempfile_path=None):
 
         # set the processing pool
         if pool is None:
@@ -75,13 +104,24 @@ class TheJoker:
             raise TypeError("The input prior must be a JokerPrior instance.")
         self.prior = prior
 
-    def marginal_ln_likelihood(self, prior_samples, data):
+        if tempfile_path is None:
+            self._tempfile_path = os.path.expanduser('~/.thejoker/')
+        else:
+            self._tempfile_path = os.path.abspath(
+                os.path.expanduser(tempfile_path))
+
+    @property
+    def tempfile_path(self):
+        os.makedirs(self._tempfile_path, exist_ok=True)
+        return self._tempfile_path
+
+    def marginal_ln_likelihood(self, prior_samples, data, n_batches=None):
         """
         Compute the marginal log-likelihood at each of the input prior samples.
 
         Parameters
         ----------
-        prior_samples : `thejoker.JokerSamples`
+        prior_samples : str, `thejoker.JokerSamples`
             The input prior samples.
         data : `thejoker.RVData`, iterable, dict
             The radial velocity data to compute the likelihood with.
@@ -92,15 +132,26 @@ class TheJoker:
             The marginal log-likelihood computed at the location of each prior
             sample.
         """
+        from .src.multiproc_helpers import marginal_ln_likelihood_helper
 
-        # TODO: validate number of unique ids vs. number of v0_offsets in prior
-        all_data, ids, trend_M = _validate_data(data)
-        helper = CJokerHelper(data, self.prior, trend_M, self.random_state)
+        if not isinstance(prior_samples, str):
+            if not isinstance(prior_samples, JokerSamples):
+                raise TypeError("prior_samples must either be a string "
+                                "filename specifying a cache file contining "
+                                "prior samples, or must be a JokerSamples "
+                                f"instance, not: {type(prior_samples)}")
 
-        chunk, _ = prior_samples.pack(units={'s': data.rv.unit})
-        ll = helper.batch_marginal_ln_likelihood(chunk)
+            with NamedTemporaryFile(mode='r+', suffix='.hdf5',
+                                    dir=self.tempfile_path) as f:
+                # write samples to tempfile and recursively call this method
+                prior_samples.write(f.name, overwrite=True)
+                ll = self.marginal_ln_likelihood(f.name, data)
 
-        return np.array(ll)
+        else:
+            ll = marginal_ln_likelihood_helper(data, self.prior, prior_samples,
+                                               self.pool, n_batches=n_batches)
+
+        return ll
 
     def rejection_sample(self, data, n_prior_samples,
                          max_posterior_samples=None,
@@ -204,8 +255,8 @@ class TheJoker:
         return n_prior_samples, cache_exists
 
     def __rejection_sample(self, data, n_prior_samples=None, max_n_samples=None,
-                         prior_cache_file=None, return_logprobs=False,
-                         start_idx=0):
+                           prior_cache_file=None, return_logprobs=False,
+                           start_idx=0):
         """Run The Joker's rejection sampling on prior samples to get posterior
         samples for the input data.
 

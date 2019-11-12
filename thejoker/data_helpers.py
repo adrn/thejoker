@@ -55,7 +55,7 @@ def guess_time_format(time_val):
         raise ValueError(err_msg)
 
 
-def _validate_data(data):
+def _validate_data(data, prior):
     """Internal function.
 
     Used to take an input ``RVData`` instance, or a list/dict of ``RVData``
@@ -113,6 +113,8 @@ def _validate_data(data):
     rv = np.concatenate(rv) * rv_unit
     err = np.concatenate(err) * rv_unit
     ids = np.concatenate(ids)
+
+    # TODO: validate number of unique ids vs. number of v0_offsets in prior
 
     all_data = RVData(t=Time(t, format='mjd', scale='tcb'),
                       rv=rv, rv_err=err)
