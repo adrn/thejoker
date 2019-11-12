@@ -210,9 +210,10 @@ def write_table_hdf5(table, output, path=None, compression=False,
 
     else:  # We need to append the tables!
         try:
-            out_meta = metadata.merge(existing_header['meta'],
-                                      table.meta,
-                                      metadata_conflicts=metadata_conflicts)
+            # TODO: do something with the merged metadata!
+            metadata.merge(existing_header['meta'],
+                           table.meta,
+                           metadata_conflicts=metadata_conflicts)
         except metadata.MergeConflictError:
             raise metadata.MergeConflictError(
                 "Cannot append table to existing file because "

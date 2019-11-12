@@ -6,7 +6,6 @@ import os
 # Third-party
 import astropy.units as u
 from astropy.table import Table, QTable
-from astropy.table.meta import get_header_from_yaml, get_yaml_from_table
 import numpy as np
 from twobody import KeplerOrbit, PolynomialRVTrend
 
@@ -304,13 +303,11 @@ class JokerSamples:
         filename : str
             The output filename.
         """
-        # To get the table metadata / units:
+        # TODO: To get out the table metadata / units:
         # from astropy.table import meta
         # test = meta.get_header_from_yaml(
         #     h.decode('utf-8') for h in f['__astropy_table__.__table_column_meta__'])
         # h5file.root.samples.append()
-
-        import h5py
 
         ext = os.path.splitext(filename)[1]
         if ext not in ['.hdf5', '.h5']:
@@ -322,61 +319,6 @@ class JokerSamples:
                          append=append, overwrite=overwrite,
                          serialize_meta=True, metadata_conflicts='error',
                          maxshape=(None, ))
-
-        return
-
-        if overwrite and append_existing:
-            raise ValueError("overwrite and append cannot both be set to True.")
-
-        if os.path.exists(filename) and not overwrite:
-            with h5py.File(filename, 'r') as f:
-                if HDF5_PATH_NAME in f.keys():
-                    has_data = True
-
-                    # load existing column metadata
-                    header_grp = f[f"{HDF5_PATH_NAME}.__table_column_meta__"]
-                    header = get_header_from_yaml(
-                        h.decode('utf-8') for h in header_grp)
-
-                    meta = {k: v for k, v in header['meta'].items()
-                            if not k.startswith('_')}
-
-                else:
-                    has_data = False
-
-            if has_data and append_existing:
-                # First, compare metadata between this object and on disk
-                for k, v in meta.items():
-                    if k not in self.tbl.meta or self.tbl.meta[k] != v:
-                        raise ValueError(
-                            "Cannot append table to existing file because the "
-                            "existing file table metadata and this object's "
-                            "table metadata do not match. Key with conflict: "
-                            f"{k}, {self.tbl.meta[k]} vs. {v}")
-
-                # Now compare datatype of this object and on disk
-                this_header = get_header_from_yaml(
-                    get_yaml_from_table(self.tbl))
-
-                if not _custom_tbl_dtype_compare(header['datatype'],
-                                                 this_header['datatype']):
-                    raise ValueError(
-                        "Cannot append table to existing file because "
-                        "the existing file table datatype and this "
-                        "object's table datatype do not match. "
-                        f"{header['datatype']} vs. {this_header['datatype']}")
-
-                # If we got here, we can now try to append:
-                with h5py.File(filename, 'a') as f:
-                    current_size = len(f[HDF5_PATH_NAME])
-                    f[HDF5_PATH_NAME].resize((current_size + len(self), ))
-                    f[HDF5_PATH_NAME][current_size:] = self.tbl.as_array()
-
-                return None
-
-        self.tbl.write(filename, format='hdf5',
-                       path=HDF5_PATH_NAME, serialize_meta=True,
-                       overwrite=overwrite)
 
     @classmethod
     def read(cls, filename):
