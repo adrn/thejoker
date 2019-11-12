@@ -2,12 +2,11 @@
 from astropy.time import Time
 import astropy.units as u
 from astropy.tests.helper import quantity_allclose
-import h5py
 import numpy as np
 import pytest
 
 # Project
-from ..samples import JokerSamples
+from ..samples import JokerSamples, _custom_tbl_dtype_compare
 
 
 def test_joker_samples(tmpdir):
@@ -150,3 +149,67 @@ def test_table(tmp_path, t0, poly_trend):
 
     for k in samples.par_names:
         assert u.allclose(samples2[k], samples[k])
+
+
+def _get_dtype_compare_cases():
+    d1s = []
+    d2s = []
+    evals = []
+
+    # True
+    d1 = [{'name': 'P', 'unit': 'd', 'datatype': 'float64'},
+          {'name': 'e', 'datatype': 'float64'},
+          {'name': 'omega', 'unit': 'rad', 'datatype': 'float64'},
+          {'name': 'M0', 'unit': 'rad', 'datatype': 'float64'},
+          {'name': 's', 'unit': 'm / s', 'datatype': 'float64'}]
+    d2 = [{'name': 'P', 'unit': 'd', 'datatype': 'float64'},
+          {'name': 'e', 'unit': '', 'datatype': 'float64'},
+          {'name': 'omega', 'unit': 'rad', 'datatype': 'float64'},
+          {'name': 'M0', 'unit': 'rad', 'datatype': 'float64'},
+          {'name': 's', 'unit': 'm / s', 'datatype': 'float64'}]
+    d1s.append(d1)
+    d2s.append(d2)
+    evals.append(True)
+
+    # True
+    d1 = [{'name': 'P', 'unit': 'd', 'datatype': 'float64'},
+          {'name': 'e', 'datatype': 'float64'}]
+    d2 = [{'name': 'P', 'unit': 'd', 'datatype': 'float64'},
+          {'name': 'e', 'unit': '', 'datatype': 'float64'}]
+    d1s.append(d1)
+    d2s.append(d2)
+    evals.append(True)
+
+    # True
+    d1 = [{'name': 'P', 'unit': 'd', 'datatype': 'float64'},
+          {'name': 'e', 'unit': '', 'datatype': 'float64'}]
+    d2 = [{'name': 'P', 'unit': 'd', 'datatype': 'float64'},
+          {'name': 'e', 'unit': '', 'datatype': 'float64'}]
+    d1s.append(d1)
+    d2s.append(d2)
+    evals.append(True)
+
+    # False
+    d1 = [{'name': 'P', 'unit': 'd', 'datatype': 'float64'},
+          {'name': 'e', 'unit': 'a', 'datatype': 'float64'}]
+    d2 = [{'name': 'P', 'unit': 'd', 'datatype': 'float64'},
+          {'name': 'e', 'unit': '', 'datatype': 'float64'}]
+    d1s.append(d1)
+    d2s.append(d2)
+    evals.append(False)
+
+    # False
+    d1 = [{'name': 'P', 'unit': 'd', 'datatype': 'float64'},
+          {'name': 'e', 'unit': 'a', 'datatype': 'float64'}]
+    d2 = [{'name': 'P', 'unit': 'd', 'datatype': 'float64'},
+          {'name': 'e', 'unit': 'b', 'datatype': 'float64'}]
+    d1s.append(d1)
+    d2s.append(d2)
+    evals.append(False)
+
+    return zip(d1s, d2s, evals)
+
+
+@pytest.mark.parametrize('d1,d2,equal', _get_dtype_compare_cases())
+def test_table_dtype_compare(d1, d2, equal):
+    assert _custom_tbl_dtype_compare(d1, d2) == equal

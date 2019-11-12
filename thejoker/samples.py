@@ -320,3 +320,25 @@ class JokerSamples:
     def read(cls, filename):
         tbl = QTable.read(filename, path='samples')
         return cls(samples=tbl, **tbl.meta)
+
+
+def _custom_tbl_dtype_compare(dtype1, dtype2):
+    """This is a custom equality operator for comparing table data types that
+    is less strict about units when unit is missing in one and dimensionless in
+    the other.
+    """
+
+    for d1, d2 in zip(dtype1, dtype2):
+        for k in set(list(d1.keys()) + list(d2.keys())):
+            if k == 'unit':
+                if d1.get(k, '') != '' and k not in d2:
+                    return False
+                if d2.get(k, '') != '' and k not in d1:
+                    return False
+                if d1.get(k, '') != d2.get(k, ''):
+                    return False
+            else:
+                if d1.get(k, '1') != d2.get(k, '2'):
+                    return False
+
+    return True
