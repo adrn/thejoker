@@ -3,6 +3,9 @@ from astropy.time import Time
 import astropy.units as u
 import numpy as np
 
+# Project
+from .src.likelihood_helpers import get_constant_term_design_matrix
+
 __all__ = ['guess_time_format']
 
 
@@ -52,7 +55,7 @@ def guess_time_format(time_val):
         raise ValueError(err_msg)
 
 
-def _prepare_multi_data(data):
+def _validate_data(data):
     """Internal function.
 
     Used to take an input ``RVData`` instance, or a list/dict of ``RVData``
@@ -61,13 +64,21 @@ def _prepare_multi_data(data):
     """
     from .data import RVData
     if isinstance(data, RVData):  # single instance
-        return data, None
+        trend_M = get_constant_term_design_matrix(data)
+        return data, None, trend_M
 
     # Turn a list-like into a dict object:
     if not hasattr(data, 'keys'):
-        _d = {}
-        for i, d in enumerate(data):
-            _d[i] = d
+        # assume it's iterable:
+        try:
+            _d = {}
+            for i, d in enumerate(data):
+                _d[i] = d
+        except Exception:
+            raise TypeError("Failed to parse input data: data must either be "
+                            "an RVData instance, an iterable of RVData "
+                            "instances, or a dictionary with RVData instances "
+                            "as values. Received: {}".format(type(data)))
         data = _d
 
     # If we've gotten here, data is dict-like:
@@ -78,6 +89,10 @@ def _prepare_multi_data(data):
     ids = []
     for k in data.keys():
         d = data[k]
+
+        if not isinstance(d, RVData):
+            raise TypeError(f"All data must be specified as RVData instances: "
+                            f"Object at key '{k}' is a '{type(d)}' instead.")
 
         if d._has_cov:
             raise NotImplementedError("We currently don't support "
@@ -102,4 +117,6 @@ def _prepare_multi_data(data):
     all_data = RVData(t=Time(t, format='mjd', scale='tcb'),
                       rv=rv, rv_err=err)
 
-    return all_data, ids
+    trend_M = get_constant_term_design_matrix(all_data, ids)
+
+    return all_data, ids, trend_M
