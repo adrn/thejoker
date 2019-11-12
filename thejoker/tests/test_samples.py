@@ -6,7 +6,8 @@ import numpy as np
 import pytest
 
 # Project
-from ..samples import JokerSamples, _custom_tbl_dtype_compare
+from ..samples import JokerSamples
+from ..samples_helpers import _custom_tbl_dtype_compare
 
 
 def test_joker_samples(tmpdir):
@@ -98,6 +99,22 @@ def test_joker_samples(tmpdir):
 
     orb = new_samples.get_orbit()
     orb.radial_velocity(Time('J2015.6'))
+
+
+def test_append_write(tmpdir):
+    N = 64
+    samples = JokerSamples(t0=Time('J2000'))
+    samples['P'] = np.random.uniform(800, 1000, size=N)*u.day
+    samples['M0'] = 2*np.pi*np.random.random(size=N)*u.radian
+    samples['e'] = np.random.random(size=N)
+    samples['omega'] = 2*np.pi*np.random.random(size=N)*u.radian
+
+    fn = str(tmpdir / 'test-tbl.hdf5')
+    samples.write(fn)
+    samples.write(fn, append=True)
+
+    samples2 = JokerSamples.read(fn)
+    assert np.all(samples2['P'][:N] == samples2['P'][N:])
 
 
 def test_apply_methods():

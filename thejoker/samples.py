@@ -6,17 +6,20 @@ import os
 # Third-party
 import astropy.units as u
 from astropy.table import Table, QTable
+from astropy.table.meta import get_header_from_yaml, get_yaml_from_table
 import numpy as np
 from twobody import KeplerOrbit, PolynomialRVTrend
 
 # Project
 from .prior_helpers import (_validate_polytrend, _get_nonlinear_equiv_units,
                             _get_linear_equiv_units)
+from .samples_helpers import write_table_hdf5
 
 __all__ = ['JokerSamples']
 
 
 class JokerSamples:
+    _hdf5_path = 'samples'
 
     def __init__(self, samples=None, poly_trend=1, t0=None, **kwargs):
         """A dictionary-like object for storing prior or posterior samples from
@@ -286,7 +289,7 @@ class JokerSamples:
             samples[k] = packed_samples[:, i] * unit
         return samples
 
-    def write(self, filename, overwrite=False):
+    def write(self, filename, overwrite=False, append=False):
         """
         Save the samples data to a file. This is a thin wrapper around the
         ``astropy.table`` write machinery, so the output format is inferred from
@@ -305,40 +308,77 @@ class JokerSamples:
         # from astropy.table import meta
         # test = meta.get_header_from_yaml(
         #     h.decode('utf-8') for h in f['__astropy_table__.__table_column_meta__'])
-        # units = {k: self.tbl[k].unit for k in self.par_names}
+        # h5file.root.samples.append()
+
+        import h5py
 
         ext = os.path.splitext(filename)[1]
         if ext not in ['.hdf5', '.h5']:
             raise NotImplementedError("We currently only support writing to "
                                       "HDF5 files, with extension .hdf5 or .h5")
 
+        write_table_hdf5(self.tbl, filename, path=self._hdf5_path,
+                         compression=False,
+                         append=append, overwrite=overwrite,
+                         serialize_meta=True, metadata_conflicts='error',
+                         maxshape=(None, ))
+
+        return
+
+        if overwrite and append_existing:
+            raise ValueError("overwrite and append cannot both be set to True.")
+
+        if os.path.exists(filename) and not overwrite:
+            with h5py.File(filename, 'r') as f:
+                if HDF5_PATH_NAME in f.keys():
+                    has_data = True
+
+                    # load existing column metadata
+                    header_grp = f[f"{HDF5_PATH_NAME}.__table_column_meta__"]
+                    header = get_header_from_yaml(
+                        h.decode('utf-8') for h in header_grp)
+
+                    meta = {k: v for k, v in header['meta'].items()
+                            if not k.startswith('_')}
+
+                else:
+                    has_data = False
+
+            if has_data and append_existing:
+                # First, compare metadata between this object and on disk
+                for k, v in meta.items():
+                    if k not in self.tbl.meta or self.tbl.meta[k] != v:
+                        raise ValueError(
+                            "Cannot append table to existing file because the "
+                            "existing file table metadata and this object's "
+                            "table metadata do not match. Key with conflict: "
+                            f"{k}, {self.tbl.meta[k]} vs. {v}")
+
+                # Now compare datatype of this object and on disk
+                this_header = get_header_from_yaml(
+                    get_yaml_from_table(self.tbl))
+
+                if not _custom_tbl_dtype_compare(header['datatype'],
+                                                 this_header['datatype']):
+                    raise ValueError(
+                        "Cannot append table to existing file because "
+                        "the existing file table datatype and this "
+                        "object's table datatype do not match. "
+                        f"{header['datatype']} vs. {this_header['datatype']}")
+
+                # If we got here, we can now try to append:
+                with h5py.File(filename, 'a') as f:
+                    current_size = len(f[HDF5_PATH_NAME])
+                    f[HDF5_PATH_NAME].resize((current_size + len(self), ))
+                    f[HDF5_PATH_NAME][current_size:] = self.tbl.as_array()
+
+                return None
+
         self.tbl.write(filename, format='hdf5',
-                       path='samples', serialize_meta=True,
+                       path=HDF5_PATH_NAME, serialize_meta=True,
                        overwrite=overwrite)
 
     @classmethod
     def read(cls, filename):
-        tbl = QTable.read(filename, path='samples')
+        tbl = QTable.read(filename, path=cls._hdf5_path)
         return cls(samples=tbl, **tbl.meta)
-
-
-def _custom_tbl_dtype_compare(dtype1, dtype2):
-    """This is a custom equality operator for comparing table data types that
-    is less strict about units when unit is missing in one and dimensionless in
-    the other.
-    """
-
-    for d1, d2 in zip(dtype1, dtype2):
-        for k in set(list(d1.keys()) + list(d2.keys())):
-            if k == 'unit':
-                if d1.get(k, '') != '' and k not in d2:
-                    return False
-                if d2.get(k, '') != '' and k not in d1:
-                    return False
-                if d1.get(k, '') != d2.get(k, ''):
-                    return False
-            else:
-                if d1.get(k, '1') != d2.get(k, '2'):
-                    return False
-
-    return True
