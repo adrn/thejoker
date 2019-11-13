@@ -1,16 +1,42 @@
 # Third-party
-import h5py
 import numpy as np
 import tables as tb
 
 # Project
 from ..logging import logger
-from ..data_helpers import _validate_data
-from .fast_likelihood import CJokerHelper
+from ..samples import JokerSamples
 from .utils import batch_tasks, read_batch
 
-# __all__ = ['compute_likelihoods', 'get_good_sample_indices',
-#            'sample_indices_to_full_samples']
+
+def run_worker(worker, pool, prior_samples_file, task_args=(), n_batches=None,
+               n_prior_samples=None, samples_idx=None):
+
+    with tb.open_file(prior_samples_file, mode='r') as f:
+        n_samples = f.root[JokerSamples._hdf5_path].shape[0]
+
+    if n_prior_samples is not None and samples_idx is not None:
+        raise ValueError("TODO: dont specify both")
+
+    elif samples_idx is not None:
+        n_samples = len(samples_idx)
+
+    elif n_prior_samples is not None:
+        n_samples = int(n_prior_samples)
+
+    if n_batches is None:
+        n_batches = max(1, pool.size)
+
+    if samples_idx is not None:
+        tasks = batch_tasks(n_samples, n_batches=n_batches, arr=samples_idx,
+                            args=task_args)
+    else:
+        tasks = batch_tasks(n_samples, n_batches=n_batches, args=task_args)
+
+    results = []
+    for res in pool.map(worker, tasks):
+        results.append(res)
+
+    return results
 
 
 def marginal_ln_likelihood_worker(task):
@@ -32,11 +58,11 @@ def marginal_ln_likelihood_worker(task):
         Array of log-likelihood values.
 
     """
-    (start, stop), task_id, prior_samples_file, joker_helper = task
+    slice_or_idx, task_id, prior_samples_file, joker_helper = task
 
-    # read this batch of the prior samples
+    # Read the batch of prior samples
     batch = read_batch(prior_samples_file, joker_helper.packed_order,
-                       start, stop, units=joker_helper.internal_units)
+                       slice_or_idx, units=joker_helper.internal_units)
 
     # memoryview is returned
     ll = joker_helper.batch_marginal_ln_likelihood(batch)
@@ -44,149 +70,136 @@ def marginal_ln_likelihood_worker(task):
     return np.array(ll)
 
 
-def marginal_ln_likelihood_helper(data, prior, prior_samples_file, pool,
-                                  n_batches=None):
-    all_data, ids, trend_M = _validate_data(data, prior)
-    joker_helper = CJokerHelper(data, prior, trend_M, None)
+def marginal_ln_likelihood_helper(joker_helper, prior_samples_file, pool,
+                                  n_batches=None, n_prior_samples=None,
+                                  samples_idx=None):
 
+    task_args = (prior_samples_file,
+                 joker_helper)
+    results = run_worker(marginal_ln_likelihood_worker, pool,
+                         prior_samples_file,
+                         task_args=task_args, n_batches=n_batches,
+                         samples_idx=samples_idx)
+    return np.concatenate(results)
+
+
+def make_full_samples_worker(task):
+    (slice_or_idx,
+     task_id,
+     prior_samples_file,
+     joker_helper,
+     n_linear_samples,
+     global_random_state) = task
+
+    random_state = np.random.RandomState()
+    random_state.set_state(global_random_state.get_state())
+    random_state.seed(task_id)  # TODO: is this safe?
+
+    # Read the batch of prior samples
+    batch = read_batch(prior_samples_file,
+                       columns=joker_helper.packed_order,
+                       slice_or_idx=slice_or_idx,
+                       units=joker_helper.internal_units)
+
+    raw_samples, _ = joker_helper.batch_get_posterior_samples(batch,
+                                                              n_linear_samples,
+                                                              random_state)
+
+    return raw_samples
+
+
+def make_full_samples(joker_helper, prior_samples_file, pool, random_state,
+                      samples_idx, n_linear_samples=1, n_batches=None):
+
+    task_args = (prior_samples_file,
+                 joker_helper,
+                 n_linear_samples,
+                 random_state)
+    results = run_worker(make_full_samples_worker, pool, prior_samples_file,
+                         task_args=task_args, n_batches=n_batches,
+                         samples_idx=samples_idx)
+
+    # Concatenate all of the raw samples arrays
+    raw_samples = np.concatenate(results)
+
+    # unpack the raw samples
+    samples = JokerSamples.unpack(raw_samples,
+                                  joker_helper.internal_units,
+                                  poly_trend=joker_helper.prior.poly_trend,
+                                  t0=joker_helper.data.t0)
+
+    return samples
+
+
+def rejection_sample_helper(joker_helper, prior_samples_file, pool,
+                            random_state,
+                            n_prior_samples=None,
+                            max_posterior_samples=None,
+                            n_linear_samples=1,
+                            return_logprobs=False,
+                            n_batches=None,
+                            randomize_prior_order=False):
+
+    # Total number of samples in the cache:
     with tb.open_file(prior_samples_file, mode='r') as f:
-        n_samples = f.root.samples.shape[0]
+        n_total_samples = f.root[JokerSamples._hdf5_path].shape[0]
 
-    if n_batches is None:
-        n_batches = max(1, pool.size)
+    if n_prior_samples is None:
+        n_prior_samples = n_total_samples
+    elif n_prior_samples > n_total_samples:
+        raise ValueError("TODO:")
 
-    tasks = batch_tasks(n_samples, n_batches=n_batches,
-                        args=(prior_samples_file, joker_helper))
+    if max_posterior_samples is None:
+        max_posterior_samples = n_prior_samples
 
-    all_ll = []
-    for res in pool.map(marginal_ln_likelihood_worker, tasks):
-        all_ll.append(res)
+    # Keyword arguments to be passed to marginal_ln_likelihood_helper:
+    ll_kw = dict(joker_helper=joker_helper,
+                 prior_samples_file=prior_samples_file,
+                 pool=pool,
+                 n_batches=n_batches)
 
-    return np.concatenate(all_ll)
-
-
-def get_good_sample_indices(marg_ll, seed=None):
-    """Return the indices of 'good' samples from pre-computed values of the
-    log-likelihood.
-
-    Parameters
-    ----------
-    marg_ll : array_like
-        Array of marginal log-likelihood values.
-    seed : int (optional)
-        Random number seed for uniform samples to use in rejection sampling.
-
-    Returns
-    -------
-    samples_idx : `numpy.ndarray`
-        An array of integers for the prior samples that pass
-        rejection sampling.
-
-    """
-
-    # rejection sample using the marginal likelihood
-    rnd = np.random.RandomState(seed)
-    uu = rnd.uniform(size=len(marg_ll))
-    good_samples_bool = uu < np.exp(marg_ll - marg_ll.max())
-    good_samples_idx, = np.where(good_samples_bool)
-
-    return good_samples_idx
-
-
-def _sample_vector_worker(task):
-    """
-    This is meant to be
-        ``map``ped using one of the ``Pool`` classes by the functions below and
-        is not supposed to be in the public API.
-    """
-
-    (idx, batch_index, prior_cache_file, joker_helper, global_seed,
-     return_logprobs) = task
-
-    if global_seed is not None:
-        seed = global_seed + batch_index
-        rnd = np.random.RandomState(seed)
-        logger.log(0, "worker with batch {} has seed {}".format(idx[0], seed))
-
+    if randomize_prior_order:
+        # Generate a random ordering for the samples
+        idx = random_state.choice(n_total_samples, size=n_prior_samples,
+                                  replace=False)
+        ll_kw['samples_idx'] = idx
     else:
-        rnd = np.random.RandomState()
-        logger.log(0, "worker with batch {} not seeded".format(idx[0]))
+        ll_kw['n_prior_samples'] = n_prior_samples
 
-    # read a batch of the prior samples
-    with h5py.File(prior_cache_file, 'r') as f:
-        tmp = np.zeros(len(f['samples']), dtype=bool)
-        tmp[idx] = True
-        batch = np.array(f['samples'][tmp, :])
+    # compute likelihoods
+    lls = marginal_ln_likelihood_helper(**ll_kw)
 
-        if return_logprobs:
-            ln_prior = np.array(f['ln_prior_probs'][tmp])
+    # get indices of samples that pass rejection step
+    uu = random_state.uniform(size=len(lls))
+    good_samples_idx = np.where(np.exp(lls - lls.max()) > uu)[0]
+    good_samples_idx = good_samples_idx[:max_posterior_samples]
 
-    batch = batch.astype(np.float64)
-
-    pars = joker_helper.batch_get_posterior_samples(batch, rnd, return_logprobs)
-
-    if return_logprobs:
-        pars = np.hstack((pars[:, :-1], ln_prior[:, None], pars[:, -1:]))
-    return pars
-
-
-def sample_indices_to_full_samples(good_samples_idx, prior_cache_file, data,
-                                   prior, trend_M, max_n_samples, pool,
-                                   global_seed=None, return_logprobs=False,
-                                   n_batches=None):
-    """
-    Generate the full set of parameter values (linear + non-linear) for
-    the nonlinear parameter prior samples that pass the rejection sampling.
-
-    For speed when parallelizing, this accepts a filename for an HDF5
-    that contains the prior samples, splits up the samples based on the
-    number of processes / MPI workers, and only distributes the indices
-    for each worker to read.
-
-    Parameters
-    ----------
-    good_samples_idx : array_like
-        The array of indices for the 'good' samples in the prior
-        samples cache file.
-    prior_cache_file : str
-        Path to an HDF5 file containing the prior samples.
-    data : `thejoker.data.RVData`
-        An instance of ``RVData`` with the data we're modeling.
-    joker_params : `~thejoker.sampler.params.JokerParams`
-        A specification of the parameters to use.
-    max_n_samples : int
-        The maximum number of samples to return.
-    pool : `~schwimmbad.pool.BasePool` or subclass
-        An instance of a processing pool - must have a ``.map()`` method.
-    global_seed : int (optional)
-        The global level random number seed.
-    return_logprobs : bool (optional)
-        Also return the log-probabilities of the prior samples.
-    n_batches : int (optional)
-        How many batches to divide the work into. Defaults to ``pool.size``.
-
-    """
-
-    # TODO: get trend_M from prior
-    joker_helper = CJokerHelper(data, prior, trend_M)
-
-    good_samples_idx = good_samples_idx[:max_n_samples]
-    n_samples = len(good_samples_idx)
-    args = [prior_cache_file, joker_helper, global_seed, return_logprobs]
-    if n_batches is None:
-        n_batches = pool.size
-    tasks = batch_tasks(n_samples, n_batches=n_batches, arr=good_samples_idx,
-                        args=args)
-
-    samples = [r for r in pool.map(_sample_vector_worker, tasks)]
-    samples = np.concatenate(samples)
-
-    assert len(samples) == n_samples
-    samples = samples.reshape(-1, samples.shape[-1])
-
-    if return_logprobs:
-        # samples, ln(prior), ln(likelihood)
-        return samples[:, :-2], samples[:, -2], samples[:, -1]
-
+    if randomize_prior_order:
+        full_samples_idx = idx[good_samples_idx]
     else:
-        return samples
+        full_samples_idx = good_samples_idx
+    samples_ll = lls[good_samples_idx]
+
+    # generate linear parameters
+    samples = make_full_samples(joker_helper, prior_samples_file, pool,
+                                random_state, full_samples_idx,
+                                n_linear_samples=n_linear_samples,
+                                n_batches=n_batches)
+
+    # TODO: deal with return_logprobs=True case...
+
+    return samples
+
+
+def iterative_sample_helper(joker_helper, prior_samples_file, pool,
+                            random_state,
+                            n_prior_samples=None,
+                            max_posterior_samples=None,
+                            n_linear_samples=1,
+                            return_logprobs=False,
+                            n_batches=None,
+                            randomize_prior_order=False):
+
+    # TODO!
+
+    return samples
