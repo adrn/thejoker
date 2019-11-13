@@ -12,7 +12,8 @@ def init_helper(case=None):
     default_expected_units = {'P': u.day, 'e': u.one,
                               'omega': u.radian, 'M0': u.radian,
                               's': u.m/u.s,
-                              'K': u.km/u.s, 'v0': u.km/u.s}
+                              'K': u.km/u.s, 'v0': u.km/u.s,
+                              'ln_prior': u.one}
 
     if case == 0:
         # Default prior with standard parameters:
@@ -128,6 +129,8 @@ def test_init_sample(case):
     prior, expected_units = init_helper(case)
 
     for k in expected_units.keys():
+        if k == 'ln_prior':  # skip
+            continue
         assert k in prior.model.named_vars
 
     samples = prior.sample()
@@ -140,15 +143,15 @@ def test_init_sample(case):
         assert hasattr(samples[k], 'unit')
         assert samples[k].unit == expected_units[k]
 
-    samples, logprior = prior.sample(size=10, return_logprobs=True)
+    samples = prior.sample(size=10, return_logprobs=True)
+    assert 'ln_prior' in samples.par_names
     for k in samples.par_names:
         assert hasattr(samples[k], 'unit')
         assert samples[k].unit == expected_units[k]
-    assert len(logprior) == len(samples)
 
-    samples, logprior = prior.sample(size=10, generate_linear=True,
-                                     return_logprobs=True)
+    samples = prior.sample(size=10, generate_linear=True,
+                           return_logprobs=True)
+    assert 'ln_prior' in samples.par_names
     for k in samples.par_names:
         assert hasattr(samples[k], 'unit')
         assert samples[k].unit == expected_units[k]
-    assert len(logprior) == len(samples)

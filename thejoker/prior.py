@@ -1,5 +1,4 @@
 # Third-party
-from astropy.table import Table
 import astropy.units as u
 import numpy as np
 import pymc3 as pm
@@ -445,16 +444,12 @@ class JokerPrior:
         generate_linear : bool (optional)
             Also generate samples in the linear parameters.
         return_logprobs : bool (optional)
-            Return the log-prior probability at the position of each sample, for
-            each parameter separately
+            Generate the log-prior probability at the position of each sample.
 
         Returns
         -------
         samples : `thejoker.Jokersamples`
             The random samples.
-        log_prior : `astropy.table.Table` (optional)
-            The log-prior probability at the position of each sample. This is
-            only returned if ``return_logprobs=True``.
 
         """
         sub_pars = {k: p for k, p in self.pars.items()
@@ -505,13 +500,18 @@ class JokerPrior:
 
             prior_samples[p.name] = np.atleast_1d(raw_samples[p.name]) * unit
 
-        if not return_logprobs:
-            return prior_samples
+        if return_logprobs:
+            log_prior = {p.name: vals
+                         for p, vals in zip(pars_list, samples_values[npars:])}
+            prior_samples['ln_prior'] = np.sum([v for v in log_prior.values()],
+                                               axis=0)
 
-        log_prior = {p.name: vals for p, vals in zip(pars_list,
-                                                     samples_values[npars:])}
-        log_prior = {k: np.atleast_1d(v)
-                     for k, v in log_prior.items()}
-        log_prior = Table(log_prior)[par_names]
+        # TODO: right now, elsewhere, we assume the log_prior is a single value
+        # for each sample (i.e. the total prior value). In principle, we could
+        # store all of the individual log-prior values (for each parameter),
+        # like here:
+        # log_prior = {k: np.atleast_1d(v)
+        #              for k, v in log_prior.items()}
+        # log_prior = Table(log_prior)[par_names]
 
-        return prior_samples, log_prior
+        return prior_samples
