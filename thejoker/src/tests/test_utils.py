@@ -8,7 +8,8 @@ import tables as tb
 # Package
 from ...samples import JokerSamples
 from ..utils import (batch_tasks, table_header_to_units,
-                     read_batch, read_random_batch)
+                     read_batch, read_batch_slice, read_batch_idx,
+                     read_random_batch)
 
 
 def test_batch_tasks():
@@ -41,7 +42,7 @@ def test_table_header_to_units(tmpdir):
         assert tbl[col].unit == units[col]
 
 
-def test_read_batch(tmpdir):
+def test_read_batch_slice(tmpdir):
     filename = str(tmpdir / 'test.hdf5')
 
     tbl = QTable()
@@ -50,16 +51,43 @@ def test_read_batch(tmpdir):
     tbl['c'] = np.arange(100) * u.day
     tbl.write(filename, path=JokerSamples._hdf5_path, serialize_meta=True)
 
-    batch = read_batch(filename, ['a', 'b'], 10, 20, units=None)
-    assert batch.shape == (10, 2)
-    assert np.allclose(batch[:, 0], tbl['a'].value[10:20])
-    assert np.allclose(batch[:, 1], tbl['b'].value[10:20])
+    for read_func in [read_batch_slice, read_batch]:
+        batch = read_func(filename, ['a', 'b'], slice(10, 20))
+        assert batch.shape == (10, 2)
+        assert np.allclose(batch[:, 0], tbl['a'].value[10:20])
+        assert np.allclose(batch[:, 1], tbl['b'].value[10:20])
 
-    batch = read_batch(filename, ['b', 'c'], 0, 100,
-                       units={'b': u.kpc/u.Myr})
-    assert batch.shape == (100, 2)
-    assert np.allclose(batch[:, 0], tbl['b'].to_value(u.kpc/u.Myr))
-    assert np.allclose(batch[:, 1], tbl['c'].value)
+        batch = read_func(filename, ['b', 'c'], slice(0, 100),
+                          units={'b': u.kpc/u.Myr})
+        assert batch.shape == (100, 2)
+        assert np.allclose(batch[:, 0], tbl['b'].to_value(u.kpc/u.Myr))
+        assert np.allclose(batch[:, 1], tbl['c'].value)
+
+        batch = read_func(filename, ['b', 'c'], slice(0, 100, 2))
+        assert batch.shape == (50, 2)
+
+
+def test_read_batch_idx(tmpdir):
+    filename = str(tmpdir / 'test.hdf5')
+
+    tbl = QTable()
+    tbl['a'] = np.arange(100) * u.kpc
+    tbl['b'] = np.arange(100) * u.km/u.s
+    tbl['c'] = np.arange(100) * u.day
+    tbl.write(filename, path=JokerSamples._hdf5_path, serialize_meta=True)
+
+    for read_func in [read_batch_idx, read_batch]:
+        idx = np.arange(10, 20, 1)
+        batch = read_func(filename, ['a', 'b'], idx, units=None)
+        assert batch.shape == (len(idx), 2)
+        assert np.allclose(batch[:, 0], tbl['a'].value[idx])
+        assert np.allclose(batch[:, 1], tbl['b'].value[idx])
+
+        batch = read_func(filename, ['b', 'c'], idx,
+                          units={'b': u.kpc/u.Myr})
+        assert batch.shape == (len(idx), 2)
+        assert np.allclose(batch[:, 0], tbl['b'].to_value(u.kpc/u.Myr)[idx])
+        assert np.allclose(batch[:, 1], tbl['c'].value[idx])
 
 
 def test_read_random_batch(tmpdir):
@@ -71,9 +99,10 @@ def test_read_random_batch(tmpdir):
     tbl['c'] = np.arange(100) * u.day
     tbl.write(filename, path=JokerSamples._hdf5_path, serialize_meta=True)
 
-    batch = read_random_batch(filename, ['a', 'b'], size=10, units=None)
-    assert batch.shape == (10, 2)
+    for read_func in [read_random_batch, read_batch]:
+        batch = read_func(filename, ['a', 'b'], 10, units=None)
+        assert batch.shape == (10, 2)
 
-    batch = read_random_batch(filename, ['b', 'c'], size=100,
-                              units={'b': u.kpc/u.Myr})
-    assert batch.shape == (100, 2)
+        batch = read_func(filename, ['b', 'c'], 100,
+                          units={'b': u.kpc/u.Myr})
+        assert batch.shape == (100, 2)
