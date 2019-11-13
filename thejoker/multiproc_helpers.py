@@ -3,8 +3,8 @@ import numpy as np
 import tables as tb
 
 # Project
-from ..logging import logger
-from ..samples import JokerSamples
+from .logging import logger
+from .samples import JokerSamples
 from .utils import batch_tasks, read_batch
 
 
@@ -191,14 +191,14 @@ def rejection_sample_helper(joker_helper, prior_samples_file, pool,
     return samples
 
 
-def iterative_sample_helper(joker_helper, prior_samples_file, pool,
-                            random_state,
-                            n_prior_samples=None,
-                            max_posterior_samples=None,
-                            n_linear_samples=1,
-                            return_logprobs=False,
-                            n_batches=None,
-                            randomize_prior_order=False):
+def iterative_rejection_helper(joker_helper, prior_samples_file, pool,
+                               random_state,
+                               n_prior_samples=None,
+                               max_posterior_samples=None,
+                               n_linear_samples=1,
+                               return_logprobs=False,
+                               n_batches=None,
+                               randomize_prior_order=False):
 
     # TODO!
 
