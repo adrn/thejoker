@@ -82,7 +82,8 @@ def table_header_to_units(header_dataset):
     return units
 
 
-def read_batch(prior_samples_file, columns, slice_or_idx, units=None, **kwargs):
+def read_batch(prior_samples_file, columns, slice_or_idx, units=None,
+               random_state=None):
     """
     Single-point interface to all read_batch functions below that infers the
     type of read from the ``slice_or_idx`` argument.
@@ -93,8 +94,24 @@ def read_batch(prior_samples_file, columns, slice_or_idx, units=None, **kwargs):
         Path to an HDF5 file containing prior samples from The Joker.
     columns : `list`, iterable
         A list of string column names to read in to the batch.
-    slice_or_idx : `tuple`, `int`, `numpy.ndarray`
-        This determines what rows are read in to the batch from the prior samples file. If a tuple, this is interpreted as a
+    slice_or_idx : `slice`, `int`, `numpy.ndarray`
+        This determines what rows are read in to the batch from the prior
+        samples file. If a slice or tuple, this is interpreted as a range of
+        contiguous row indices to read. If an integer, this is interpreted as
+        the size used to generate random row indices. If a numpy array, this is
+        interpreted as the row indices to read.
+    units : dict (optional)
+        The desired output units to convert the prior samples to.
+    random_state : `numpy.random.RandomState`
+        Used to generate random row indices if passing an integer (size) in to
+        ``slice_or_idx``. This argument is ignored for other read methods.
+
+    Returns
+    -------
+    batch : `numpy.ndarray`
+        The batch of prior samples, loaded into a numpy array and stripped of
+        units (converted to the specified ``units``). This array will have
+        shape: ``(n_samples, len(columns))``.
     """
     if isinstance(slice_or_idx, tuple):
         # read a contiguous batch of prior samples
@@ -110,7 +127,7 @@ def read_batch(prior_samples_file, columns, slice_or_idx, units=None, **kwargs):
         # read a random batch of samples of size "slice_or_idx"
         batch = read_random_batch(prior_samples_file, columns,
                                   slice_or_idx, units=units,
-                                  **kwargs)
+                                  random_state=random_state)
 
     elif isinstance(slice_or_idx, np.ndarray):
         # read a random batch of samples of size "slice_or_idx"
@@ -118,7 +135,8 @@ def read_batch(prior_samples_file, columns, slice_or_idx, units=None, **kwargs):
                                slice_or_idx, units=units)
 
     else:
-        raise ValueError("TODO: DOH")
+        raise ValueError("Invalid input for slice_or_idx: must be a slice, "
+                         "int, or numpy array.")
 
     return batch
 
