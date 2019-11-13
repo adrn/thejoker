@@ -4,7 +4,7 @@ import astropy.units as u
 import numpy as np
 
 # Project
-from .likelihood_helpers import get_constant_term_design_matrix
+from .likelihood_helpers import get_trend_design_matrix
 
 
 def guess_time_format(time_val):
@@ -62,7 +62,7 @@ def validate_prepare_data(data, prior):
     """
     from .data import RVData
     if isinstance(data, RVData):  # single instance
-        trend_M = get_constant_term_design_matrix(data)
+        trend_M = get_trend_design_matrix(data, None, prior)
         return data, None, trend_M
 
     # Turn a list-like into a dict object:
@@ -112,11 +112,16 @@ def validate_prepare_data(data, prior):
     err = np.concatenate(err) * rv_unit
     ids = np.concatenate(ids)
 
-    # TODO: validate number of unique ids vs. number of v0_offsets in prior
+    # validate number of unique ids vs. number of v0_offsets in prior
+    if prior.v0_offsets is not None:
+        if len(np.unique(ids)) != len(prior.v0_offsets):
+            raise ValueError("Number of data IDs must equal the number of "
+                             "priors on constant offsets specified (i.e. "
+                             "v0_offsets)")
 
     all_data = RVData(t=Time(t, format='mjd', scale='tcb'),
                       rv=rv, rv_err=err)
 
-    trend_M = get_constant_term_design_matrix(all_data, ids)
+    trend_M = get_trend_design_matrix(all_data, ids, prior)
 
     return all_data, ids, trend_M
