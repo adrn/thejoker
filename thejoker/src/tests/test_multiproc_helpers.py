@@ -5,35 +5,12 @@ import numpy as np
 import schwimmbad
 
 # Package
-from ..multiproc_helpers import (get_good_sample_indices, compute_likelihoods,
-                                 sample_indices_to_full_samples, chunk_tasks)
+# from ..multiproc_helpers import (get_good_sample_indices, compute_likelihoods,
+#                                  sample_indices_to_full_samples, chunk_tasks)
 from .helpers import FakeData
 
 
-def test_chunk_tasks():
-    N = 10000
-    start_idx = 1103
-    tasks = chunk_tasks(N, n_batches=16, start_idx=start_idx)
-    assert tasks[0][0][0] == start_idx
-    assert tasks[-1][0][1] == N+start_idx
-
-    # try with an array:
-    tasks = chunk_tasks(N, n_batches=16, start_idx=start_idx,
-                        arr=np.random.random(size=8*N))
-    n_tasks = sum([tasks[i][0].size for i in range(len(tasks))])
-    assert n_tasks == N
-
-
 class TestMultiproc(object):
-
-    # TODO: this is bad to copy pasta from test_likelihood.py
-    def truths_to_nlp(self, truths):
-        # P, M0, ecc, omega
-        P = truths['P'].to(u.day).value
-        M0 = truths['M0'].to(u.radian).value
-        ecc = truths['e']
-        omega = truths['omega'].to(u.radian).value
-        return np.array([P, M0, ecc, omega, 0.])
 
     def setup(self):
         d = FakeData()

@@ -26,30 +26,6 @@ from .src.multiproc_helpers import (get_good_sample_indices,
 __all__ = ['TheJoker']
 
 
-def _marginal_ll_worker(task):
-    """
-    Compute the marginal log-likelihood, i.e. the likelihood integrated over
-    the linear parameters. This is meant to be ``map``ped using a processing
-    pool` within the functions below and is not supposed to be in the
-    public API.
-
-    Parameters
-    ----------
-    task : iterable
-        An array containing the indices of samples to be operated on, the
-        filename containing the prior samples, and the data.
-
-    Returns
-    -------
-    ll : `numpy.ndarray`
-        Array of log-likelihood values.
-
-    """
-    chunk, i, joker_helper = task
-    ll = joker_helper.batch_marginal_ln_likelihood(chunk)
-    return np.array(ll)
-
-
 class TheJoker:
     """A custom Monte-Carlo sampler for two-body systems.
 

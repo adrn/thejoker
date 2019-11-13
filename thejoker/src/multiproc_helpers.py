@@ -5,63 +5,47 @@ import tables as tb
 
 # Project
 from ..logging import logger
+from ..data_helpers import _validate_data
 from .fast_likelihood import CJokerHelper
+from .utils import batch_tasks, read_batch
 
 __all__ = ['compute_likelihoods', 'get_good_sample_indices',
            'sample_indices_to_full_samples']
 
 
-def chunk_tasks(n_tasks, n_batches, arr=None, args=None, start_idx=0):
-    """Split the tasks into some number of batches to sent out to MPI workers.
+def marginal_ln_likelihood_worker(task):
+    (start, stop), task_id, prior_samples_file, joker_helper = task
 
-    Parameters
-    ----------
-    n_tasks : int
-        The total number of tasks to divide.
-    n_batches : int
-        The number of batches to split the tasks into. Often, you may want to do
-        ``n_batches=pool.size`` for equal sharing amongst MPI workers.
-    arr : iterable (optional)
-        Instead of returning indices that specify the batches, you can also
-        directly split an array into batches.
-    args : iterable (optional)
-        Other arguments to add to each task.
-    start_idx : int (optional)
-        What index in the tasks to start from?
+    # read this batch of the prior samples
+    batch = read_batch(prior_samples_file, joker_helper.packed_order,
+                       start, stop, units=joker_helper.internal_units)
 
-    """
-    if args is None:
-        args = []
-    args = list(args)
+    # memoryview is returned
+    ll = joker_helper.batch_marginal_ln_likelihood(batch)
 
-    tasks = []
-    if n_batches > 0 and n_tasks > n_batches:
-        # chunk by the number of batches, often the pool size
-        base_chunk_size = n_tasks // n_batches
-        rmdr = n_tasks % n_batches
+    return np.array(ll)
 
-        i1 = start_idx
-        for i in range(n_batches):
-            i2 = i1 + base_chunk_size
-            if i < rmdr:
-                i2 += 1
 
-            if arr is None:  # store indices
-                tasks.append([(i1, i2), i1] + args)
+def marginal_ln_likelihood_helper(data, prior, prior_samples_file, pool,
+                                  n_batches=None):
+    all_data, ids, trend_M = _validate_data(data, prior)
+    joker_helper = CJokerHelper(data, prior, trend_M, None)
 
-            else:  # store sliced array
-                tasks.append([arr[i1:i2], i1] + args)
+    with tb.open_file(prior_samples_file, mode='r') as f:
+        n_samples = f.root.samples.shape[0]
 
-            i1 = i2
+    if n_batches is None:
+        n_batches = max(1, pool.size)
 
-    else:
-        if arr is None:  # store indices
-            tasks.append([(start_idx, n_tasks+start_idx), start_idx] + args)
+    tasks = batch_tasks(n_samples, n_batches=n_batches,
+                        args=(prior_samples_file, joker_helper))
 
-        else:  # store sliced array
-            tasks.append([arr[start_idx:n_tasks+start_idx], start_idx] + args)
+    all_ll = []
+    for res in pool.map(marginal_ln_likelihood_worker, tasks):
+        all_ll.append(res)
 
-    return tasks
+    return np.concatenate(all_ll)
+
 
 
 def _marginal_ll_worker(task):
@@ -83,16 +67,16 @@ def _marginal_ll_worker(task):
         Array of log-likelihood values.
 
     """
-    start_stop, chunk_index, prior_cache_file, joker_helper = task
+    start_stop, batch_index, prior_cache_file, joker_helper = task
 
-    # read a chunk of the prior samples
+    # read a batch of the prior samples
     with h5py.File(prior_cache_file, 'r') as f:
-        chunk = np.array(f['samples'][start_stop[0]:start_stop[1]])
+        batch = np.array(f['samples'][start_stop[0]:start_stop[1]])
 
-    chunk = chunk.astype(np.float64)
+    batch = batch.astype(np.float64)
 
     # memoryview is returned
-    ll = joker_helper.batch_marginal_ln_likelihood(chunk)
+    ll = joker_helper.batch_marginal_ln_likelihood(batch)
     return np.array(ll)
 
 
@@ -145,7 +129,7 @@ def compute_likelihoods(n_prior_samples, prior_cache_file, start_idx, data,
     args = [prior_cache_file, joker_helper]
     if n_batches is None:
         n_batches = pool.size
-    tasks = chunk_tasks(n_prior_samples, n_batches=n_batches, args=args,
+    tasks = batch_tasks(n_prior_samples, n_batches=n_batches, args=args,
                         start_idx=start_idx)
 
     results = [r for r in pool.map(_marginal_ll_worker, tasks)]
@@ -194,30 +178,30 @@ def _sample_vector_worker(task):
         is not supposed to be in the public API.
     """
 
-    (idx, chunk_index, prior_cache_file, joker_helper, global_seed,
+    (idx, batch_index, prior_cache_file, joker_helper, global_seed,
      return_logprobs) = task
 
     if global_seed is not None:
-        seed = global_seed + chunk_index
+        seed = global_seed + batch_index
         rnd = np.random.RandomState(seed)
-        logger.log(0, "worker with chunk {} has seed {}".format(idx[0], seed))
+        logger.log(0, "worker with batch {} has seed {}".format(idx[0], seed))
 
     else:
         rnd = np.random.RandomState()
-        logger.log(0, "worker with chunk {} not seeded".format(idx[0]))
+        logger.log(0, "worker with batch {} not seeded".format(idx[0]))
 
-    # read a chunk of the prior samples
+    # read a batch of the prior samples
     with h5py.File(prior_cache_file, 'r') as f:
         tmp = np.zeros(len(f['samples']), dtype=bool)
         tmp[idx] = True
-        chunk = np.array(f['samples'][tmp, :])
+        batch = np.array(f['samples'][tmp, :])
 
         if return_logprobs:
             ln_prior = np.array(f['ln_prior_probs'][tmp])
 
-    chunk = chunk.astype(np.float64)
+    batch = batch.astype(np.float64)
 
-    pars = joker_helper.batch_get_posterior_samples(chunk, rnd, return_logprobs)
+    pars = joker_helper.batch_get_posterior_samples(batch, rnd, return_logprobs)
 
     if return_logprobs:
         pars = np.hstack((pars[:, :-1], ln_prior[:, None], pars[:, -1:]))
@@ -269,7 +253,7 @@ def sample_indices_to_full_samples(good_samples_idx, prior_cache_file, data,
     args = [prior_cache_file, joker_helper, global_seed, return_logprobs]
     if n_batches is None:
         n_batches = pool.size
-    tasks = chunk_tasks(n_samples, n_batches=n_batches, arr=good_samples_idx,
+    tasks = batch_tasks(n_samples, n_batches=n_batches, arr=good_samples_idx,
                         args=args)
 
     samples = [r for r in pool.map(_sample_vector_worker, tasks)]
@@ -284,54 +268,3 @@ def sample_indices_to_full_samples(good_samples_idx, prior_cache_file, data,
 
     else:
         return samples
-
-
-# -----------------------------------------------------------------------------
-from ..data_helpers import _validate_data
-
-
-def read_chunk(prior_samples_file, start, stop):
-    # TODO: units and shit!
-
-    # TODO: get order from elsewhere...like set on helper?
-    names = ['P', 'e', 'omega', 'M0']
-
-    chunk = np.zeros((stop-start, len(names)))
-    with tb.open_file(prior_samples_file, mode='r') as f:
-        for i, name in enumerate(names):
-            chunk[:, i] = f.root.samples.read(start, stop, field=name)
-
-    return chunk
-
-
-def marginal_ln_likelihood_worker(task):
-    start_stop, task_id, prior_samples_file, joker_helper = task
-
-    # read this chunk of the prior samples
-    chunk = read_chunk(prior_samples_file, *start_stop)
-
-    # memoryview is returned
-    ll = joker_helper.batch_marginal_ln_likelihood(chunk)
-
-    return np.array(ll)
-
-
-def marginal_ln_likelihood_helper(data, prior, prior_samples_file, pool,
-                                  n_batches=None):
-    all_data, ids, trend_M = _validate_data(data, prior)
-    joker_helper = CJokerHelper(data, prior, trend_M, None)
-
-    with tb.open_file(prior_samples_file, mode='r') as f:
-        n_samples = f.root.samples.shape[0]
-
-    if n_batches is None:
-        n_batches = max(1, pool.size)
-
-    tasks = chunk_tasks(n_samples, n_batches=n_batches,
-                        args=(prior_samples_file, joker_helper))
-
-    all_ll = []
-    for res in pool.map(marginal_ln_likelihood_worker, tasks):
-        all_ll.append(res)
-
-    return np.concatenate(all_ll)

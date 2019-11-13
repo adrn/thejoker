@@ -280,14 +280,14 @@ class JokerPrior:
                                      "'{}'.".format(type(pars)))
 
         # Set the number of polynomial trend parameters
-        self.poly_trend, v_names = _validate_polytrend(poly_trend)
+        self.poly_trend, self._v_trend_names = _validate_polytrend(poly_trend)
 
         # Store the names of the default parameters, used for validating input:
         # Note: these are *not* the units assumed internally by the code, but
         # are only used to validate that the units for each parameter are
         # equivalent to these
         self._nonlinear_pars = _get_nonlinear_equiv_units()
-        self._linear_pars = _get_linear_equiv_units(v_names)
+        self._linear_pars = _get_linear_equiv_units(self._v_trend_names)
         all_pars = {**self._nonlinear_pars, **self._linear_pars}
 
         # At this point, pars must be a dictionary: validate that all

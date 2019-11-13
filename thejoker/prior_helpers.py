@@ -88,10 +88,13 @@ class FixedCompanionMass(pm.Normal):
         super().__init__(mu=mu, sigma=sigma)
 
 
+def _get_v_trend_names(poly_trend):
+    return ['v{0}'.format(i) for i in range(poly_trend)]
+
+
 def _validate_polytrend(poly_trend):
     poly_trend = int(poly_trend)
-    v_names = ['v{0}'.format(i) for i in range(poly_trend)]
-    return poly_trend, v_names
+    return poly_trend, _get_v_trend_names(poly_trend)
 
 
 def _get_nonlinear_equiv_units():

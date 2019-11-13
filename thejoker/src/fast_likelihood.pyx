@@ -59,7 +59,6 @@ cdef void get_ivar(double[::1] ivar, double s, double[::1] new_ivar):
     for i in range(ivar.shape[0]):
         new_ivar[i] = ivar[i] / (1 + s*s * ivar[i])
 
-# TODO: now that I have the FixedCompanionMass distribution, check for that and use it to set fixed_K_prior or whatever. And read sigma from that distr rather than from prior itself...
 
 cdef class CJokerHelper:
     cdef:
@@ -110,6 +109,8 @@ cdef class CJokerHelper:
         public object rnd
         public object prior
         public object data
+        public object internal_units
+        public object packed_order
 
     def __reduce__(self):
         return (CJokerHelper, (self.data, self.prior,
@@ -120,6 +121,23 @@ cdef class CJokerHelper:
 
         self.prior = prior
         self.data = data
+
+        # Internal units needed for calculations below
+        self.internal_units = {}
+        self.internal_units['P'] = u.day
+        self.internal_units['e'] = u.one
+        self.internal_units['omega'] = u.radian
+        self.internal_units['M0'] = u.radian
+        self.internal_units['s'] = self.data.rv.unit
+        self.internal_units['K'] = self.data.rv.unit
+        for i, name in enumerate(prior._v_trend_names):
+            self.internal_units[name] = self.data.rv.unit / u.day ** i
+
+        # The assumed order of the nonlinear parameters used below to read from
+        # packed samples array
+        # NOTE: if this order is changed, make sure to change the indexing order
+        # at the two other NOTE's below
+        self.packed_order = ['P', 'e', 'omega', 'M0', 's']
 
         # Counting:
         self.n_times = len(data)  # number of data pints
@@ -180,20 +198,20 @@ cdef class CJokerHelper:
         else:
             self.fixed_K_prior = 1
 
-        v_unit = data.rv.unit
         for i, name in enumerate(prior._linear_pars.keys()):
             dist = prior.model[name].distribution
             _unit = getattr(prior.model[name], xu.UNIT_ATTR_NAME)
-            self.mu[i] = (dist.mean.eval() * _unit).to_value(v_unit)
+            to_unit = self.internal_units[name]
+            self.mu[i] = (dist.mean.eval() * _unit).to_value(to_unit)
 
             if name == 'K' and self.fixed_K_prior == 0:
                 # TODO: here's the major hack
-                self.sigma_K0 = dist._sigma_K0.to_value(v_unit)
+                self.sigma_K0 = dist._sigma_K0.to_value(to_unit)
                 self.P0 = dist._P0.to_value(getattr(prior.pars['P'],
                                                     xu.UNIT_ATTR_NAME))
-                self.max_K = dist._max_K.to_value(v_unit)
+                self.max_K = dist._max_K.to_value(to_unit)
             else:
-                self.Lambda[i] = (dist.sd.eval() * _unit).to_value(v_unit) ** 2
+                self.Lambda[i] = (dist.sd.eval() * _unit).to_value(to_unit) ** 2
         # ---------------------------------------------------------------------
 
     cdef int make_AAinv(self):
@@ -387,7 +405,8 @@ cdef class CJokerHelper:
             double[::1] ll = np.full(n_samples, np.nan)
 
         for n in range(n_samples):
-            # TODO: need to make sure the chunk is always in this order!
+            # NOTE: need to make sure the chunk is always in this order! If this
+            # is changed, change "packed_order" above
             P = chunk[n, 0]
             e = chunk[n, 1]
             om = chunk[n, 2]
@@ -443,13 +462,13 @@ cdef class CJokerHelper:
                                                    self.n_linear))
 
         for n in range(n_samples):
-            # TODO: need to make sure the chunk is always in this order!
+            # NOTE: need to make sure the chunk is always in this order! If this
+            # is changed, change "packed_order" above
             P = chunk[n, 0]
             e = chunk[n, 1]
             om = chunk[n, 2]
             M0 = chunk[n, 3]
 
-            # TODO: audit order of chunk[...]'s and what c_rv_from_elements
             c_rv_from_elements(&self.t[0], &self.M_T[0, 0], self.n_times,
                                P, 1., e, om, M0, self.t0,
                                anomaly_tol, anomaly_maxiter)
