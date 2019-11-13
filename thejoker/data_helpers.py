@@ -4,9 +4,7 @@ import astropy.units as u
 import numpy as np
 
 # Project
-from .src.likelihood_helpers import get_constant_term_design_matrix
-
-__all__ = ['guess_time_format']
+from .likelihood_helpers import get_constant_term_design_matrix
 
 
 def guess_time_format(time_val):
@@ -55,7 +53,7 @@ def guess_time_format(time_val):
         raise ValueError(err_msg)
 
 
-def _validate_data(data, prior):
+def validate_prepare_data(data, prior):
     """Internal function.
 
     Used to take an input ``RVData`` instance, or a list/dict of ``RVData``

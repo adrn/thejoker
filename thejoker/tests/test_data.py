@@ -22,7 +22,7 @@ except ImportError:
 
 # Package
 from ..data import RVData
-from ..data_helpers import guess_time_format, _validate_data
+from ..data_helpers import guess_time_format, validate_prepare_data
 
 
 def test_guess_time_format():
@@ -253,20 +253,20 @@ def test_multi_data():
     data3 = RVData(raw3['t_obj'], raw3['rv'], raw3['err'])
 
     # Object should return input:
-    multi_data, ids, trend_M = _validate_data(data1)
+    multi_data, ids, trend_M = validate_prepare_data(data1)
     assert np.allclose(multi_data.rv.value, data1.rv.value)
     assert ids is None
 
     # Three valid objects as a list:
     datas = [data1, data2, data3]
-    multi_data, ids, trend_M = _validate_data(datas)
+    multi_data, ids, trend_M = validate_prepare_data(datas)
     assert len(np.unique(ids)) == 3
     assert len(multi_data) == sum([len(d) for d in datas])
     assert 0 in ids and 1 in ids and 2 in ids
 
     # Three valid objects with names:
     datas = {'apogee': data1, 'lamost': data2, 'weave': data3}
-    multi_data, ids, trend_M = _validate_data(datas)
+    multi_data, ids, trend_M = validate_prepare_data(datas)
     assert len(np.unique(ids)) == 3
     assert len(multi_data) == sum([len(d) for d in datas.values()])
     assert 'apogee' in ids and 'lamost' in ids and 'weave' in ids
@@ -274,7 +274,7 @@ def test_multi_data():
     # Check that this fails if one has a covariance matrix
     data_cov = RVData(raw3['t_obj'], raw3['rv'], raw3['cov'])
     with pytest.raises(NotImplementedError):
-        _validate_data({'apogee': data1, 'weave': data_cov})
+        validate_prepare_data({'apogee': data1, 'weave': data_cov})
 
     with pytest.raises(NotImplementedError):
-        _validate_data([data1, data_cov])
+        validate_prepare_data([data1, data_cov])
