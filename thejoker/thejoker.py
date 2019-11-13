@@ -207,7 +207,7 @@ class TheJoker:
         from .multiproc_helpers import iterative_rejection_helper
         joker_helper = self._make_joker_helper(data)  # also validates data
 
-        # TODO: left of here in this module
+        # TODO: left off here in this module
 
         # The "magic numbers" below control how fast the iterative batches grow
         # in size, and the maximum number of iterations

@@ -5,7 +5,7 @@ import tables as tb
 # Project
 from .logging import logger
 from .samples import JokerSamples
-from .utils import batch_tasks, read_batch
+from .utils import batch_tasks, read_batch, table_contains_column
 
 
 def run_worker(worker, pool, prior_samples_file, task_args=(), n_batches=None,
@@ -144,6 +144,14 @@ def rejection_sample_helper(joker_helper, prior_samples_file, pool,
     with tb.open_file(prior_samples_file, mode='r') as f:
         n_total_samples = f.root[JokerSamples._hdf5_path].shape[0]
 
+        if return_logprobs:
+            if not table_contains_column(f.root, 'ln_prior'):
+                raise RuntimeError("return_logprobs=True but ln_prior values "
+                                   "not found in prior cache: make sure you "
+                                   "generate prior samples with prior.sample "
+                                   "(..., return_logprobs=True) before saving "
+                                   "the prior samples.")
+
     if n_prior_samples is None:
         n_prior_samples = n_total_samples
     elif n_prior_samples > n_total_samples:
@@ -178,7 +186,6 @@ def rejection_sample_helper(joker_helper, prior_samples_file, pool,
         full_samples_idx = idx[good_samples_idx]
     else:
         full_samples_idx = good_samples_idx
-    samples_ll = lls[good_samples_idx]
 
     # generate linear parameters
     samples = make_full_samples(joker_helper, prior_samples_file, pool,
@@ -186,7 +193,12 @@ def rejection_sample_helper(joker_helper, prior_samples_file, pool,
                                 n_linear_samples=n_linear_samples,
                                 n_batches=n_batches)
 
-    # TODO: deal with return_logprobs=True case...
+    if return_logprobs:
+        samples['ln_likelihood'] = lls[good_samples_idx]
+
+        with tb.open_file(prior_samples_file, mode='r') as f:
+            data = f.root[JokerSamples._hdf5_path]
+            samples['ln_prior'] = data.read_coordinates(full_samples_idx)
 
     return samples
 

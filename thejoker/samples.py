@@ -53,6 +53,10 @@ class JokerSamples:
         self._valid_units = {**_get_nonlinear_equiv_units(),
                              **_get_linear_equiv_units(v_trend_names)}
 
+        # log-prior and log-likelihood values are also valid:
+        self._valid_units['ln_prior'] = u.one
+        self._valid_units['ln_likelihood'] = u.one
+
         self.tbl.meta['poly_trend'] = poly_trend
         self.tbl.meta['t0'] = t0
         for k, v in kwargs.items():
@@ -303,12 +307,6 @@ class JokerSamples:
         filename : str
             The output filename.
         """
-        # TODO: To get out the table metadata / units:
-        # from astropy.table import meta
-        # test = meta.get_header_from_yaml(
-        #     h.decode('utf-8') for h in f['__astropy_table__.__table_column_meta__'])
-        # h5file.root.samples.append()
-
         ext = os.path.splitext(filename)[1]
         if ext not in ['.hdf5', '.h5']:
             raise NotImplementedError("We currently only support writing to "
