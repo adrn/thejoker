@@ -106,17 +106,15 @@ cdef class CJokerHelper:
         public double[::1] a
 
         # Random number generation
-        public object rnd
         public object prior
         public object data
         public object internal_units
         public object packed_order
 
     def __reduce__(self):
-        return (CJokerHelper, (self.data, self.prior,
-                               np.array(self.trend_M), self.rnd))
+        return (CJokerHelper, (self.data, self.prior, np.array(self.trend_M)))
 
-    def __init__(self, data, prior, double[:, ::1] trend_M, rnd):
+    def __init__(self, data, prior, double[:, ::1] trend_M):
         cdef int i, n
 
         self.prior = prior
@@ -151,9 +149,6 @@ cdef class CJokerHelper:
         self.rv = np.ascontiguousarray(data.rv.value, dtype='f8')
         self.ivar = np.ascontiguousarray(data.ivar.value, dtype='f8')
         self.trend_M = trend_M
-
-        # Random numbers:
-        self.rnd = rnd
 
         # ivar with jitter included
         self.s_ivar = np.zeros(self.n_times, dtype='f8')
@@ -431,7 +426,8 @@ cdef class CJokerHelper:
         return ll
 
     cpdef batch_get_posterior_samples(self, double[:, ::1] chunk,
-                                      int n_linear_samples_per):
+                                      int n_linear_samples_per,
+                                      object random_state):
         """TODO:
 
         Parameters
@@ -487,7 +483,7 @@ cdef class CJokerHelper:
             # TODO: FIXME: this calls back to numpy at the Python layer
             # - use https://github.com/bashtage/randomgen instead?
             # a and Ainv are populated by the likelihood_worker()
-            linear_pars = self.rnd.multivariate_normal(
+            linear_pars = random_state.multivariate_normal(
                 self.a, np.linalg.inv(self.Ainv), size=n_linear_samples_per)
 
             for j in range(n_linear_samples_per):
