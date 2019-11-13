@@ -9,11 +9,29 @@ from ..data_helpers import _validate_data
 from .fast_likelihood import CJokerHelper
 from .utils import batch_tasks, read_batch
 
-__all__ = ['compute_likelihoods', 'get_good_sample_indices',
-           'sample_indices_to_full_samples']
+# __all__ = ['compute_likelihoods', 'get_good_sample_indices',
+#            'sample_indices_to_full_samples']
 
 
 def marginal_ln_likelihood_worker(task):
+    """
+    Compute the marginal log-likelihood, i.e. the likelihood integrated over
+    the linear parameters. This is meant to be ``map``ped using a processing
+    pool` within the functions below and is not supposed to be in the
+    public API.
+
+    Parameters
+    ----------
+    task : iterable
+        An array containing the indices of samples to be operated on, the
+        filename containing the prior samples, and the data.
+
+    Returns
+    -------
+    ll : `numpy.ndarray`
+        Array of log-likelihood values.
+
+    """
     (start, stop), task_id, prior_samples_file, joker_helper = task
 
     # read this batch of the prior samples
@@ -45,102 +63,6 @@ def marginal_ln_likelihood_helper(data, prior, prior_samples_file, pool,
         all_ll.append(res)
 
     return np.concatenate(all_ll)
-
-
-
-def _marginal_ll_worker(task):
-    """
-    Compute the marginal log-likelihood, i.e. the likelihood integrated over
-    the linear parameters. This is meant to be ``map``ped using a processing
-    pool` within the functions below and is not supposed to be in the
-    public API.
-
-    Parameters
-    ----------
-    task : iterable
-        An array containing the indices of samples to be operated on, the
-        filename containing the prior samples, and the data.
-
-    Returns
-    -------
-    ll : `numpy.ndarray`
-        Array of log-likelihood values.
-
-    """
-    start_stop, batch_index, prior_cache_file, joker_helper = task
-
-    # read a batch of the prior samples
-    with h5py.File(prior_cache_file, 'r') as f:
-        batch = np.array(f['samples'][start_stop[0]:start_stop[1]])
-
-    batch = batch.astype(np.float64)
-
-    # memoryview is returned
-    ll = joker_helper.batch_marginal_ln_likelihood(batch)
-    return np.array(ll)
-
-
-def compute_likelihoods(n_prior_samples, prior_cache_file, start_idx, data,
-                        prior, trend_M, pool, n_batches=None):
-    """
-    Return the indices of 'good' samples by computing the log-likelihood
-    for ``n_prior_samples`` prior samples and doing rejection sampling.
-
-    For speed when parallelizing, this accepts a filename for an HDF5
-    that contains the prior samples, splits up the samples based on the
-    number of processes / MPI workers, and only distributes the indices
-    for each worker to read. This limits the amount of data that needs
-    to be passed around.
-
-    Parameters
-    ----------
-    n_prior_samples : int
-        The number of prior samples to use.
-    prior_cache_file : str
-        Path to an HDF5 file containing the prior samples.
-    start_idx : int
-        Index to start reading prior samples from in the prior cache file.
-    data : `~thejoker.data.RVData`
-        An instance of ``RVData`` with the data we're modeling.
-    joker_params : `~thejoker.sampler.params.JokerParams`
-        A specification of the parameters to use.
-    pool : `~schwimmbad.pool.BasePool` or subclass
-        An instance of a processing pool - must have a ``.map()`` method.
-    n_batches : int (optional)
-        How many batches to divide the work into. Defaults to ``pool.size``.
-
-    Returns
-    -------
-    samples_idx : `numpy.ndarray`
-        An array of integers for the prior samples that pass
-        rejection sampling.
-
-    TODO
-    ----
-    - The structure of this function is ok for most cluster-like machines
-        up to ~2**28 samples or so. Then it becomes an issue that I keep
-        the likelihood values in memory. We may want to be able to cache
-        the likelihood values instead?
-
-    """
-    # TODO: get trend_M from prior
-    joker_helper = CJokerHelper(data, prior, trend_M)
-
-    args = [prior_cache_file, joker_helper]
-    if n_batches is None:
-        n_batches = pool.size
-    tasks = batch_tasks(n_prior_samples, n_batches=n_batches, args=args,
-                        start_idx=start_idx)
-
-    results = [r for r in pool.map(_marginal_ll_worker, tasks)]
-    marg_ll = np.concatenate(results)
-
-    if len(marg_ll) != n_prior_samples:
-        raise RuntimeError("Unexpected failure: number of likelihoods "
-                           "returned from workers does not match number sent "
-                           "out to workers.")
-
-    return marg_ll
 
 
 def get_good_sample_indices(marg_ll, seed=None):

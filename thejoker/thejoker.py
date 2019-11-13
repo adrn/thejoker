@@ -129,38 +129,30 @@ class TheJoker:
 
         return ll
 
-    def rejection_sample(self, data, n_prior_samples,
+    def rejection_sample(self, data, n_prior_samples=None, prior_samples=None,
                          max_posterior_samples=None,
-                         n_linear_samples_per=1, return_logprobs=False):
+                         n_linear_samples_per=1, return_logprobs=False,
+                         n_batches=None):
         """Run the sampler in memory
         """
         if max_posterior_samples is None:
             max_posterior_samples = n_prior_samples
 
+        if prior_samples is None and n_prior_samples is None:
+            raise ValueError("TODO:...")
+
+        # TODO: if n_prior_samples and prior_samples, only read that number of samples
+
         # Generate prior samples
         prior_samples = self.prior.sample(size=n_prior_samples)
 
-        # TODO: validate data vs. v0_offsets
-        all_data, ids, trend_M = _validate_data(data)
-
-        helper = CJokerHelper(data, self.prior, trend_M, self.random_state)
-
-        chunk, units = prior_samples.pack(units={'s': data.rv.unit})
-        ll = helper.batch_marginal_ln_likelihood(chunk)
-        ll = np.array(ll)
-
-        uu = self.random_state.uniform(size=ll.size)
-        mask = np.exp(ll - ll.max()) > uu
-
-        chunk2 = chunk[mask]
-        full_samples, ll = helper.batch_get_posterior_samples(
-            chunk2, n_linear_samples_per)
-
-        # TODO: hack
-        units['K'] = data.rv.unit
-        units['v0'] = data.rv.unit
-        samples = JokerSamples.unpack(full_samples, units,
-                                      self.prior.poly_trend, t0=data.t0)
+        with NamedTemporaryFile(mode='r+', suffix='.hdf5',
+                                dir=self.tempfile_path) as f:
+            # write samples to tempfile
+            prior_samples.write(f.name, overwrite=True)
+            samples = rejection_sample_helper(data, self.prior, f.name,
+                                              pool=self.pool,
+                                              n_batches=n_batches)
 
         return samples
 
