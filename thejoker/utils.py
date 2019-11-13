@@ -1,14 +1,19 @@
 """Miscellaneous utilities"""
 
+# Standard library
+import inspect
+from tempfile import NamedTemporaryFile
+
 # Third-party
 import astropy.units as u
 from astropy.table.meta import get_header_from_yaml
 from astropy.io.misc.hdf5 import meta_path
+from astropy.utils.decorators import wraps
 import numpy as np
 import tables as tb
 
 # Package
-from ..samples import JokerSamples
+from .samples import JokerSamples
 
 __all__ = ['batch_tasks', 'table_header_to_units', 'read_batch']
 
@@ -204,3 +209,39 @@ def read_random_batch(prior_samples_file, columns, size, units=None,
         idx = random_state.randint(0, f.root[path].shape[0], size=size)
 
     return read_batch_idx(prior_samples_file, columns, idx=idx, units=units)
+
+
+def tempfile_decorator(func):
+    wrapped_signature = inspect.signature(func)
+    func_args = list(wrapped_signature.parameters.keys())
+    if 'prior_samples' not in func_args:
+        raise ValueError("TODO: cant decorate")
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        args = list(args)
+        prior_samples = kwargs.get('prior_samples',
+                                   args.pop(func_args.index('prior_samples')))
+
+        if not isinstance(prior_samples, str):
+            if not isinstance(prior_samples, JokerSamples):
+                raise TypeError("prior_samples must either be a string "
+                                "filename specifying a cache file contining "
+                                "prior samples, or must be a JokerSamples "
+                                f"instance, not: {type(prior_samples)}")
+
+            with NamedTemporaryFile(mode='r+', suffix='.hdf5') as f:
+                # write samples to tempfile and recursively call this method
+                prior_samples.write(f.name, overwrite=True)
+                kwargs['prior_samples'] = f.name
+                func_return = func(*args, **kwargs)
+
+        else:
+            # TODO: it's a string, so it's probably a filename, but we should
+            # validate that!
+            kwargs['prior_samples'] = prior_samples
+            func_return = func(*args, **kwargs)
+
+        return func_return
+
+    return wrapper

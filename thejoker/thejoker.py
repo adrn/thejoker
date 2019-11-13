@@ -5,8 +5,6 @@
 
 # Standard library
 import os
-import sys
-from tempfile import NamedTemporaryFile
 
 # Third-party
 import astropy.units as u
@@ -16,14 +14,17 @@ import numpy as np
 # Project
 from .logging import logger
 from .data import RVData
-from .data_helpers import _validate_data
+from .data_helpers import validate_prepare_data
 from .prior import JokerPrior
 from .samples import JokerSamples
 from .src.fast_likelihood import CJokerHelper
-from .src.multiproc_helpers import (get_good_sample_indices,
-                                    sample_indices_to_full_samples)
+from .utils import tempfile_decorator
 
 __all__ = ['TheJoker']
+
+
+_data_doc = "The radial velocity data."
+_prior_samples_doc = "TODO"
 
 
 class TheJoker:
@@ -91,16 +92,22 @@ class TheJoker:
         os.makedirs(self._tempfile_path, exist_ok=True)
         return self._tempfile_path
 
-    def marginal_ln_likelihood(self, prior_samples, data, n_batches=None):
-        """
+    def _make_joker_helper(self, data):
+        all_data, ids, trend_M = validate_prepare_data(data, self.prior)
+        joker_helper = CJokerHelper(data, self.prior, trend_M)
+        return joker_helper
+
+    @tempfile_decorator
+    def marginal_ln_likelihood(self, data, prior_samples, n_batches=None):
+        f"""
         Compute the marginal log-likelihood at each of the input prior samples.
 
         Parameters
         ----------
-        prior_samples : str, `thejoker.JokerSamples`
-            The input prior samples.
         data : `thejoker.RVData`, iterable, dict
-            The radial velocity data to compute the likelihood with.
+            {_data_doc}
+        prior_samples : str, `thejoker.JokerSamples`
+            {_prior_samples_doc}
 
         Returns
         -------
@@ -108,124 +115,18 @@ class TheJoker:
             The marginal log-likelihood computed at the location of each prior
             sample.
         """
-        from .src.multiproc_helpers import marginal_ln_likelihood_helper
+        from .multiproc_helpers import marginal_ln_likelihood_helper
+        joker_helper = self._make_joker_helper(data)  # also validates data
+        return marginal_ln_likelihood_helper(joker_helper, prior_samples,
+                                             self.pool, n_batches=n_batches)
 
-        if not isinstance(prior_samples, str):
-            if not isinstance(prior_samples, JokerSamples):
-                raise TypeError("prior_samples must either be a string "
-                                "filename specifying a cache file contining "
-                                "prior samples, or must be a JokerSamples "
-                                f"instance, not: {type(prior_samples)}")
-
-            with NamedTemporaryFile(mode='r+', suffix='.hdf5',
-                                    dir=self.tempfile_path) as f:
-                # write samples to tempfile and recursively call this method
-                prior_samples.write(f.name, overwrite=True)
-                ll = self.marginal_ln_likelihood(f.name, data)
-
-        else:
-            ll = marginal_ln_likelihood_helper(data, self.prior, prior_samples,
-                                               self.pool, n_batches=n_batches)
-
-        return ll
-
-    def rejection_sample(self, data, n_prior_samples=None, prior_samples=None,
+    def rejection_sample(self, data, prior_samples,
+                         n_prior_samples=None,
                          max_posterior_samples=None,
-                         n_linear_samples_per=1, return_logprobs=False,
-                         n_batches=None):
-        """Run the sampler in memory
-        """
-        if max_posterior_samples is None:
-            max_posterior_samples = n_prior_samples
-
-        if prior_samples is None and n_prior_samples is None:
-            raise ValueError("TODO:...")
-
-        # TODO: if n_prior_samples and prior_samples, only read that number of samples
-
-        # Generate prior samples
-        prior_samples = self.prior.sample(size=n_prior_samples)
-
-        with NamedTemporaryFile(mode='r+', suffix='.hdf5',
-                                dir=self.tempfile_path) as f:
-            # write samples to tempfile
-            prior_samples.write(f.name, overwrite=True)
-            samples = rejection_sample_helper(data, self.prior, f.name,
-                                              pool=self.pool,
-                                              n_batches=n_batches)
-
-        return samples
-
-    def _rejection_sample_from_cache(self, data, n_prior_samples, max_n_samples,
-                                     cache_file, start_idx, seed,
-                                     return_logprobs=False):
-        """Perform The Joker's rejection sampling on a cache file containing
-        prior samples. This is meant to be used internally.
-        """
-
-        # Get indices of good samples from the cache file
-        # TODO: I have some implementation questions about whether this should
-        #   return a boolean array (in which case I need to process all
-        #   likelihood values) or an array of integers...Right now,
-        #   _marginal_ll_worker has to return the values because we then compare
-        #   with the maximum value of the likelihood
-        marg_lls = compute_likelihoods(n_prior_samples, cache_file, start_idx,
-                                       data, self.params, pool=self.pool,
-                                       n_batches=self.n_batches)
-        good_samples_idx = get_good_sample_indices(marg_lls, seed=seed)
-
-        if len(good_samples_idx) == 0:
-            logger.error("Failed to find any good samples!")
-            self.pool.close()
-            sys.exit(1)
-
-        n_good = len(good_samples_idx)
-        s_or_not = 's' if n_good > 1 else ''
-        logger.info("{0} good sample{1} after rejection sampling"
-                    .format(n_good, s_or_not))
-
-        if max_n_samples is None:
-            max_n_samples = n_good
-
-        # For samples that pass the rejection step, we now have their indices
-        # in the prior cache file. Here, we read the actual values:
-        result = sample_indices_to_full_samples(
-            good_samples_idx, cache_file, data, self.params, max_n_samples,
-            pool=self.pool, global_seed=seed, return_logprobs=return_logprobs)
-
-        return result
-
-    def _validate_prior_cache(self, n_prior_samples, prior_cache_file):
-        """Internal method used to either validate the prior cache file, or
-        create one based on the number of samples input.
-        """
-
-        if n_prior_samples is None and prior_cache_file is None:
-            raise ValueError("You either have to specify the number of prior "
-                             "samples to generate, or a path to an HDF5 file "
-                             "containing cached prior samples.")
-
-        if prior_cache_file is not None:
-            # read prior units from cache file
-            with h5py.File(prior_cache_file, 'r') as f:
-                if n_prior_samples is None:
-                    n_prior_samples = len(f['samples'])
-
-                # TODO: also validate keys in cache?
-
-            cache_exists = True
-            logger.log(1, "Prior cache file found and validated.")
-
-        else:
-            cache_exists = False
-            logger.log(1, "Prior cache file not found or invalid.")
-
-        return n_prior_samples, cache_exists
-
-    def __rejection_sample(self, data, n_prior_samples=None, max_n_samples=None,
-                           prior_cache_file=None, return_logprobs=False,
-                           start_idx=0):
-        """Run The Joker's rejection sampling on prior samples to get posterior
+                         n_linear_samples=1, return_logprobs=False,
+                         n_batches=None, randomize_prior_order=False):
+        f"""
+        Run The Joker's rejection sampling on prior samples to get posterior
         samples for the input data.
 
         You must either specify the number of prior samples to generate and
@@ -235,65 +136,44 @@ class TheJoker:
         Parameters
         ----------
         data : `~thejoker.data.RVData`
-            The radial velocity data.
+            {_data_doc}
+        prior_samples : str, `~thejoker.JokerSamples`
+            {_prior_samples_doc}
         n_prior_samples : int (optional)
-            If ``prior_cache_file`` is not specified, this sets the number of
-            prior samples to generate and use to do the rejection sampling. If
-            ``prior_cache_file`` is specified, this sets the number of prior
-            samples to load from the cache file.
-        prior_cache_file : str (optional)
-            A path to an HDF5 cache file containing prior samples. TODO: more
-            information
+            TODO
+        max_posterior_samples : int (optional)
+            TODO
+        n_linear_samples : int (optional)
+            TODO
         return_logprobs : bool (optional)
             Also return the log-probabilities.
-        start_idx : int (optional)
-            Index to start reading from in the prior cache file.
+        n_batches : int (optional)
+            TODO
+
+        Returns
+        -------
+        samples : `~thejoker.JokerSamples`
+            The posterior samples produced from The Joker.
 
         """
+        from .multiproc_helpers import rejection_sample_helper
+        joker_helper = self._make_joker_helper(data)  # also validates data
+        samples = rejection_sample_helper(
+            joker_helper,
+            prior_samples,
+            pool=self.pool,
+            random_state=self.random_state,
+            n_prior_samples=n_prior_samples,
+            max_posterior_samples=max_posterior_samples,
+            n_linear_samples=n_linear_samples,
+            return_logprobs=return_logprobs,
+            n_batches=n_batches,
+            randomize_prior_order=randomize_prior_order)
 
-        # validate input data
-        if not isinstance(data, RVData):
-            raise TypeError("Input data must be an RVData instance, not '{0}'"
-                            .format(type(data)))
+        return samples
 
-        # compute full parameter vectors for all good samples
-        if self._rnd_passed:
-            seed = self.random_state.randint(np.random.randint(2**16))
-        else:
-            seed = None
-
-        n_prior_samples, cache_exists = self._validate_prior_cache(
-            n_prior_samples, prior_cache_file)
-
-        if cache_exists:
-            with h5py.File(prior_cache_file, 'r') as f:
-                prior_units = [u.Unit(uu) for uu in f.attrs['units']]
-
-            result = self._rejection_sample_from_cache(
-                data, n_prior_samples, max_n_samples, prior_cache_file,
-                start_idx, seed=seed, return_logprobs=return_logprobs)
-
-        else:
-            with tempfile.NamedTemporaryFile(mode='r+',
-                                             dir=self.tempfile_path) as f:
-                prior_cache_file = f.name
-
-                # first do prior sampling, cache to temporary file
-                prior_samples, lnp = self.sample_prior(size=n_prior_samples,
-                                                       return_logprobs=True)
-                prior_units = save_prior_samples(prior_cache_file,
-                                                 prior_samples,
-                                                 data.rv.unit,
-                                                 ln_prior_probs=lnp)
-
-                result = self._rejection_sample_from_cache(
-                    data, n_prior_samples, max_n_samples, prior_cache_file,
-                    start_idx, seed=seed, return_logprobs=return_logprobs)
-
-        return self._unpack_full_samples(result, prior_units, t0=data.t0,
-                                         return_logprobs=return_logprobs)
-
-    def iterative_rejection_sample(self, data, n_requested_samples,
+    def iterative_rejection_sample(self, data, prior_samples,
+                                   n_requested_samples,
                                    prior_cache_file=None, n_prior_samples=None,
                                    return_logprobs=False, init_n_process=None,
                                    magic_fudge=128):
@@ -324,27 +204,14 @@ class TheJoker:
             of prior samples to evaluate at. Larger numbers make the trial
             batches larger more rapidly.
         """
+        from .multiproc_helpers import iterative_rejection_helper
+        joker_helper = self._make_joker_helper(data)  # also validates data
 
-        # validate input data
-        if not isinstance(data, RVData):
-            raise TypeError("Input data must be an RVData instance, not '{}'"
-                            .format(type(data)))
+        # TODO: left of here in this module
 
-        # a bit of a hack to make the K, v0 samples deterministic
-        if self._rnd_passed:
-            seed = self.random_state.randint(np.random.randint(2**16))
-        else:
-            seed = None
-
-        # HACK: must start from 0
-        start_idx = 0
-
-        n_prior_samples, cache_exists = self._validate_prior_cache(
-            n_prior_samples, prior_cache_file)
-
-        # There are some magic numbers below used to control how fast the
-        # iterative batches grow in size
-        maxiter = 128 # MAGIC NUMBER
+        # The "magic numbers" below control how fast the iterative batches grow
+        # in size, and the maximum number of iterations
+        maxiter = 128  # MAGIC NUMBER
         safety_factor = 4  # MAGIC NUMBER
         if init_n_process is None:
             n_process = magic_fudge * n_requested_samples  # MAGIC NUMBER
