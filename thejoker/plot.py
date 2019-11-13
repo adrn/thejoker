@@ -69,12 +69,12 @@ def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
                           "manually to decrease the number of grid points.",
                           ResourceWarning)
 
-    if not isinstance(t_grid, Time): # Assume BMJD
+    if not isinstance(t_grid, Time):  # Assume BMJD
         t_grid = Time(t_grid, format='mjd', scale='tcb')
 
     # scale the transparency of the lines
     n_plot = len(samples)
-    Q = 4. # HACK
+    Q = 4.  # HACK
     line_alpha = 0.05 + Q / (n_plot + Q)
 
     if rv_unit is None:
@@ -128,7 +128,7 @@ def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
         ax.set_ylabel('RV [{}]'
                       .format(rv_unit.to_string(format='latex_inline')))
 
-    # TODO: should we ever set the limits based on the data?
+    # TODO: should we ever set the limits based on the data, computed above?
     ylim = model_ylim
     ax.set_ylim(ylim)
 
