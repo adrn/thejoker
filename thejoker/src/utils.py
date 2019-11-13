@@ -102,3 +102,30 @@ def read_batch(prior_samples_file, columns, start, stop, units=None):
                     batch[:, i] *= table_units[name].to(units[name])
 
     return batch
+
+
+def read_random_batch(prior_samples_file, columns, size, units=None, rnd=None):
+    """
+    Read a random batch (row block) of prior samples into a plain numpy array,
+    converting units where necessary.
+    """
+
+    if rnd is None:
+        rnd = np.random.RandomState()
+
+    path = JokerSamples._hdf5_path
+
+    batch = np.zeros((size, len(columns)))
+    with tb.open_file(prior_samples_file, mode='r') as f:
+        idx = rnd.randint(0, f.root[path].shape[0], size=size)
+
+        for i, name in enumerate(columns):
+            batch[:, i] = f.root[path].read_coordinates(idx, field=name)
+
+        if units is not None:
+            table_units = table_header_to_units(f.root[meta_path(path)])
+            for i, name in enumerate(columns):
+                if name in units:
+                    batch[:, i] *= table_units[name].to(units[name])
+
+    return batch

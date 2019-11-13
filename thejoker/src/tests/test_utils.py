@@ -7,7 +7,8 @@ import tables as tb
 
 # Package
 from ...samples import JokerSamples
-from ..utils import batch_tasks, table_header_to_units, read_batch
+from ..utils import (batch_tasks, table_header_to_units,
+                     read_batch, read_random_batch)
 
 
 def test_batch_tasks():
@@ -59,3 +60,20 @@ def test_read_batch(tmpdir):
     assert batch.shape == (100, 2)
     assert np.allclose(batch[:, 0], tbl['b'].to_value(u.kpc/u.Myr))
     assert np.allclose(batch[:, 1], tbl['c'].value)
+
+
+def test_read_random_batch(tmpdir):
+    filename = str(tmpdir / 'test.hdf5')
+
+    tbl = QTable()
+    tbl['a'] = np.arange(100) * u.kpc
+    tbl['b'] = np.arange(100) * u.km/u.s
+    tbl['c'] = np.arange(100) * u.day
+    tbl.write(filename, path=JokerSamples._hdf5_path, serialize_meta=True)
+
+    batch = read_random_batch(filename, ['a', 'b'], size=10, units=None)
+    assert batch.shape == (10, 2)
+
+    batch = read_random_batch(filename, ['b', 'c'], size=100,
+                              units={'b': u.kpc/u.Myr})
+    assert batch.shape == (100, 2)
