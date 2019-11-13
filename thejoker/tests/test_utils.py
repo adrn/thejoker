@@ -6,8 +6,9 @@ import numpy as np
 import tables as tb
 
 # Package
-from ...samples import JokerSamples
+from ..samples import JokerSamples
 from ..utils import (batch_tasks, table_header_to_units,
+                     table_contains_column,
                      read_batch, read_batch_slice, read_batch_idx,
                      read_random_batch)
 
@@ -40,6 +41,22 @@ def test_table_header_to_units(tmpdir):
 
     for col in tbl.colnames:
         assert tbl[col].unit == units[col]
+
+
+def test_table_contains_column(tmpdir):
+    filename = str(tmpdir / 'test.hdf5')
+
+    tbl = QTable()
+    tbl['a'] = np.arange(10) * u.kpc
+    tbl['b'] = np.arange(10) * u.km/u.s
+    tbl['c'] = np.arange(10) * u.day
+    tbl.write(filename, path=JokerSamples._hdf5_path, serialize_meta=True)
+
+    with tb.open_file(filename, mode='r') as f:
+        assert table_contains_column(f.root, 'a')
+        assert table_contains_column(f.root, 'b')
+        assert table_contains_column(f.root, 'c')
+        assert not table_contains_column(f.root, 'd')
 
 
 def test_read_batch_slice(tmpdir):

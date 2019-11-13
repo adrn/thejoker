@@ -87,6 +87,19 @@ def table_header_to_units(header_dataset):
     return units
 
 
+def table_contains_column(root, column):
+    from .samples import JokerSamples
+
+    path = meta_path(JokerSamples._hdf5_path)
+    header = get_header_from_yaml(h.decode('utf-8') for h in root[path])
+
+    columns = []
+    for row in header['datatype']:
+        columns.append(row['name'])
+
+    return column in columns
+
+
 def read_batch(prior_samples_file, columns, slice_or_idx, units=None,
                random_state=None):
     """
@@ -238,7 +251,7 @@ def tempfile_decorator(func):
 
         else:
             # TODO: it's a string, so it's probably a filename, but we should
-            # validate that!
+            # validate the contents of hte file!
             kwargs['prior_samples'] = prior_samples
             func_return = func(*args, **kwargs)
 
