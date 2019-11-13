@@ -10,10 +10,10 @@ import tables as tb
 # Package
 from ..samples import JokerSamples
 
-__all__ = ['chunk_tasks', 'table_header_to_units']
+__all__ = ['batch_tasks', 'table_header_to_units', 'read_batch']
 
 
-def chunk_tasks(n_tasks, n_batches, arr=None, args=None, start_idx=0):
+def batch_tasks(n_tasks, n_batches, arr=None, args=None, start_idx=0):
     """Split the tasks into some number of batches to sent out to MPI workers.
 
     Parameters
@@ -39,12 +39,12 @@ def chunk_tasks(n_tasks, n_batches, arr=None, args=None, start_idx=0):
     tasks = []
     if n_batches > 0 and n_tasks > n_batches:
         # chunk by the number of batches, often the pool size
-        base_chunk_size = n_tasks // n_batches
+        base_batch_size = n_tasks // n_batches
         rmdr = n_tasks % n_batches
 
         i1 = start_idx
         for i in range(n_batches):
-            i2 = i1 + base_chunk_size
+            i2 = i1 + base_batch_size
             if i < rmdr:
                 i2 += 1
 
@@ -82,23 +82,23 @@ def table_header_to_units(header_dataset):
     return units
 
 
-def read_chunk(prior_samples_file, columns, start, stop, units=None):
+def read_batch(prior_samples_file, columns, start, stop, units=None):
     """
-    Read a chunk (row block) of prior samples into a plain numpy array,
+    Read a batch (row block) of prior samples into a plain numpy array,
     converting units where necessary.
     """
 
     path = JokerSamples._hdf5_path
 
-    chunk = np.zeros((stop-start, len(columns)))
+    batch = np.zeros((stop-start, len(columns)))
     with tb.open_file(prior_samples_file, mode='r') as f:
         for i, name in enumerate(columns):
-            chunk[:, i] = f.root[path].read(start, stop, field=name)
+            batch[:, i] = f.root[path].read(start, stop, field=name)
 
         if units is not None:
             table_units = table_header_to_units(f.root[meta_path(path)])
             for i, name in enumerate(columns):
                 if name in units:
-                    chunk[:, i] *= table_units[name].to(units[name])
+                    batch[:, i] *= table_units[name].to(units[name])
 
-    return chunk
+    return batch
