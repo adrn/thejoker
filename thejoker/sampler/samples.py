@@ -156,7 +156,7 @@ class JokerSamples(OrderedDict):
             t0 = None
 
         samples = cls(t0=t0, **kwargs)
-        for key in cls._valid_keys:
+        for key in samples._valid_keys:
             if key in f:
                 samples[key] = quantity_from_hdf5(f, key, n=n)
 
@@ -195,7 +195,7 @@ class JokerSamples(OrderedDict):
                                 scale='tcb')
 
         samples = cls(**kwargs)
-        for key in cls._valid_keys:
+        for key in samples._valid_keys:
             if key in tbl_or_f.colnames:
                 samples[key] = u.Quantity(tbl_or_f[key])
 
