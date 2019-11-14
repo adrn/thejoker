@@ -47,7 +47,7 @@ these data into a `~thejoker.data.RVData` object:
     >>> t = [0., 49.452, 95.393, 127.587, 190.408]
     >>> rv = [38.77, 39.70, 37.45, 38.31, 38.31] * u.km/u.s
     >>> err = [0.184, 0.261, 0.112, 0.155, 0.223] * u.km/u.s
-    >>> data = RVData(t=t, rv=rv, stddev=err)
+    >>> data = RVData(t=t, rv=rv, rv_err=err)
     >>> ax = data.plot() # doctest: +SKIP
     >>> ax.set_xlim(-10, 200) # doctest: +SKIP
 
@@ -62,7 +62,7 @@ these data into a `~thejoker.data.RVData` object:
     rv = [38.77, 39.70, 37.45, 38.31, 38.31] * u.km/u.s
     err = [0.184, 0.261, 0.112, 0.155, 0.223] * u.km/u.s
 
-    data = RVData(t=t, rv=rv, stddev=err)
+    data = RVData(t=t, rv=rv, rv_err=err)
     ax = data.plot() # doctest: +SKIP
     ax.set_xlim(-10, 200)
 
@@ -71,15 +71,16 @@ have to specify the minimum and maximum period to consider, and a prior on the
 linear parameters in the model (the semi-amplitude and velocity zero-point):
 
     >>> import numpy as np
-    >>> from thejoker.sampler import JokerParams
-    >>> params = JokerParams(P_min=8*u.day, P_max=512*u.day,
-    ...                      linear_par_Lambda=np.diag([1e2, 1e2])**2)
+    >>> from thejoker.prior import JokerPrior
+    >>> prior = JokerPrior.default(P_min=8*u.day, P_max=512*u.day,
+    ...                            sigma_K0=30*u.km/u.s, sigma_v=100*u.km/u.s)
 
 Finally we can create the sampler object and run:
 
-    >>> from thejoker.sampler import TheJoker
-    >>> joker = TheJoker(params)
-    >>> samples = joker.rejection_sample(data, n_prior_samples=65536) # doctest: +SKIP
+    >>> from thejoker import TheJoker
+    >>> joker = TheJoker(prior)
+    >>> prior_samples = prior.sample(size=65536)
+    >>> samples = joker.rejection_sample(data, prior_samples) # doctest: +SKIP
 
 Of the 65536 prior samples we considered, only a handful pass the rejection
 sampling step of |thejoker|. Let's visualize the surviving samples in the
@@ -92,8 +93,7 @@ below to see how these were made):
     :align: center
     :width: 512
 
-    from thejoker.data import RVData
-    from thejoker.sampler import JokerParams, TheJoker
+    from thejoker import JokerPrior, TheJoker, RVData
     from thejoker.plot import plot_rv_curves
     import astropy.units as u
     import schwimmbad
@@ -103,12 +103,13 @@ below to see how these were made):
     err = [0.184, 0.261, 0.112, 0.155, 0.223] * u.km/u.s
 
     data = RVData(t=t, rv=rv, stddev=err)
-    params = JokerParams(P_min=8*u.day, P_max=512*u.day,
-                         linear_par_Lambda=np.diag([1e2, 1e2])**2)
+    prior = JokerPrior.default(P_min=8*u.day, P_max=512*u.day,
+                           sigma_K0=30*u.km/u.s, sigma_v=100*u.km/u.s)
     pool = schwimmbad.MultiPool()
     joker = TheJoker(params, pool=pool)
 
-    samples = joker.rejection_sample(data, n_prior_samples=65536)
+    prior_samples = prior.sample(size=65536)
+    samples = joker.rejection_sample(data, prior_samples)
 
     fig, ax = plt.subplots(1, 1, figsize=(6,6)) # doctest: +SKIP
     ax.scatter(samples['P'].value, samples['K'].to(u.km/u.s).value,
