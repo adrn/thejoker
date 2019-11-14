@@ -131,6 +131,57 @@ def test_rejection_sample(tmpdir, prior):
         samples = joker.rejection_sample(flat_data, _samples)
         assert len(samples) > 10  # HACK: this should generally be true...
 
+    # Check that setting the random state makes it deterministic
+    all_Ps = []
+    all_Ks = []
+    for i in range(10):
+        joker = TheJoker(prior, random_state=np.random.RandomState(42))
+        samples = joker.rejection_sample(flat_data, prior_samples)
+        all_Ps.append(samples['P'])
+        all_Ks.append(samples['K'])
+
+    for i in range(1, len(all_Ps)):
+        assert u.allclose(all_Ps[0], all_Ps[i])
+        assert u.allclose(all_Ks[0], all_Ks[i])
+
+
+@pytest.mark.parametrize('prior', [
+    JokerPrior.default(P_min=5*u.day, P_max=500*u.day,
+                       sigma_K0=25*u.km/u.s, sigma_v=100*u.km/u.s),
+    JokerPrior.default(P_min=5*u.day, P_max=500*u.day,
+                       sigma_K0=25*u.km/u.s, poly_trend=2,
+                       sigma_v=[100*u.km/u.s, 0.5*u.km/u.s/u.day])
+])
+def test_iterative_rejection_sample(tmpdir, prior):
+    data, orbit = make_data(n_times=3)
+
+    prior_samples = prior.sample(size=100_000)
+    filename = str(tmpdir / f'samples.hdf5')
+    prior_samples.write(filename, overwrite=True)
+
+    joker = TheJoker(prior, random_state=np.random.RandomState(42))
+
+    for _samples in [prior_samples, filename]:
+        # pass JokerSamples instance, process all samples:
+        samples = joker.iterative_rejection_sample(data, _samples,
+                                                   n_requested_samples=4)
+        assert len(samples) > 1
+
+    # Check that setting the random state makes it deterministic
+    all_Ps = []
+    all_Ks = []
+    for i in range(10):
+        joker = TheJoker(prior, random_state=np.random.RandomState(42))
+        samples = joker.iterative_rejection_sample(data, prior_samples,
+                                                   n_requested_samples=4,
+                                                   randomize_prior_order=True)
+        all_Ps.append(samples['P'])
+        all_Ks.append(samples['K'])
+
+    for i in range(1, len(all_Ps)):
+        assert u.allclose(all_Ps[0], all_Ps[i])
+        assert u.allclose(all_Ks[0], all_Ks[i])
+
 
 @pytest.mark.skip(reason="TODO: need to re-implement this!")
 def test_mcmc_continue():
