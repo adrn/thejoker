@@ -205,13 +205,111 @@ def rejection_sample_helper(joker_helper, prior_samples_file, pool,
 
 def iterative_rejection_helper(joker_helper, prior_samples_file, pool,
                                random_state,
-                               n_prior_samples=None,
-                               max_posterior_samples=None,
+                               n_requested_samples,
+                               init_batch_size=None,
+                               growth_factor=128,
+                               max_prior_samples=None,
                                n_linear_samples=1,
                                return_logprobs=False,
                                n_batches=None,
                                randomize_prior_order=False):
 
-    # TODO!
+    # Total number of samples in the cache:
+    with tb.open_file(prior_samples_file, mode='r') as f:
+        n_total_samples = f.root[JokerSamples._hdf5_path].shape[0]
+
+        if return_logprobs:
+            if not table_contains_column(f.root, 'ln_prior'):
+                raise RuntimeError("return_logprobs=True but ln_prior values "
+                                   "not found in prior cache: make sure you "
+                                   "generate prior samples with prior.sample "
+                                   "(..., return_logprobs=True) before saving "
+                                   "the prior samples.")
+
+    if max_prior_samples is None:
+        max_prior_samples = n_total_samples
+
+    # The "magic numbers" below control how fast the iterative batches grow
+    # in size, and the maximum number of iterations
+    maxiter = 128  # MAGIC NUMBER
+    safety_factor = 4  # MAGIC NUMBER
+    if init_batch_size is None:
+        n_process = growth_factor * n_requested_samples  # MAGIC NUMBER
+    else:
+        n_process = init_batch_size
+
+    if n_process > max_prior_samples:
+        raise ValueError("Prior sample library not big enough! For "
+                         "iterative sampling, you have to have at least "
+                         "growth_factor * n_requested_samples = "
+                         f"{growth_factor * n_requested_samples} samples in "
+                         "the prior samples cache file. You have, or have "
+                         f"limited to, {max_prior_samples} samples.")
+
+    if randomize_prior_order:
+        # Generate a random ordering for the samples
+        all_idx = random_state.choice(n_total_samples, size=max_prior_samples,
+                                      replace=False)
+    else:
+        all_idx = np.arange(0, max_prior_samples, 1)
+
+    all_marg_lls = np.array([])
+    start_idx = 0
+    for i in range(maxiter):
+        logger.log(1, f"iteration {i}, computing {n_process} likelihoods")
+
+        marg_lls = marginal_ln_likelihood_helper(
+            joker_helper, prior_samples_file, pool,
+            n_batches=None, n_prior_samples=None,
+            samples_idx=all_idx[start_idx:start_idx + n_process])
+
+        all_marg_lls = np.concatenate((all_marg_lls, marg_lls))
+
+        # get indices of samples that pass rejection step
+        uu = random_state.uniform(size=len(all_marg_lls))
+        aa = np.exp(all_marg_lls - all_marg_lls.max())
+        good_samples_idx = np.where(aa > uu)[0]
+
+        if len(good_samples_idx) == 0:
+            raise RuntimeError("Failed to find any good samples!")
+
+        n_good = len(good_samples_idx)
+        logger.log(1, f"{n_good} good samples after rejection sampling")
+
+        if n_good >= n_requested_samples:
+            logger.debug("Enough samples found!")
+            break
+
+        start_idx += n_process
+
+        n_ll_evals = len(all_marg_lls)
+        n_need = n_requested_samples - n_good
+        n_process = int(safety_factor * n_need / n_good * n_ll_evals)
+
+        if start_idx + n_process > max_prior_samples:
+            n_process = max_prior_samples - start_idx
+
+        if n_process <= 0:
+            break
+
+    else:
+        # We should never get here!!
+        raise RuntimeError("Hit maximum number of iterations!")
+
+    full_samples_idx = all_idx[good_samples_idx]
+
+    # generate linear parameters
+    samples = make_full_samples(joker_helper, prior_samples_file, pool,
+                                random_state, full_samples_idx,
+                                n_linear_samples=n_linear_samples,
+                                n_batches=n_batches)
+
+    # TODO: copy-pasted from function above
+    if return_logprobs:
+        samples['ln_likelihood'] = all_marg_lls[good_samples_idx]
+
+        with tb.open_file(prior_samples_file, mode='r') as f:
+            data = f.root[JokerSamples._hdf5_path]
+            samples['ln_prior'] = data.read_coordinates(full_samples_idx)
 
     return samples
