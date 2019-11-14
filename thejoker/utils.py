@@ -15,7 +15,8 @@ import tables as tb
 # Package
 from .samples import JokerSamples
 
-__all__ = ['batch_tasks', 'table_header_to_units', 'read_batch']
+__all__ = ['batch_tasks', 'table_header_to_units', 'read_batch',
+           'tempfile_decorator']
 
 
 def batch_tasks(n_tasks, n_batches, arr=None, args=None, start_idx=0):

@@ -13,12 +13,10 @@ import numpy as np
 
 # Project
 from .logging import logger
-from .data import RVData
 from .data_helpers import validate_prepare_data
 from .prior import JokerPrior
-from .samples import JokerSamples
 from .src.fast_likelihood import CJokerHelper
-from .utils import tempfile_decorator
+from thejoker.utils import tempfile_decorator
 
 __all__ = ['TheJoker']
 
