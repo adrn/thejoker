@@ -1,5 +1,4 @@
 # Third-party
-import astropy.time as atime
 import astropy.units as u
 import numpy as np
 import pytest
@@ -7,27 +6,33 @@ import pytest
 try:
     import matplotlib.pyplot as plt
     HAS_MPL = True
-except:
+except ImportError:
     HAS_MPL = False
 
 # Package
-from ..sampler import JokerSamples
+from ..prior import JokerPrior
 from ..plot import plot_rv_curves
+from .test_sampler import make_data
 
 
 @pytest.mark.skipif(not HAS_MPL, reason='matplotlib not installed')
-def test_plot_rv_curves():
+@pytest.mark.parametrize('prior', [
+    JokerPrior.default(10*u.day, 20*u.day,
+                       25*u.km/u.s, sigma_v=100*u.km/u.s),
+    JokerPrior.default(10*u.day, 20*u.day,
+                       25*u.km/u.s, poly_trend=2,
+                       sigma_v=[100*u.km/u.s, 0.2*u.km/u.s/u.day])
+])
+def test_plot_rv_curves(prior):
 
-    pars = dict(P=[30.]*u.day, K=[10.]*u.km/u.s, e=[0.11239],
-                omega=[0.]*u.radian, M0=[np.pi/2]*u.radian,
-                v0=[150]*u.km/u.s)
-
-    samples = JokerSamples()
-    for k in pars:
-        samples[k] = pars[k]
+    data, _ = make_data()
+    samples = prior.sample(100, generate_linear=True)
 
     t_grid = np.random.uniform(56000, 56500, 1024)
     t_grid.sort()
 
-    fig, ax = plt.subplots(1, 1, figsize=(12,5))
+    plot_rv_curves(samples, t_grid)
+    plot_rv_curves(samples, data=data)
+
+    fig, ax = plt.subplots(1, 1, figsize=(12, 5))
     plot_rv_curves(samples, t_grid, ax=ax)

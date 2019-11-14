@@ -1,14 +1,14 @@
 # Third-party
 import astropy.units as u
+import pytest
 import pymc3 as pm
 import exoplanet.units as xu
-import pytest
 
 # Project
 from ..prior import JokerPrior, default_nonlinear_prior, default_linear_prior
 
 
-def init_helper(case=None):
+def get_prior(case=None):
     default_expected_units = {'P': u.day, 'e': u.one,
                               'omega': u.radian, 'M0': u.radian,
                               's': u.m/u.s,
@@ -18,7 +18,7 @@ def init_helper(case=None):
     if case == 0:
         # Default prior with standard parameters:
         with pm.Model() as model:
-            default_nonlinear_prior(P_min=1*u.day, P_max=10*u.year)
+            default_nonlinear_prior(P_min=1*u.day, P_max=1*u.year)
             default_linear_prior(sigma_K0=25*u.km/u.s,
                                  P0=1*u.year,
                                  sigma_v=10*u.km/u.s)
@@ -51,7 +51,7 @@ def init_helper(case=None):
                              u.m/u.s)
             units['K'] = u.m/u.s
 
-            default_nonlinear_prior(P_min=1*u.day, P_max=10*u.day)
+            default_nonlinear_prior(P_min=1*u.day, P_max=1*u.year)
             default_linear_prior(sigma_v=10*u.km/u.s,
                                  pars={'K': K})
 
@@ -62,7 +62,7 @@ def init_helper(case=None):
     elif case == 3:
         # Pass pars instead of relying on model
         with pm.Model() as model:
-            nl_pars = default_nonlinear_prior(P_min=1*u.day, P_max=10*u.year)
+            nl_pars = default_nonlinear_prior(P_min=1*u.day, P_max=1*u.year)
             l_pars = default_linear_prior(sigma_K0=25*u.km/u.s,
                                           P0=1*u.year,
                                           sigma_v=10*u.km/u.s)
@@ -75,7 +75,7 @@ def init_helper(case=None):
         # Try with more poly_trends
         units = default_expected_units.copy()
         with pm.Model() as model:
-            nl_pars = default_nonlinear_prior(P_min=1*u.day, P_max=10*u.year)
+            nl_pars = default_nonlinear_prior(P_min=1*u.day, P_max=1*u.year)
             l_pars = default_linear_prior(sigma_K0=25*u.km/u.s,
                                           P0=1*u.year,
                                           sigma_v=[10*u.km/u.s,
@@ -99,7 +99,7 @@ def init_helper(case=None):
     elif case == 6:
         # poly_trend with .default()
         units = default_expected_units.copy()
-        prior = JokerPrior.default(P_min=1*u.day, P_max=10*u.year,
+        prior = JokerPrior.default(P_min=1*u.day, P_max=1*u.year,
                                    sigma_K0=25*u.km/u.s,
                                    P0=1*u.year,
                                    sigma_v=[10*u.km/u.s,
@@ -116,17 +116,17 @@ def init_helper(case=None):
                              u.m/u.s)
             units['K'] = u.m/u.s
 
-            prior = JokerPrior.default(P_min=1*u.day, P_max=10*u.day,
+            prior = JokerPrior.default(P_min=1*u.day, P_max=1*u.year,
                                        sigma_v=100*u.km/u.s,
                                        pars={'K': K})
         return prior, units
 
-    return 8
+    return 8  # number of cases above
 
 
-@pytest.mark.parametrize('case', range(init_helper()))
+@pytest.mark.parametrize('case', range(get_prior()))
 def test_init_sample(case):
-    prior, expected_units = init_helper(case)
+    prior, expected_units = get_prior(case)
 
     for k in expected_units.keys():
         if k == 'ln_prior':  # skip

@@ -52,26 +52,18 @@ class TheJoker:
         if pool is None:
             import schwimmbad
             pool = schwimmbad.SerialPool()
-
         elif not hasattr(pool, 'map') or not hasattr(pool, 'close'):
             raise TypeError("Input pool object must have .map() and .close() "
                             "methods. We recommend using `schwimmbad` pools.")
-
         self.pool = pool
 
         # Set the parent random state - child processes get different states
         # based on the parent
         if random_state is None:
-            self._rnd_passed = False
             random_state = np.random.RandomState()
-
         elif not isinstance(random_state, np.random.RandomState):
             raise TypeError("Random state object must be a numpy RandomState "
                             "instance, not '{0}'".format(type(random_state)))
-
-        else:
-            self._rnd_passed = True
-
         self.random_state = random_state
 
         # check if a JokerParams instance was passed in to specify the state
@@ -118,6 +110,7 @@ class TheJoker:
         return marginal_ln_likelihood_helper(joker_helper, prior_samples,
                                              self.pool, n_batches=n_batches)
 
+    @tempfile_decorator
     def rejection_sample(self, data, prior_samples,
                          n_prior_samples=None,
                          max_posterior_samples=None,

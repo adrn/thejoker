@@ -5,12 +5,12 @@ from scipy.stats import multivariate_normal
 from twobody.units import UnitSystem
 
 # Project
-from .likelihood import get_ivar, design_matrix
-from .params import JokerParams
+# from .likelihood import get_ivar, design_matrix
+# from .params import JokerParams
 from .samples import JokerSamples
-from ..data import RVData
-from ..utils.stats import beta_logpdf, norm_logpdf
-from ..utils.logging import logger
+from .data import RVData
+# from ..utils.stats import beta_logpdf, norm_logpdf
+# from ..utils.logging import logger
 
 __all__ = ['TheJokerMCMCModel']
 

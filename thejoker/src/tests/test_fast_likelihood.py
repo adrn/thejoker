@@ -9,15 +9,13 @@ import exoplanet.units as xu
 from ...data import RVData
 from ...prior import JokerPrior
 from ..fast_likelihood import CJokerHelper
-from ..likelihood_helpers import get_constant_term_design_matrix
+from ...likelihood_helpers import get_constant_term_design_matrix
 from .py_likelihood import marginal_ln_likelihood, get_aAbB
 
 # TODO: horrible copy-pasta code below
 
 
 def test_against_py():
-    rnd = np.random.RandomState(42)
-
     with pm.Model():
         K = xu.with_unit(pm.Normal('K', 0, 10.),
                          u.km/u.s)
@@ -38,7 +36,7 @@ def test_against_py():
     chunk, _ = samples.pack()
     chunk = np.ascontiguousarray(chunk)
 
-    helper = CJokerHelper(data, prior, trend_M, rnd)
+    helper = CJokerHelper(data, prior, trend_M)
 
     t0 = time.time()
     cy_ll = helper.batch_marginal_ln_likelihood(chunk)
@@ -52,8 +50,6 @@ def test_against_py():
 
 
 def test_scale_varK_against_py():
-    rnd = np.random.RandomState(42)
-
     prior = JokerPrior.default(P_min=8*u.day, P_max=32768*u.day,
                                s=0*u.m/u.s,
                                sigma_K0=25*u.km/u.s,
@@ -70,7 +66,7 @@ def test_scale_varK_against_py():
     chunk, _ = samples.pack()
     chunk = np.ascontiguousarray(chunk)
 
-    helper = CJokerHelper(data, prior, trend_M, rnd)
+    helper = CJokerHelper(data, prior, trend_M)
 
     t0 = time.time()
     cy_ll = helper.batch_marginal_ln_likelihood(chunk)
@@ -84,8 +80,6 @@ def test_scale_varK_against_py():
 
 
 def test_likelihood_helpers():
-    rnd = np.random.RandomState(42)
-
     with pm.Model():
         K = xu.with_unit(pm.Normal('K', 0, 1.),
                          u.km/u.s)
@@ -105,7 +99,7 @@ def test_likelihood_helpers():
     samples = prior.sample(size=16)  # HACK: MAGIC NUMBER 16!
     chunk, _ = samples.pack()
 
-    helper = CJokerHelper(data, prior, trend_M, rnd)
+    helper = CJokerHelper(data, prior, trend_M)
 
     py_vals = get_aAbB(samples, prior, data)
 
