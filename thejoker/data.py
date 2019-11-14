@@ -12,7 +12,8 @@ __all__ = ['RVData']
 
 
 class RVData:
-    """Time-domain radial velocity measurements for a single target.
+    """
+    Time-domain radial velocity measurements for a single target.
 
     Parameters
     ----------
@@ -149,8 +150,9 @@ class RVData:
     @classmethod
     def guess_from_table(cls, tbl, time_kwargs=None, rv_unit=None,
                          fuzzy=False):
-        """Try to construct an ``RVData`` instance by guessing column names
-        from the input table.
+        """
+        Try to construct an ``RVData`` instance by guessing column names from
+        the input table.
 
         .. note::
 
@@ -311,7 +313,8 @@ class RVData:
     # To other classes
 
     def to_timeseries(self):
-        """Convert this object into an `astropy.timeseries.TimeSeries` instance.
+        """
+        Convert this object into an `astropy.timeseries.TimeSeries` instance.
         """
         from astropy.timeseries import TimeSeries
 

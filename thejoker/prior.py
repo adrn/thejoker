@@ -222,7 +222,8 @@ def default_linear_prior(sigma_K0=None, P0=None, sigma_v=None,
 class JokerPrior:
 
     def __init__(self, pars=None, poly_trend=1, v0_offsets=None, model=None):
-        """This class controls the prior probability distributions for the
+        """
+        This class controls the prior probability distributions for the
         parameters used in The Joker.
 
         This initializer is meant to be flexible, allowing you to specify the
@@ -342,8 +343,8 @@ class JokerPrior:
     @classmethod
     def default(cls, P_min, P_max, sigma_K0=None, P0=1*u.year, sigma_v=None,
                 s=None, poly_trend=1, model=None, pars=None):
-        r"""An alternative initializer to set up the default prior for The
-        Joker.
+        r"""
+        An alternative initializer to set up the default prior for The Joker.
 
         The default prior is:
 
@@ -428,7 +429,8 @@ class JokerPrior:
         return ", ".join(self.par_names)
 
     def sample(self, size=1, generate_linear=False, return_logprobs=False):
-        """Generate random samples from the prior.
+        """
+        Generate random samples from the prior.
 
         .. note::
 

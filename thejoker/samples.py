@@ -21,7 +21,8 @@ class JokerSamples:
     _hdf5_path = 'samples'
 
     def __init__(self, samples=None, poly_trend=1, t0=None, **kwargs):
-        """A dictionary-like object for storing prior or posterior samples from
+        """
+        A dictionary-like object for storing prior or posterior samples from
         The Joker, with some extra functionality.
 
         Parameters
@@ -123,7 +124,8 @@ class JokerSamples:
     # Interaction with TwoBody
 
     def get_orbit(self, index=None, **kwargs):
-        """Get a `twobody.KeplerOrbit` object for the samples at the specified
+        """
+        Get a `twobody.KeplerOrbit` object for the samples at the specified
         index.
 
         Parameters
@@ -193,7 +195,8 @@ class JokerSamples:
 
     @property
     def orbits(self):
-        """A generator that successively returns `twobody.KeplerOrbit` objects
+        """
+        A generator that successively returns `twobody.KeplerOrbit` objects
         for each sample. See docstring for `thejoker.JokerSamples.get_orbit` for
         more information.
 
@@ -226,8 +229,9 @@ class JokerSamples:
 
     # Packing and unpacking
     def pack(self, units=None, nonlinear_only=True):
-        """Pack the sample data into a single numpy array (i.e. strip the units
-        and return those separately).
+        """
+        Pack the sample data into a single numpy array (i.e. strip the units and
+        return those separately).
 
         Parameters
         ----------
@@ -264,7 +268,8 @@ class JokerSamples:
 
     @classmethod
     def unpack(cls, packed_samples, units, poly_trend=1, t0=None, **kwargs):
-        """Unpack the array of packed (prior) samples and return a
+        """
+        Unpack the array of packed (prior) samples and return a
         `~thejoker.JokerSamples` instance.
 
         Parameters
@@ -294,10 +299,7 @@ class JokerSamples:
 
     def write(self, filename, overwrite=False, append=False):
         """
-        Save the samples data to a file. This is a thin wrapper around the
-        ``astropy.table`` write machinery, so the output format is inferred from
-        the filename extension, and all kwargs are passed to
-        `astropy.table.Table.write()`.
+        Write the samples data to a file.
 
         Currently, we only support writing to / reading from HDF5 files, so the
         filename must end in a .hdf5 or .h5 extension.
@@ -306,6 +308,10 @@ class JokerSamples:
         ----------
         filename : str
             The output filename.
+        overwrite : bool (optional)
+            Overwrite the existing file.
+        append : bool (optional)
+            Append the samples to an existing table in the specified filename.
         """
         ext = os.path.splitext(filename)[1]
         if ext not in ['.hdf5', '.h5']:
@@ -320,5 +326,16 @@ class JokerSamples:
 
     @classmethod
     def read(cls, filename):
+        """
+        Read the samples data to a file.
+
+        Currently, we only support writing to / reading from HDF5 files, so the
+        filename must end in a .hdf5 or .h5 extension.
+
+        Parameters
+        ----------
+        filename : str
+            The output filename.
+        """
         tbl = QTable.read(filename, path=cls._hdf5_path)
         return cls(samples=tbl, **tbl.meta)
