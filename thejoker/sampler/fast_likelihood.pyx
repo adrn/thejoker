@@ -7,6 +7,7 @@
 # cython: language_level=3
 
 # Third-party
+import astropy.units as u
 import numpy as np
 cimport numpy as np
 np.import_array()
@@ -278,7 +279,7 @@ cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
 
         # inverse variance array with jitter included
         double[::1] jitter_ivar = np.zeros(data.ivar.value.shape)
-        double[:, ::1] Lambda = np.ascontiguousarray(joker_params.linear_par_Lambda)
+        double[:, ::1] Lambda = np.zeros((n_pars, n_pars))
         double[::1] mu = np.ascontiguousarray(joker_params.linear_par_mu)
 
         # design matrix
@@ -302,11 +303,23 @@ cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
         # Needed for temporary storage in likelihood_worker:
         double[:, ::1] Btmp = np.zeros((n_times, n_times), dtype=np.float64)
         double[:, ::1] Atmp = np.zeros((n_pars, n_pars), dtype=np.float64)
-        double[:, ::1] Linv = np.linalg.inv(Lambda)
+        double[:, ::1] Linv = np.zeros((n_pars, n_pars), dtype=np.float64)
         int[::1] npar_ipiv = np.zeros(n_pars, dtype=np.int32)
         int[::1] ntime_ipiv = np.zeros(n_times, dtype=np.int32)
         double[::1] npar_work = np.zeros(n_pars, dtype=np.float64)
         double[::1] ntime_work = np.zeros(n_times, dtype=np.float64)
+
+        double K0
+        int scale_K_prior_with_P = joker_params.scale_K_prior_with_P
+
+    if scale_K_prior_with_P > 0:
+        # TODO: allow customizing K0!
+        K0 = (25 * u.km/u.s).to_value(joker_params._jitter_unit)
+        Lambda[1:, 1:] = np.array(joker_params.linear_par_Lambda)
+        Linv[1:, 1:] = np.linalg.inv(joker_params.linear_par_Lambda)
+    else:
+        Lambda = np.ascontiguousarray(joker_params.linear_par_Lambda)
+        Linv = np.linalg.inv(Lambda)
 
     if joker_params._fixed_jitter:
         _fixed_jitter = 1
@@ -324,6 +337,10 @@ cpdef batch_marginal_ln_likelihood(double[:,::1] chunk,
 
         # Note: jitter must be in same units as the data RV's / ivar!
         get_ivar(ivar, jitter, jitter_ivar)
+
+        if scale_K_prior_with_P > 0:
+            Lambda[0, 0] = K0**2 / (1 - chunk[n, 2]**2) * (chunk[n, 0] / 365.)**(-2/3.)
+            Linv[0, 0] = 1 / Lambda[0, 0]
 
         # compute things needed for the ln(likelihood)
         ll[n] = likelihood_worker(rv, jitter_ivar, M_T, mu, Lambda, Linv,
@@ -363,7 +380,7 @@ cpdef batch_get_posterior_samples(double[:,::1] chunk,
 
         # inverse variance array with jitter included
         double[::1] jitter_ivar = np.zeros(data.ivar.value.shape)
-        double[:, ::1] Lambda = np.ascontiguousarray(joker_params.linear_par_Lambda)
+        double[:, ::1] Lambda = np.zeros((n_pars, n_pars))
         double[::1] mu = np.ascontiguousarray(joker_params.linear_par_mu)
 
         # transpose of design matrix
@@ -384,7 +401,7 @@ cpdef batch_get_posterior_samples(double[:,::1] chunk,
         # Needed for temporary storage in likelihood_worker:
         double[:, ::1] Btmp = np.zeros((n_times, n_times), dtype=np.float64)
         double[:, ::1] Atmp = np.zeros((n_pars, n_pars), dtype=np.float64)
-        double[:, ::1] Linv = np.linalg.inv(Lambda)
+        double[:, ::1] Linv = np.zeros((n_pars, n_pars), dtype=np.float64)
         int[::1] npar_ipiv = np.zeros(n_pars, dtype=np.int32)
         int[::1] ntime_ipiv = np.zeros(n_times, dtype=np.int32)
         double[::1] npar_work = np.zeros(n_pars, dtype=np.float64)
@@ -393,6 +410,18 @@ cpdef batch_get_posterior_samples(double[:,::1] chunk,
         double[:,::1] pars = np.zeros((n_samples,
             joker_params.num_params + int(return_logprobs)))
         double[::1] linear_pars
+
+        double K0
+        int scale_K_prior_with_P = joker_params.scale_K_prior_with_P
+
+    if scale_K_prior_with_P > 0:
+        # TODO: allow customizing K0!
+        K0 = (25 * u.km/u.s).to_value(joker_params._jitter_unit)
+        Lambda[1:, 1:] = np.array(joker_params.linear_par_Lambda)
+        Linv[1:, 1:] = np.linalg.inv(joker_params.linear_par_Lambda)
+    else:
+        Lambda = np.ascontiguousarray(joker_params.linear_par_Lambda)
+        Linv = np.linalg.inv(Lambda)
 
     for n in range(n_samples):
         pars[n, 0] = chunk[n, 0] # P
@@ -406,6 +435,12 @@ cpdef batch_get_posterior_samples(double[:,::1] chunk,
 
         # jitter must be in same units as the data RV's / ivar!
         get_ivar(ivar, chunk[n, 4], jitter_ivar)
+
+        if scale_K_prior_with_P > 0:
+            # TODO: many issues with this. If units are whack, this matrix could
+            # become singular! e.g., 25 km/s -> 25000 m/s, squared...
+            Lambda[0, 0] = K0**2 / (1 - chunk[n, 2]**2) * (chunk[n, 0] / 365.)**(-2/3)
+            Linv[0, 0] = 1 / Lambda[0, 0]
 
         # compute things needed for the ln(likelihood)
         ll = likelihood_worker(rv, jitter_ivar, M_T, mu, Lambda, Linv,

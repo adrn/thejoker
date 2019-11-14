@@ -64,6 +64,14 @@ class FakeData(object):
         self.truths['binary_jitter'] = truth.copy()
         self.truths['binary_jitter']['jitter'] = 0. * u.km/u.s
 
+        # Binary with fancy K prior
+        self.datasets['binary_Kprior'] = data
+        self.params['binary_Kprior'] = JokerParams(
+            P_min=8*u.day, P_max=1024*u.day, linear_par_Lambda=Lambda[1:, 1:],
+            scale_K_prior_with_P=True)
+        self.truths['binary_Kprior'] = truth.copy()
+        self.truths['binary_Kprior']['jitter'] = 0. * u.km/u.s
+
         ######################################################################
         # Binary on circular orbit
 

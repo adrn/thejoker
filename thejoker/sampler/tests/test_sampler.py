@@ -131,3 +131,11 @@ class TestSampler(object):
                           n_walkers=128, return_sampler=False)
         joker.mcmc_sample(data, samples, n_steps=8, n_burn=8, n_walkers=128,
                           return_sampler=True)
+
+        # Fancy K prior:
+        data = self.data['binary_Kprior']
+        joker = TheJoker(self.joker_params['binary_Kprior'], random_state=rnd)
+
+        samples = joker.rejection_sample(data, n_prior_samples=16384)
+        joker.mcmc_sample(data, samples, n_steps=8, n_burn=8,
+                          n_walkers=128, return_sampler=False)
