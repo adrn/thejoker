@@ -5,37 +5,33 @@ The Joker [YO-ker] /'joʊkər/
 Introduction
 ============
 
-|thejoker| [#f1]_ is a custom Monte Carlo sampler for the two-body problem and
-is therefore useful for constraining star-star or star-planet systems. It is
-designed to generate posterior samples over the orbital parameters of the
-primary (observed) star given time-domain radial velocity measurements of this
-star. Though it is assumed the system has only a primary and a companion,
-|thejoker| can also be used for hierarchical systems in which the velocity
-perturbations from a third or other bodies are much longer than the dominant
-companion. See the paper [#f2]_ for more details about the method and
-applications.
-
-|thejoker| is particularly useful for sparse or low-quality radial velocity
-data.
+|thejoker| [#f1]_ is a custom Monte Carlo sampler for the two-body problem
+applied to radial velocity observations of stars. It is designed to deliver
+converged posterior samplings in Keplerian orbital parameters even when the
+radial velocity measurements are sparse or very noisy. It is therefore useful
+for constraining the orbital properties of binary star or star-planet systems.
+Though it fundamentally assumes that any system has two massive bodies (and only
+the primary is observed), |thejoker| can also be used for hierarchical systems
+in which the velocity perturbations from a third or other bodies are much longer
+than the dominant companion. See the paper [#f2]_ for more details about the
+method and applications.
 
 .. toctree::
     :maxdepth: 1
 
     install
     whats-new
-    random-numbers
-    faq
 
 Getting started
 ===============
 
 Generating samples with |thejoker| requires specifying three things:
 
-    #. **The data**, `~thejoker.data.RVData`: radial velocity measurements,
+    #. **The data**, `~thejoker.RVData`: radial velocity measurements,
        uncertainties, and observation times
-    #. **The model parameters**, `~thejoker.sampler.params.JokerParams`:
+    #. **The priors on model parameters**, `~thejoker.JokerPrior`:
        hyper-parameters, what parameters to sample over
-    #. **The sampler parameters**, `~thejoker.sampler.sampler.TheJoker`: how
+    #. **The sampler parameters**, `~thejoker.TheJoker`: how
        many prior samples to generate, etc.
 
 Here we'll work through a simple example to generate samples for orbital
@@ -66,9 +62,12 @@ these data into a `~thejoker.data.RVData` object:
     ax = data.plot() # doctest: +SKIP
     ax.set_xlim(-10, 200)
 
-We next need to specify some hyper-parameters for |thejoker|. At minimum, we
-have to specify the minimum and maximum period to consider, and a prior on the
-linear parameters in the model (the semi-amplitude and velocity zero-point):
+We next need to specify the prior distributions for the parameters of
+|thejoker|. The default prior, explained in the docstring of
+`~thejoker.JokerPrior.default()`, assumes some reasonable defaults where
+possible, but requires specifying minimum and maximum period to sample over,
+along with parameters of the prior over the linear parameters in The Joker (the
+velocity semi-amplitude, ``K``, and the systemic velocity, ``v0``):
 
     >>> import numpy as np
     >>> from thejoker.prior import JokerPrior
@@ -82,7 +81,7 @@ Finally we can create the sampler object and run:
     >>> prior_samples = prior.sample(size=65536)
     >>> samples = joker.rejection_sample(data, prior_samples) # doctest: +SKIP
 
-Of the 65536 prior samples we considered, only a handful pass the rejection
+Of the 65536 prior samples we generated, only a handful pass the rejection
 sampling step of |thejoker|. Let's visualize the surviving samples in the
 subspace of the period :math:`P` and velocity semi-amplitude :math:`K`. We'll
 also plot the true values as a green marker. As a separate plot, we'll also
@@ -145,11 +144,9 @@ More examples / tutorials
 API
 ===
 
-.. toctree::
-    :maxdepth: 1
+.. automodapi:: thejoker
+    :no-inheritance-diagram:
 
-    data
-    sampler
 
 .. rubric:: Footnotes
 

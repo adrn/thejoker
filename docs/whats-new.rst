@@ -2,6 +2,11 @@
 What's new?
 ***********
 
+v1.0
+====
+
+TODO: API change! and new features...
+
 v0.3
 ====
 

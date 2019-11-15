@@ -8,8 +8,14 @@ We recommend installing |thejoker| into a new `Anaconda environment
 pip
 ===
 
-|thejoker| has not been released as a package on PyPI, but you can still install
-it using pip using the GitHub project link:
+You can install the latest release of The Joker using ``pip``:
+
+.. code-block:: bash
+
+    pip install thejoker
+
+Or, to install the latest development version, you can also use pip with the
+GitHub project link:
 
 .. code-block:: bash
 
@@ -49,6 +55,9 @@ Dependencies
 - astropy
 - h5py
 - emcee
+- pytables
+- exoplanet
+- pymc3
 - `schwimmbad <https://github.com/adrn/schwimmbad>`_
 - `twobody <https://github.com/adrn/TwoBody>`_
 
