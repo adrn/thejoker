@@ -58,6 +58,7 @@ highlight_language = 'python3'
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 exclude_patterns.append('_templates')
+exclude_patterns.append('**.ipynb_checkpoints')
 
 # This is added to the end of RST files - a good place to put substitutions to
 # be used globally.
@@ -174,34 +175,23 @@ if eval(setup_cfg.get('edit_on_github')):
 # -- Resolving issue number to links in changelog -----------------------------
 github_issues_url = 'https://github.com/{0}/issues/'.format(setup_cfg['github_project'])
 
-# -- Turn on nitpicky mode for sphinx (to warn about references not found) ----
-#
-# nitpicky = True
-# nitpick_ignore = []
-#
-# Some warnings are impossible to suppress, and you can list specific references
-# that should be ignored in a nitpick-exceptions file which should be inside
-# the docs/ directory. The format of the file should be:
-#
-# <type> <class>
-#
-# for example:
-#
-# py:class astropy.io.votable.tree.Element
-# py:class astropy.io.votable.tree.SimpleElement
-# py:class astropy.io.votable.tree.SimpleElementWithContent
-#
-# Uncomment the following lines to enable the exceptions:
-#
-# for line in open('nitpick-exceptions'):
-#     if line.strip() == "" or line.startswith("#"):
-#         continue
-#     dtype, target = line.split(None, 1)
-#     target = target.strip()
-#     nitpick_ignore.append((dtype, six.u(target)))
-
 intersphinx_mapping['h5py'] = ('http://docs.h5py.org/en/latest/', None)
 
 # add nbsphinx extension
 extensions += ['nbsphinx']
 extensions += ['IPython.sphinxext.ipython_console_highlighting']
+
+# see if we're running on travis
+if 'CI' in os.environ:
+    ON_TRAVIS = True
+else:
+    ON_TRAVIS = False
+
+# Use astropy plot style
+plot_rcparams = dict()
+if not ON_TRAVIS:
+    plot_rcparams['text.usetex'] = True
+plot_rcparams['savefig.facecolor'] = 'none'
+plot_rcparams['savefig.bbox'] = 'tight'
+plot_apply_rcparams = True
+plot_formats = [('png', 512)]
