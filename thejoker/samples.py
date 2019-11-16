@@ -162,20 +162,21 @@ class JokerSamples:
 
         _, v_trend_names = _validate_polytrend(self.poly_trend)
         names = list(_get_linear_equiv_units(v_trend_names).keys())
-        if len(self) == 1:
-            if index is not None and index > 0:
-                raise ValueError('Samples are scalar-valued!')
 
-            trend_coeffs = [self[x] for x in names[1:]]  # skip K
+        if index is None:
+            if len(self) == 1:
+                index = 0
+            else:
+                raise ValueError("You must specify an index when the number "
+                                 f"of samples is >1 (here, it's {len(self)})")
 
-        else:
-            P = P[index]
-            e = e[index]
-            a = a[index]
-            omega = omega[index]
-            M0 = M0[index]
+        P = P[index]
+        e = e[index]
+        a = a[index]
+        omega = omega[index]
+        M0 = M0[index]
 
-            trend_coeffs = [self[x][index] for x in names[1:]]  # skip K
+        trend_coeffs = [self[x][index] for x in names[1:]]  # skip K
 
         orbit.elements._P = P
         orbit.elements._e = e * u.dimensionless_unscaled
