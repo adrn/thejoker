@@ -147,7 +147,8 @@ cdef class CJokerHelper:
         self.t0 = data._t0_bmjd
         self.t = np.ascontiguousarray(data._t_bmjd, dtype='f8')
         self.rv = np.ascontiguousarray(data.rv.value, dtype='f8')
-        self.ivar = np.ascontiguousarray(data.ivar.value, dtype='f8')
+        self.ivar = np.ascontiguousarray(
+            data.ivar.to_value(1 / self.data.rv.unit**2), dtype='f8')
         self.trend_M = trend_M
 
         # ivar with jitter included
