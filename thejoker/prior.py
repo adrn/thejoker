@@ -33,7 +33,7 @@ def _validate_model(model):
     return model
 
 
-@u.quantity_input(P_min=u.day, P_max=u.day, s=u.km/u.s)
+@u.quantity_input(P_min=u.day, P_max=u.day)
 def default_nonlinear_prior(P_min=None, P_max=None, s=None,
                             model=None, pars=None):
     r"""
@@ -56,7 +56,7 @@ def default_nonlinear_prior(P_min=None, P_max=None, s=None,
     ----------
     P_min : `~astropy.units.Quantity` [time]
     P_max : `~astropy.units.Quantity` [time]
-    s : `~astropy.units.Quantity` [speed]
+    s : `~pm.model.TensorVariable`, ~astropy.units.Quantity` [speed]
     model : `pymc3.Model`
         This is either required, or this function must be called within a pymc3
         model context.
@@ -65,6 +65,15 @@ def default_nonlinear_prior(P_min=None, P_max=None, s=None,
 
     if pars is None:
         pars = dict()
+
+    if s is None:
+        s = 0 * u.m/u.s
+
+    if isinstance(s, pm.model.TensorVariable):
+        pars['s'] = pars.get('s', s)
+    else:
+        if not hasattr(s, 'unit') or not s.unit.is_equivalent(u.km/u.s):
+            raise u.UnitsError("Invalid unit for s: must be equivalent to km/s")
 
     # dictionary of parameters to return
     out_pars = dict()
@@ -92,8 +101,6 @@ def default_nonlinear_prior(P_min=None, P_max=None, s=None,
                                           u.radian)
 
         if 's' not in pars:
-            if s is None:
-                s = 0 * u.m/u.s
             out_pars['s'] = xu.with_unit(pm.Constant('s', s.value),
                                          s.unit)
 
@@ -194,6 +201,11 @@ def default_linear_prior(sigma_K0=None, P0=None, sigma_v=None,
 
     with model:
         if 'K' not in pars:
+            if sigma_K0 is None or P0 is None:
+                raise ValueError("If using the default prior form on K, you "
+                                 "must pass in a variance scale (sigma_K0) "
+                                 "and a reference period (P0)")
+
             # Default prior on semi-amplitude: scales with period and
             # eccentricity such that it is flat with companion mass
             v_unit = sigma_K0.unit
@@ -336,7 +348,12 @@ class JokerPrior:
                                      "must be independent Normal "
                                      "distributions, not '{}'"
                                      .format(type(offset.distribution)))
-        self.v0_offsets = v0_offsets
+            self._n_offsets = len(v0_offsets)
+            self.v0_offsets = v0_offsets
+
+        else:
+            self._n_offsets = 0
+            self.v0_offsets = None
 
         self.pars = pars
 

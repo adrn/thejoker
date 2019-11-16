@@ -121,7 +121,21 @@ def get_prior(case=None):
                                        pars={'K': K})
         return prior, units
 
-    return 8  # number of cases above
+    elif case == 8:
+        # Replace s with pymc3 var with .default()
+        units = default_expected_units.copy()
+        with pm.Model() as model:
+            s = xu.with_unit(pm.Normal('s', 10, 0.5),
+                             u.m/u.s)
+            units['s'] = u.m/u.s
+
+            prior = JokerPrior.default(P_min=1*u.day, P_max=1*u.year,
+                                       sigma_K0=25*u.km/u.s,
+                                       sigma_v=100*u.km/u.s,
+                                       s=s)
+        return prior, units
+
+    return 9  # number of cases above
 
 
 @pytest.mark.parametrize('case', range(get_prior()))
