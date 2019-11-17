@@ -65,6 +65,7 @@ cdef class CJokerHelper:
         # Counts:
         int n_times
         int n_poly
+        int n_offsets
         int n_linear
         int n_pars
 
@@ -115,7 +116,7 @@ cdef class CJokerHelper:
         return (CJokerHelper, (self.data, self.prior, np.array(self.trend_M)))
 
     def __init__(self, data, prior, double[:, ::1] trend_M):
-        cdef int i, n
+        cdef int i, j, n
 
         self.prior = prior
         self.data = data
@@ -128,7 +129,13 @@ cdef class CJokerHelper:
         self.internal_units['M0'] = u.radian
         self.internal_units['s'] = self.data.rv.unit
         self.internal_units['K'] = self.data.rv.unit
-        for i, name in enumerate(prior._v_trend_names):
+        self.internal_units['v0'] = self.data.rv.unit
+
+        # v0 offsets must be between v0 and v1, if v1 is present
+        for offset in prior.v0_offsets:
+            self.internal_units[offset.name] = self.data.rv.unit
+
+        for i, name in enumerate(prior._v_trend_names[1:]):
             self.internal_units[name] = self.data.rv.unit / u.day ** i
 
         # The assumed order of the nonlinear parameters used below to read from
@@ -140,7 +147,8 @@ cdef class CJokerHelper:
         # Counting:
         self.n_times = len(data)  # number of data pints
         self.n_poly = prior.poly_trend  # polynomial trend terms
-        self.n_linear = 1 + self.n_poly  # K, trend - TODO: v0_offsets
+        self.n_offsets = prior._n_offsets  # v0 offsets
+        self.n_linear = 1 + self.n_poly + self.n_offsets # K, trend
         self.n_pars = len(prior.par_names)
 
         # Data:
@@ -155,16 +163,18 @@ cdef class CJokerHelper:
         self.s_ivar = np.zeros(self.n_times, dtype='f8')
 
         # Transpose of design matrix: Fill the columns for the linear part of M
+        # - trend shape: K, v0 + v0_offsets, poly_trend-1
         if (trend_M.shape[0] != self.n_times
-                or trend_M.shape[1] != (self.n_linear-1)):
+                or trend_M.shape[1] != self.n_linear - 1):
             raise ValueError("Invalid design matrix shape: {}, expected: {}"
                              .format(trend_M.shape,
-                                     (self.n_times, self.n_linear-1)))
+                                     (self.n_times,
+                                     self.n_linear - 1)))
 
         self.M_T = np.zeros((self.n_linear, self.n_times))
         for n in range(self.n_times):
-            for i in range(self.n_linear-1):
-                self.M_T[1 + i, n] = trend_M[n, i]
+            for i in range(1, self.n_linear):
+                self.M_T[i, n] = trend_M[n, i-1]
 
         # Needed for temporary storage in likelihood_worker:
         self.Btmp = np.zeros((self.n_times, self.n_times), dtype=np.float64)
@@ -184,8 +194,20 @@ cdef class CJokerHelper:
 
         # TODO: Lambda should be a matrix, but we currently only support
         # diagonal variance on Lambda
-        self.mu = np.zeros(self.n_linear)
-        self.Lambda = np.zeros(self.n_linear)
+        self.mu = np.zeros(self.n_linear + self.n_offsets)
+        self.Lambda = np.zeros(self.n_linear + self.n_offsets)
+
+        # put v0_offsets variances into Lambda
+        # - validated to be Normal() in JokerPrior
+        for i in range(self.n_offsets):
+            name = prior.v0_offsets[i].name
+            dist = prior.v0_offsets[i].distribution
+            _unit = getattr(prior.model[name], xu.UNIT_ATTR_NAME)
+            to_unit = self.internal_units[name]
+
+            # K, v0 = 2 - start at index 2
+            self.mu[2+i] = (dist.mean.eval() * _unit).to_value(to_unit)
+            self.Lambda[2+i] = (dist.sd.eval() * _unit).to_value(to_unit) ** 2
 
         # ---------------------------------------------------------------------
         # TODO: This is a bit of a hack:
@@ -198,7 +220,7 @@ cdef class CJokerHelper:
             dist = prior.model[name].distribution
             _unit = getattr(prior.model[name], xu.UNIT_ATTR_NAME)
             to_unit = self.internal_units[name]
-            self.mu[i] = (dist.mean.eval() * _unit).to_value(to_unit)
+            mu = (dist.mean.eval() * _unit).to_value(to_unit)
 
             if name == 'K' and self.fixed_K_prior == 0:
                 # TODO: here's the major hack
@@ -206,8 +228,16 @@ cdef class CJokerHelper:
                 self.P0 = dist._P0.to_value(getattr(prior.pars['P'],
                                                     xu.UNIT_ATTR_NAME))
                 self.max_K = dist._max_K.to_value(to_unit)
-            else:
+                self.mu[i] = mu
+
+            elif name == 'v0':
                 self.Lambda[i] = (dist.sd.eval() * _unit).to_value(to_unit) ** 2
+                self.mu[i] = mu
+
+            else:  # v1, v2, etc.
+                j = i + self._n_offsets
+                self.Lambda[j] = (dist.sd.eval() * _unit).to_value(to_unit) ** 2
+                self.mu[j] = mu
         # ---------------------------------------------------------------------
 
     cdef int make_AAinv(self):

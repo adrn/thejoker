@@ -294,13 +294,32 @@ class JokerPrior:
         # Set the number of polynomial trend parameters
         self.poly_trend, self._v_trend_names = _validate_polytrend(poly_trend)
 
+        # TODO: FIXME: enable support for this
+        # TODO: support passing in v0_offsets as a dict with same keys as data
+        if v0_offsets is None:
+            v0_offsets = []
+
+        try:
+            v0_offsets = list(v0_offsets)
+        except Exception:
+            raise TypeError("Constant velocity offsets must be an iterable "
+                            "of pymc3 variables that define the priors on "
+                            "each offset term.")
+
+        self._v0_offset_pars = {p.name: u.m/u.s for p in v0_offsets}
+        self._n_offsets = len(v0_offsets)
+        self.v0_offsets = v0_offsets
+        pars.update({p.name: p for p in self.v0_offsets})
+
         # Store the names of the default parameters, used for validating input:
         # Note: these are *not* the units assumed internally by the code, but
         # are only used to validate that the units for each parameter are
         # equivalent to these
         self._nonlinear_pars = _get_nonlinear_equiv_units()
         self._linear_pars = _get_linear_equiv_units(self._v_trend_names)
-        all_pars = {**self._nonlinear_pars, **self._linear_pars}
+        self._all_par_unit_equiv = {**self._nonlinear_pars,
+                                    **self._linear_pars,
+                                    **self._v0_offset_pars}
 
         # At this point, pars must be a dictionary: validate that all
         # parameters are specified and that they all have units
@@ -316,7 +335,7 @@ class JokerPrior:
                                  "for your pymc3 variables. See the "
                                  "documentation for examples: thejoker.rtfd.io")
 
-            equiv_unit = all_pars[name]
+            equiv_unit = self._all_par_unit_equiv[name]
             if not getattr(pars[name],
                            xu.UNIT_ATTR_NAME).is_equivalent(equiv_unit):
                 raise ValueError(f"Parameter '{name}' has an invalid unit: "
@@ -324,42 +343,19 @@ class JokerPrior:
                                  f"transformable to '{equiv_unit}'")
 
         # Enforce that the priors on all linear parameters are Normal (or normal subclass)
-        for name in self._linear_pars.keys():
+        for name in (list(self._linear_pars.keys())
+                     + list(self._v0_offset_pars.keys())):
             if not isinstance(pars[name].distribution, pm.Normal):
                 raise ValueError("Priors on the linear parameters (K, v0, "
                                  "etc.) must be independent Normal "
                                  "distributions, not '{}'"
                                  .format(type(pars[name].distribution)))
 
-        # TODO: FIXME: enable support for this
-        if v0_offsets is not None:
-            raise NotImplementedError("Support for this is coming - sorry!")
-
-            try:
-                v0_offsets = list(v0_offsets)
-            except Exception:
-                raise TypeError("Constant velocity offsets must be an iterable "
-                                "of pymc3 variables that define the priors on "
-                                "each offset term.")
-
-            for offset in v0_offsets:
-                if not isinstance(offset.distribution, pm.Normal):
-                    raise ValueError("Priors on the constant offset parameters "
-                                     "must be independent Normal "
-                                     "distributions, not '{}'"
-                                     .format(type(offset.distribution)))
-            self._n_offsets = len(v0_offsets)
-            self.v0_offsets = v0_offsets
-
-        else:
-            self._n_offsets = 0
-            self.v0_offsets = None
-
         self.pars = pars
 
     @classmethod
     def default(cls, P_min, P_max, sigma_K0=None, P0=1*u.year, sigma_v=None,
-                s=None, poly_trend=1, model=None, pars=None):
+                s=None, poly_trend=1, v0_offsets=None, model=None, pars=None):
         r"""
         An alternative initializer to set up the default prior for The Joker.
 
@@ -408,6 +404,9 @@ class JokerPrior:
             default here is ``polytrend=1``, meaning one term: the (constant)
             systemtic velocity. For example, ``poly_trend=3`` will sample over
             parameters of a long-term quadratic velocity trend.
+        v0_offsets : list (optional)
+            A list of additional Gaussian parameters that set systematic offsets
+            of subsets of the data. TODO: link to tutorial here
         model : `pymc3.Model` (optional)
             If not specified, this will create a model instance and store it on the prior object.
         pars : dict, list (optional)
@@ -426,14 +425,16 @@ class JokerPrior:
                                       pars=pars)
 
         pars = {**nl_pars, **l_pars}
-        obj = cls(pars=pars, model=model, poly_trend=poly_trend)
+        obj = cls(pars=pars, model=model, poly_trend=poly_trend,
+                  v0_offsets=v0_offsets)
 
         return obj
 
     @property
     def par_names(self):
-        return (list(self._nonlinear_pars.keys()) +
-                list(self._linear_pars.keys()))
+        return (list(self._nonlinear_pars.keys())
+                + list(self._linear_pars.keys())
+                + [off.name for off in self.v0_offsets])
 
     @property
     def par_units(self):
@@ -473,7 +474,8 @@ class JokerPrior:
         """
         sub_pars = {k: p for k, p in self.pars.items()
                     if k in self._nonlinear_pars
-                    or (k in self._linear_pars and generate_linear)}
+                    or ((k in self._linear_pars or k in self._v0_offset_pars)
+                        and generate_linear)}
 
         if generate_linear:
             # TODO: we could warn that this is usually slow because of pymc3?
@@ -509,7 +511,7 @@ class JokerPrior:
                                              samples_values[:npars])}
 
         # Apply units if they are specified:
-        prior_samples = JokerSamples(poly_trend=self.poly_trend)
+        prior_samples = JokerSamples(prior=self)
         for name in par_names:
             p = sub_pars[name]
             unit = getattr(p, xu.UNIT_ATTR_NAME, u.one)

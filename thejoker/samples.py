@@ -20,7 +20,7 @@ __all__ = ['JokerSamples']
 class JokerSamples:
     _hdf5_path = 'samples'
 
-    def __init__(self, samples=None, poly_trend=1, t0=None, **kwargs):
+    def __init__(self, samples=None, prior=None, t0=None, **kwargs):
         """
         A dictionary-like object for storing prior or posterior samples from
         The Joker, with some extra functionality.
@@ -45,21 +45,28 @@ class JokerSamples:
         self.tbl = QTable()
 
         if isinstance(samples, Table):
-            poly_trend = samples.meta.pop('poly_trend', poly_trend)
             t0 = samples.meta.pop('t0', t0)
+            poly_trend = samples.meta.pop('poly_trend', 1)
+            _valid_units = samples.meta.pop('_valid_units', None)
             kwargs.update(samples.meta)
 
-        poly_trend, v_trend_names = _validate_polytrend(poly_trend)
+        elif prior is not None:
+            _valid_units = prior._all_par_unit_equiv.copy()
+            poly_trend = prior.poly_trend
 
-        self._valid_units = {**_get_nonlinear_equiv_units(),
-                             **_get_linear_equiv_units(v_trend_names)}
+        else:
+            raise ValueError("Either pass in an astropy table with proper "
+                             "metadata, or specify the JokerPrior instance "
+                             "used to generate these samples must be specified "
+                             "via prior=...")
 
         # log-prior and log-likelihood values are also valid:
-        self._valid_units['ln_prior'] = u.one
-        self._valid_units['ln_likelihood'] = u.one
+        _valid_units['ln_prior'] = u.one
+        _valid_units['ln_likelihood'] = u.one
 
         self.tbl.meta['poly_trend'] = poly_trend
         self.tbl.meta['t0'] = t0
+        self.tbl.meta['_valid_units'] = _valid_units
         for k, v in kwargs.items():
             self.tbl.meta[k] = v
 
@@ -99,12 +106,16 @@ class JokerSamples:
         self.tbl[key] = val
 
     @property
+    def t0(self):
+        return self.tbl.meta['t0']
+
+    @property
     def poly_trend(self):
         return self.tbl.meta['poly_trend']
 
     @property
-    def t0(self):
-        return self.tbl.meta['t0']
+    def _valid_units(self):
+        return self.tbl.meta['_valid_units']
 
     @property
     def par_names(self):
@@ -268,7 +279,7 @@ class JokerSamples:
         return np.stack(arrs, axis=1), out_units
 
     @classmethod
-    def unpack(cls, packed_samples, units, poly_trend=1, t0=None, **kwargs):
+    def unpack(cls, packed_samples, units, prior, t0=None, **kwargs):
         """
         Unpack the array of packed (prior) samples and return a
         `~thejoker.JokerSamples` instance.
@@ -292,7 +303,7 @@ class JokerSamples:
         packed_samples = np.array(packed_samples)
         nsamples, npars = packed_samples.shape
 
-        samples = cls(poly_trend=poly_trend, t0=t0, **kwargs)
+        samples = cls(prior=prior, t0=t0, **kwargs)
         for i, k in enumerate(list(units.keys())[:npars]):
             unit = units[k]
             samples[k] = packed_samples[:, i] * unit

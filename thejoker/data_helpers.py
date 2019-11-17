@@ -62,6 +62,12 @@ def validate_prepare_data(data, prior):
     """
     from .data import RVData
     if isinstance(data, RVData):  # single instance
+        if prior._n_offsets != 0:
+            raise ValueError("If sampling over velocity offsets between data "
+                             "sources, you must pass in multiple data sources."
+                             " To do this, pass in a list of RVData instances "
+                             "or a dictionary with RVData instances as values.")
+
         trend_M = get_trend_design_matrix(data, None, prior)
         return data, None, trend_M
 
@@ -113,11 +119,10 @@ def validate_prepare_data(data, prior):
     ids = np.concatenate(ids)
 
     # validate number of unique ids vs. number of v0_offsets in prior
-    if prior.v0_offsets is not None:
-        if len(np.unique(ids)) != len(prior.v0_offsets):
-            raise ValueError("Number of data IDs must equal the number of "
-                             "priors on constant offsets specified (i.e. "
-                             "v0_offsets)")
+    if (len(np.unique(ids)) - 1) != prior._n_offsets:
+        raise ValueError("Number of data IDs + 1 must equal the number of "
+                         "priors on constant offsets specified (i.e. "
+                         "v0_offsets)")
 
     all_data = RVData(t=Time(t, format='mjd', scale='tcb'),
                       rv=rv, rv_err=err)

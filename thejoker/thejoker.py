@@ -1,14 +1,7 @@
-# TODO: inside TheJoker, when sampling, validate that number of RVData's passed in equals the number of (offsets+1)
-# prior = JokerPrior.from_default(..., v0_offsets=[pm.Normal(...)])
-# joker = TheJoker(prior)
-# joker.rejection_sample([data1, data2], ...)
-
 # Standard library
 import os
 
 # Third-party
-import astropy.units as u
-import h5py
 import numpy as np
 
 # Project
@@ -81,7 +74,7 @@ class TheJoker:
 
     def _make_joker_helper(self, data):
         all_data, ids, trend_M = validate_prepare_data(data, self.prior)
-        joker_helper = CJokerHelper(data, self.prior, trend_M)
+        joker_helper = CJokerHelper(all_data, self.prior, trend_M)
         return joker_helper
 
     @tempfile_decorator
