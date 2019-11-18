@@ -239,8 +239,13 @@ class JokerSamples:
         return self._apply(np.mean)
 
     def median(self):
-        """Return a new scalar object by taking the median across all samples"""
-        return self._apply(np.mean)
+        """
+        Return a new scalar object by taking the median in period, and
+        returning the values for that sample
+        """
+        med_val = np.percentile(self['P'], 0.5, interpolation='nearest')
+        median_i, = np.where(self['P'].value == med_val)
+        return self[median_i]
 
     def std(self):
         """Return a new scalar object by taking the standard deviation across
