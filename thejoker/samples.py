@@ -287,7 +287,7 @@ class JokerSamples:
         return np.stack(arrs, axis=1), out_units
 
     @classmethod
-    def unpack(cls, packed_samples, units, *kwargs):
+    def unpack(cls, packed_samples, units, **kwargs):
         """
         Unpack the array of packed (prior) samples and return a
         `~thejoker.JokerSamples` instance.

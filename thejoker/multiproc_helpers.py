@@ -125,8 +125,9 @@ def make_full_samples(joker_helper, prior_samples_file, pool, random_state,
     # unpack the raw samples
     samples = JokerSamples.unpack(raw_samples,
                                   joker_helper.internal_units,
-                                  prior=joker_helper.prior,
-                                  t0=joker_helper.data.t0)
+                                  t0=joker_helper.data.t0,
+                                  poly_trend=joker_helper.prior.poly_trend,
+                                  n_offsets=joker_helper.prior.n_offsets)
 
     return samples
 

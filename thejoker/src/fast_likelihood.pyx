@@ -121,7 +121,9 @@ cdef class CJokerHelper:
         self.prior = prior
         self.data = data
 
-        # Internal units needed for calculations below
+        # Internal units needed for calculations below.
+        # Note: order here matters! This is the order in which prior samples
+        # will be unpacked externally!
         self.internal_units = {}
         self.internal_units['P'] = u.day
         self.internal_units['e'] = u.one
@@ -135,7 +137,7 @@ cdef class CJokerHelper:
         for offset in prior.v0_offsets:
             self.internal_units[offset.name] = self.data.rv.unit
 
-        for i, name in enumerate(prior._v_trend_names[1:]):
+        for i, name in enumerate(prior._v_trend_names):
             self.internal_units[name] = self.data.rv.unit / u.day ** i
 
         # The assumed order of the nonlinear parameters used below to read from

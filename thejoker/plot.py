@@ -55,8 +55,9 @@ def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
     else:
         fig = ax.figure
 
-    data, ids, _ = validate_prepare_data(data, samples.poly_trend,
-                                         samples.n_offsets)
+    if data is not None:
+        data, ids, _ = validate_prepare_data(data, samples.poly_trend,
+                                             samples.n_offsets)
 
     if t_grid is None:
         if data is None:
