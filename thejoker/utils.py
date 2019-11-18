@@ -229,7 +229,8 @@ def tempfile_decorator(func):
     wrapped_signature = inspect.signature(func)
     func_args = list(wrapped_signature.parameters.keys())
     if 'prior_samples' not in func_args:
-        raise ValueError("TODO: cant decorate")
+        raise ValueError("Cant decorate function because it doesn't contain an "
+                         "argument called 'prior_samples'")
 
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -251,8 +252,8 @@ def tempfile_decorator(func):
                 func_return = func(*args, **kwargs)
 
         else:
-            # TODO: it's a string, so it's probably a filename, but we should
-            # validate the contents of hte file!
+            # FIXME: it's a string, so it's probably a filename, but we should
+            # validate the contents of the file!
             kwargs['prior_samples'] = prior_samples
             func_return = func(*args, **kwargs)
 

@@ -193,7 +193,7 @@ class RVData:
         _scale_specified = 'scale' in time_kwargs
 
         # First check for any of the valid astropy Time format names:
-        # TODO: right now we only support jd and mjd (and b-preceding)
+        # FUTURETODO: right now we only support jd and mjd (and b-preceding)
         for fmt in ['jd', 'mjd']:
             if fmt in lwr_cols:
                 time_kwargs['format'] = time_kwargs.get('format', fmt)
@@ -235,7 +235,7 @@ class RVData:
         # --------------------------------------------------------------------
         # Now deal with RV data:
 
-        # TODO: could make this customizable...
+        # FUTURETODO: could make this customizable...
         _valid_rv_names = ['rv', 'vr', 'radial_velocity',
                            'vhelio', 'vrad', 'vlos']
 
@@ -247,7 +247,7 @@ class RVData:
                                   "`fuzzywuzzy`. Install with pip install "
                                   "fuzzywuzzy.")
 
-            # TODO: could make this customizable too...
+            # FUTURETODO: could make this customizable too...
             score_thresh = 90
 
             matches = []
@@ -287,7 +287,7 @@ class RVData:
 
         rv_data = u.Quantity(tbl[lwr_to_col[best_rv_name]])
 
-        # TODO: allow customizing?
+        # FUTURETODO: allow customizing?
         _valid_err_names = [f'{best_rv_name}err', f'{best_rv_name}_err',
                             f'{best_rv_name}_e', f'e_{best_rv_name}']
         for err_name in _valid_err_names:
@@ -415,7 +415,7 @@ class RVData:
             t = (t / phase_fold.to(u.day).value) % 1
 
         if self._has_cov:
-            # TODO: this is a bit of a hack
+            # FIXME: this is a bit of a hack
             diag_var = np.diag(self.rv_err.value)
             err = np.sqrt(diag_var) * self.rv_err.unit ** 0.5
         else:

@@ -100,7 +100,6 @@ class JokerPrior:
         self.poly_trend, self._v_trend_names = validate_poly_trend(poly_trend)
 
         # Calibration offsets of velocity zero-point
-        # TODO: support passing in v0_offsets as a dict with same keys as data
         if v0_offsets is None:
             v0_offsets = []
 
@@ -290,7 +289,6 @@ class JokerPrior:
                         and generate_linear)}
 
         if generate_linear:
-            # TODO: we could warn that this is usually slow because of pymc3?
             par_names = self.par_names
         else:
             par_names = list(self._nonlinear_equiv_units.keys())
@@ -503,7 +501,7 @@ def default_linear_prior(sigma_K0=None, P0=None, sigma_v=None,
         for i, name in enumerate(v_names):
             if name not in pars:
                 # Default priors are independent gaussians
-                # TODO: FIXME: make mean, mu_v, customizable
+                # FIXME: make mean, mu_v, customizable
                 out_pars[name] = xu.with_unit(
                     pm.Normal(name, 0.,
                               sigma_v[name].value),

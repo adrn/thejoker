@@ -180,7 +180,7 @@ def test_data_methods(inputs):
 
 
 def test_guess_from_table():
-    """TODO: this is not an exhaustive set of tests, but at least checks a few
+    """NOTE: this is not an exhaustive set of tests, but at least checks a few
     common cases"""
 
     for rv_name in ['rv', 'vr', 'radial_velocity']:

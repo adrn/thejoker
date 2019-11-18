@@ -24,7 +24,7 @@ def get_constant_term_design_matrix(data, ids=None):
 
 def get_trend_design_matrix(data, ids, poly_trend):
     """
-    TODO
+    Construct the full design matrix for linear parameters, without the K column
     """
     # Combine design matrix for constant term, which may contain columns for
     # sampling over v0 offsets, with the rest of the long-term trend columns

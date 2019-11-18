@@ -144,7 +144,9 @@ def write_table_hdf5(table, output, path=None, compression=False,
             # the table to have been written by this function in the past, so it
             # should have a metadata header
             if meta_path(name) not in output_group:
-                raise ValueError("TODO: no metadata for existing table, can't append...")
+                raise ValueError("No metadata exists for existing table. We "
+                                 "can only append tables if metadata "
+                                 "is consistent for all tables")
 
             # Load existing table header:
             existing_header = get_header_from_yaml(
@@ -210,7 +212,7 @@ def write_table_hdf5(table, output, path=None, compression=False,
 
     else:  # We need to append the tables!
         try:
-            # TODO: do something with the merged metadata!
+            # FIXME: do something with the merged metadata!
             metadata.merge(existing_header['meta'],
                            table.meta,
                            metadata_conflicts=metadata_conflicts)

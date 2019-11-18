@@ -31,6 +31,3 @@ class JokerLogger(logging.getLoggerClass()):
 logging.setLoggerClass(JokerLogger)
 logger = logging.getLogger('thejoker')
 logger._set_defaults()
-
-# TODO: deprecated, so remove this
-log = logger

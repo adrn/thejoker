@@ -12,7 +12,7 @@ from ..fast_likelihood import CJokerHelper
 from ...likelihood_helpers import get_constant_term_design_matrix
 from .py_likelihood import marginal_ln_likelihood, get_aAbB
 
-# TODO: horrible copy-pasta code below
+# TODO: horrible copy-pasta test code below
 
 
 def test_against_py():

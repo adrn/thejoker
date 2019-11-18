@@ -15,7 +15,7 @@ def run_worker(worker, pool, prior_samples_file, task_args=(), n_batches=None,
         n_samples = f.root[JokerSamples._hdf5_path].shape[0]
 
     if n_prior_samples is not None and samples_idx is not None:
-        raise ValueError("TODO: dont specify both")
+        raise ValueError("Dont specify both n_prior_samples and samples_idx")
 
     elif samples_idx is not None:
         n_samples = len(samples_idx)
@@ -156,7 +156,11 @@ def rejection_sample_helper(joker_helper, prior_samples_file, pool,
     if n_prior_samples is None:
         n_prior_samples = n_total_samples
     elif n_prior_samples > n_total_samples:
-        raise ValueError("TODO:")
+        raise ValueError("Number of prior samples to use is greater than the "
+                         "number of prior samples passed, or cached to a "
+                         "filename specified. "
+                         f"n_prior_samples={n_prior_samples} vs. "
+                         f"n_total_samples={n_total_samples}")
 
     if max_posterior_samples is None:
         max_posterior_samples = n_prior_samples
@@ -305,7 +309,7 @@ def iterative_rejection_helper(joker_helper, prior_samples_file, pool,
                                 n_linear_samples=n_linear_samples,
                                 n_batches=n_batches)
 
-    # TODO: copy-pasted from function above
+    # FIXME: copy-pasted from function above
     if return_logprobs:
         samples['ln_likelihood'] = all_marg_lls[good_samples_idx]
 
