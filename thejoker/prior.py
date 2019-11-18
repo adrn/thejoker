@@ -167,13 +167,13 @@ class JokerPrior:
 
         .. math::
 
-            p(P) \propto \frac{1}{P} \quad \elem (P_{\rm min}, P_{\rm max})
-            p(e) = B(a_e, b_e)
-            p(\omega) = \mathcal{U}(0, 2\pi)
-            p(M_0) = \mathcal{U}(0, 2\pi)
-            p(s) = \delta(s)
-            p(K) \propto \mathcal{N}(K \,|\, \mu_K, \sigma_K)
-            \sigma_K = \sigma_{K, 0} \, \left(\frac{P}{P_0}\right)^{-1/3} \, \left(1 - e^2\right)^{-1}
+            p(P) \propto \frac{1}{P} \quad ; \quad P \in (P_{\rm min}, P_{\rm max})\\
+            p(e) = B(a_e, b_e)\\
+            p(\omega) = \mathcal{U}(0, 2\pi)\\
+            p(M_0) = \mathcal{U}(0, 2\pi)\\
+            p(s) = 0\\
+            p(K) = \mathcal{N}(K \,|\, \mu_K, \sigma_K)\\
+            \sigma_K = \sigma_{K, 0} \, \left(\frac{P}{P_0}\right)^{-1/3} \, \left(1 - e^2\right)^{-1/2}
 
         and the priors on any polynomial trend parameters are assumed to be
         independent, univariate Normals.

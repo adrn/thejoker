@@ -185,13 +185,6 @@ class RVData:
         if time_kwargs is None:
             time_kwargs = dict()
 
-        time_info_msg = ("Assuming time scale is '{}' because it was not "
-                         "specified. To change this, pass in: "
-                         "time_kwargs=dict(scale='...') with whatever time "
-                         "scale your data are in.")
-        _fmt_specified = 'format' in time_kwargs
-        _scale_specified = 'scale' in time_kwargs
-
         # First check for any of the valid astropy Time format names:
         # FUTURETODO: right now we only support jd and mjd (and b-preceding)
         for fmt in ['jd', 'mjd']:
@@ -204,7 +197,15 @@ class RVData:
                 time_kwargs['format'] = time_kwargs.get('format', fmt)
                 time_kwargs['scale'] = time_kwargs.get('scale', 'tcb')
                 time_data = tbl[lwr_to_col[f'b{fmt}']]
+                _scale_specified = True
                 break
+
+        time_info_msg = ("Assuming time scale is '{}' because it was not "
+                         "specified. To change this, pass in: "
+                         "time_kwargs=dict(scale='...') with whatever time "
+                         "scale your data are in.")
+        _fmt_specified = 'format' in time_kwargs
+        _scale_specified = 'scale' in time_kwargs
 
         # check colnames for "t" or "time"
         for name in ['t', 'time']:
