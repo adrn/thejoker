@@ -36,170 +36,6 @@ def _validate_model(model):
     return model
 
 
-@u.quantity_input(P_min=u.day, P_max=u.day)
-def default_nonlinear_prior(P_min=None, P_max=None, s=None,
-                            model=None, pars=None):
-    r"""
-    Retrieve pymc3 variables that specify the default prior on the nonlinear
-    parameters of The Joker. See docstring of `JokerPrior.default()` for more
-    information.
-
-    The nonlinear parameters an default prior forms are:
-
-    * ``P``, period: :math:`p(P) \propto 1/P`, over the domain
-      :math:`(P_{\rm min}, P_{\rm max})`
-    * ``e``, eccentricity: the short-period form from Kipping (2013)
-    * ``M0``, phase: uniform over the domain :math:`(0, 2\pi)`
-    * ``omega``, argument of pericenter: uniform over the domain
-      :math:`(0, 2\pi)`
-    * ``s``, additional extra variance added in quadrature to data
-      uncertainties: delta-function at 0
-
-    Parameters
-    ----------
-    P_min : `~astropy.units.Quantity` [time]
-    P_max : `~astropy.units.Quantity` [time]
-    s : `~pm.model.TensorVariable`, ~astropy.units.Quantity` [speed]
-    model : `pymc3.Model`
-        This is either required, or this function must be called within a pymc3
-        model context.
-    """
-    model = pm.modelcontext(model)
-
-    if pars is None:
-        pars = dict()
-
-    if s is None:
-        s = 0 * u.m/u.s
-
-    if isinstance(s, pm.model.TensorVariable):
-        pars['s'] = pars.get('s', s)
-    else:
-        if not hasattr(s, 'unit') or not s.unit.is_equivalent(u.km/u.s):
-            raise u.UnitsError("Invalid unit for s: must be equivalent to km/s")
-
-    # dictionary of parameters to return
-    out_pars = dict()
-
-    with model:
-        # Set up the default priors for parameters with defaults
-
-        # Note: we have to do it this way (as opposed to with .get(..., default)
-        # because this can only get executed if the param is not already
-        # defined, otherwise variables are defined twice in the model
-        if 'e' not in pars:
-            out_pars['e'] = xu.with_unit(kipping13('e'),
-                                         u.one)
-
-        if 'omega' not in pars:
-            out_pars['omega'] = xu.with_unit(pm.Uniform('omega',
-                                                        lower=0,
-                                                        upper=2*np.pi),
-                                             u.radian)
-
-        if 'M0' not in pars:
-            out_pars['M0'] = xu.with_unit(pm.Uniform('M0',
-                                                     lower=0,
-                                                     upper=2*np.pi),
-                                          u.radian)
-
-        if 's' not in pars:
-            out_pars['s'] = xu.with_unit(pm.Constant('s', s.value),
-                                         s.unit)
-
-        if 'P' not in pars:
-            if P_min is None or P_max is None:
-                raise ValueError("If you are using the default period prior, "
-                                 "you must pass in both P_min and P_max to set "
-                                 "the period prior domain.")
-            out_pars['P'] = xu.with_unit(UniformLog('P',
-                                                    P_min.value,
-                                                    P_max.to_value(P_min.unit)),
-                                         P_min.unit)
-
-    for k in pars.keys():
-        out_pars[k] = pars[k]
-
-    return out_pars
-
-
-@u.quantity_input(sigma_K0=u.km/u.s, P0=u.day)
-def default_linear_prior(sigma_K0=None, P0=None, sigma_v=None,
-                         poly_trend=1, model=None, pars=None):
-    r"""
-    Retrieve pymc3 variables that specify the default prior on the linear
-    parameters of The Joker. See docstring of `JokerPrior.default()` for more
-    information.
-
-    The linear parameters an default prior forms are:
-
-    * ``K``, velocity semi-amplitude: Normal distribution, but with a variance
-      that scales with period and eccentricity.
-    * ``v0``, ``v1``, etc. polynomial velocity trend parameters: Independent
-      Normal distributions.
-
-    Parameters
-    ----------
-    sigma_K0 : `~astropy.units.Quantity` [speed]
-    P0 : `~astropy.units.Quantity` [time]
-    sigma_v : iterable of `~astropy.units.Quantity`
-    model : `pymc3.Model`
-        This is either required, or this function must be called within a pymc3
-        model context.
-    """
-    model = pm.modelcontext(model)
-
-    if pars is None:
-        pars = dict()
-
-    # dictionary of parameters to return
-    out_pars = dict()
-
-    # set up poly. trend names:
-    poly_trend, v_names = validate_poly_trend(poly_trend)
-
-    # get period/ecc from dict of nonlinear parameters
-    P = model.named_vars.get('P', None)
-    e = model.named_vars.get('e', None)
-    if P is None or e is None:
-        raise ValueError("Period P and eccentricity e must both be defined as "
-                         "nonlinear parameters on the model.")
-
-    if v_names and 'v0' not in pars:
-        sigma_v = validate_sigma_v(sigma_v, poly_trend, v_names)
-
-    with model:
-        if 'K' not in pars:
-            if sigma_K0 is None or P0 is None:
-                raise ValueError("If using the default prior form on K, you "
-                                 "must pass in a variance scale (sigma_K0) "
-                                 "and a reference period (P0)")
-
-            # Default prior on semi-amplitude: scales with period and
-            # eccentricity such that it is flat with companion mass
-            v_unit = sigma_K0.unit
-            out_pars['K'] = xu.with_unit(FixedCompanionMass('K', P=P, e=e,
-                                                            sigma_K0=sigma_K0,
-                                                            P0=P0),
-                                         v_unit)
-        else:
-            v_unit = getattr(pars['K'], xu.UNIT_ATTR_NAME, u.one)
-
-        for i, name in enumerate(v_names):
-            if name not in pars:
-                # Default priors are independent gaussians
-                # TODO: FIXME: make mean, mu_v, customizable
-                out_pars[name] = xu.with_unit(
-                    pm.Normal(name, 0.,
-                              sigma_v[name].value),
-                    sigma_v[name].unit)
-
-    for k in pars.keys():
-        out_pars[k] = pars[k]
-
-    return out_pars
-
-
 class JokerPrior:
 
     def __init__(self, pars=None, poly_trend=1, v0_offsets=None, model=None):
@@ -487,7 +323,8 @@ class JokerPrior:
                                              samples_values[:npars])}
 
         # Apply units if they are specified:
-        prior_samples = JokerSamples(prior=self)
+        prior_samples = JokerSamples(poly_trend=self.poly_trend,
+                                     n_offsets=self.n_offsets)
         for name in par_names:
             p = sub_pars[name]
             unit = getattr(p, xu.UNIT_ATTR_NAME, u.one)
@@ -512,3 +349,167 @@ class JokerPrior:
         # log_prior = Table(log_prior)[par_names]
 
         return prior_samples
+
+
+@u.quantity_input(P_min=u.day, P_max=u.day)
+def default_nonlinear_prior(P_min=None, P_max=None, s=None,
+                            model=None, pars=None):
+    r"""
+    Retrieve pymc3 variables that specify the default prior on the nonlinear
+    parameters of The Joker. See docstring of `JokerPrior.default()` for more
+    information.
+
+    The nonlinear parameters an default prior forms are:
+
+    * ``P``, period: :math:`p(P) \propto 1/P`, over the domain
+      :math:`(P_{\rm min}, P_{\rm max})`
+    * ``e``, eccentricity: the short-period form from Kipping (2013)
+    * ``M0``, phase: uniform over the domain :math:`(0, 2\pi)`
+    * ``omega``, argument of pericenter: uniform over the domain
+      :math:`(0, 2\pi)`
+    * ``s``, additional extra variance added in quadrature to data
+      uncertainties: delta-function at 0
+
+    Parameters
+    ----------
+    P_min : `~astropy.units.Quantity` [time]
+    P_max : `~astropy.units.Quantity` [time]
+    s : `~pm.model.TensorVariable`, ~astropy.units.Quantity` [speed]
+    model : `pymc3.Model`
+        This is either required, or this function must be called within a pymc3
+        model context.
+    """
+    model = pm.modelcontext(model)
+
+    if pars is None:
+        pars = dict()
+
+    if s is None:
+        s = 0 * u.m/u.s
+
+    if isinstance(s, pm.model.TensorVariable):
+        pars['s'] = pars.get('s', s)
+    else:
+        if not hasattr(s, 'unit') or not s.unit.is_equivalent(u.km/u.s):
+            raise u.UnitsError("Invalid unit for s: must be equivalent to km/s")
+
+    # dictionary of parameters to return
+    out_pars = dict()
+
+    with model:
+        # Set up the default priors for parameters with defaults
+
+        # Note: we have to do it this way (as opposed to with .get(..., default)
+        # because this can only get executed if the param is not already
+        # defined, otherwise variables are defined twice in the model
+        if 'e' not in pars:
+            out_pars['e'] = xu.with_unit(kipping13('e'),
+                                         u.one)
+
+        if 'omega' not in pars:
+            out_pars['omega'] = xu.with_unit(pm.Uniform('omega',
+                                                        lower=0,
+                                                        upper=2*np.pi),
+                                             u.radian)
+
+        if 'M0' not in pars:
+            out_pars['M0'] = xu.with_unit(pm.Uniform('M0',
+                                                     lower=0,
+                                                     upper=2*np.pi),
+                                          u.radian)
+
+        if 's' not in pars:
+            out_pars['s'] = xu.with_unit(pm.Constant('s', s.value),
+                                         s.unit)
+
+        if 'P' not in pars:
+            if P_min is None or P_max is None:
+                raise ValueError("If you are using the default period prior, "
+                                 "you must pass in both P_min and P_max to set "
+                                 "the period prior domain.")
+            out_pars['P'] = xu.with_unit(UniformLog('P',
+                                                    P_min.value,
+                                                    P_max.to_value(P_min.unit)),
+                                         P_min.unit)
+
+    for k in pars.keys():
+        out_pars[k] = pars[k]
+
+    return out_pars
+
+
+@u.quantity_input(sigma_K0=u.km/u.s, P0=u.day)
+def default_linear_prior(sigma_K0=None, P0=None, sigma_v=None,
+                         poly_trend=1, model=None, pars=None):
+    r"""
+    Retrieve pymc3 variables that specify the default prior on the linear
+    parameters of The Joker. See docstring of `JokerPrior.default()` for more
+    information.
+
+    The linear parameters an default prior forms are:
+
+    * ``K``, velocity semi-amplitude: Normal distribution, but with a variance
+      that scales with period and eccentricity.
+    * ``v0``, ``v1``, etc. polynomial velocity trend parameters: Independent
+      Normal distributions.
+
+    Parameters
+    ----------
+    sigma_K0 : `~astropy.units.Quantity` [speed]
+    P0 : `~astropy.units.Quantity` [time]
+    sigma_v : iterable of `~astropy.units.Quantity`
+    model : `pymc3.Model`
+        This is either required, or this function must be called within a pymc3
+        model context.
+    """
+    model = pm.modelcontext(model)
+
+    if pars is None:
+        pars = dict()
+
+    # dictionary of parameters to return
+    out_pars = dict()
+
+    # set up poly. trend names:
+    poly_trend, v_names = validate_poly_trend(poly_trend)
+
+    # get period/ecc from dict of nonlinear parameters
+    P = model.named_vars.get('P', None)
+    e = model.named_vars.get('e', None)
+    if P is None or e is None:
+        raise ValueError("Period P and eccentricity e must both be defined as "
+                         "nonlinear parameters on the model.")
+
+    if v_names and 'v0' not in pars:
+        sigma_v = validate_sigma_v(sigma_v, poly_trend, v_names)
+
+    with model:
+        if 'K' not in pars:
+            if sigma_K0 is None or P0 is None:
+                raise ValueError("If using the default prior form on K, you "
+                                 "must pass in a variance scale (sigma_K0) "
+                                 "and a reference period (P0)")
+
+            # Default prior on semi-amplitude: scales with period and
+            # eccentricity such that it is flat with companion mass
+            v_unit = sigma_K0.unit
+            out_pars['K'] = xu.with_unit(FixedCompanionMass('K', P=P, e=e,
+                                                            sigma_K0=sigma_K0,
+                                                            P0=P0),
+                                         v_unit)
+        else:
+            v_unit = getattr(pars['K'], xu.UNIT_ATTR_NAME, u.one)
+
+        for i, name in enumerate(v_names):
+            if name not in pars:
+                # Default priors are independent gaussians
+                # TODO: FIXME: make mean, mu_v, customizable
+                out_pars[name] = xu.with_unit(
+                    pm.Normal(name, 0.,
+                              sigma_v[name].value),
+                    sigma_v[name].unit)
+
+    for k in pars.keys():
+        out_pars[k] = pars[k]
+
+    return out_pars
