@@ -176,6 +176,9 @@ if eval(setup_cfg.get('edit_on_github')):
 github_issues_url = 'https://github.com/{0}/issues/'.format(setup_cfg['github_project'])
 
 intersphinx_mapping['h5py'] = ('http://docs.h5py.org/en/latest/', None)
+intersphinx_mapping['pymc3'] = ('https://docs.pymc.io/', None)
+intersphinx_mapping['twobody'] = ('http://twobody.readthedocs.io/en/latest/',
+                                  None)
 
 # add nbsphinx extension
 extensions += ['nbsphinx']
