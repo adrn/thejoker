@@ -2,14 +2,22 @@
 import os
 
 # Third-party
+import astropy.units as u
 import numpy as np
+import pymc3 as pm
+import exoplanet as xo
+import exoplanet.units as xu
+import theano.tensor as tt
 
 # Project
 from .logging import logger
 from .data_helpers import validate_prepare_data
-from .prior import JokerPrior
+from .samples_helpers import is_P_unimodal
+from .likelihood_helpers import get_trend_design_matrix
+from .prior import JokerPrior, _validate_model
 from .src.fast_likelihood import CJokerHelper
-from thejoker.utils import tempfile_decorator
+from .utils import tempfile_decorator
+from .samples import JokerSamples
 
 __all__ = ['TheJoker']
 
@@ -129,7 +137,7 @@ class TheJoker:
 
         Parameters
         ----------
-        data : `~thejoker.data.RVData`
+        data : `~thejoker.RVData`
             The radial velocity data, or an iterable containing ``RVData``
             objects for each data source.
         prior_samples : str, `~thejoker.JokerSamples`
@@ -206,7 +214,7 @@ class TheJoker:
 
         Parameters
         ----------
-        data : `~thejoker.data.RVData`
+        data : `~thejoker.RVData`
             The radial velocity data, or an iterable containing ``RVData``
             objects for each data source.
         prior_samples : str, `~thejoker.JokerSamples`
@@ -265,3 +273,84 @@ class TheJoker:
 
         return samples
 
+    def setup_mcmc(self, data, joker_samples, model=None):
+        """
+        Setup the model to run MCMC using pymc3.
+
+        Parameters
+        ----------
+        data : `~thejoker.RVData`
+            The radial velocity data, or an iterable containing ``RVData``
+            objects for each data source.
+        joker_samples : `~thejoker.JokerSamples`
+            If a single sample is passed in, this is packed into a pymc3
+            initialization dictionary and returned after setting up. If
+            multiple samples are passed in, the median (along period) sample is
+            taken and returned after setting up for MCMC.
+        model : `pymc3.Model`
+            This is either required, or this function must be called within a
+            pymc3 model context.
+
+        Returns
+        -------
+        mcmc_init : dict
+
+        """
+
+        model = _validate_model(model)
+
+        # Reduce data, strip units:
+        data, ids, _ = validate_prepare_data(data,
+                                             self.prior.poly_trend,
+                                             self.prior.n_offsets)
+        x = data._t_bmjd - data._t0_bmjd
+        y = data.rv.value
+        err = data.rv_err.to_value(data.rv.unit)
+
+        # First, prepare the joker_samples:
+        if not isinstance(joker_samples, JokerSamples):
+            raise TypeError("You must pass in a JokerSamples instance to the "
+                            "joker_samples argument.")
+
+        if len(joker_samples) > 1:
+            # check if unimodal in P, if not, warn
+            if not is_P_unimodal(joker_samples, data):
+                logger.warn("TODO: samples ain't unimodal")
+
+            joker_samples = joker_samples.median()
+
+        mcmc_init = dict()
+        for name in self.prior.par_names:
+            unit = getattr(self.prior.pars[name], xu.UNIT_ATTR_NAME)
+            mcmc_init[name] = joker_samples[name].to_value(unit)[0]
+
+        if 't_peri' in model.named_vars:
+            logger.info('pymc3 model has already been setup for running MCMC - '
+                        'using the previously setup model parameters.')
+            return mcmc_init
+
+        p = self.prior.pars
+        with model:
+            t_peri = pm.Deterministic('t_peri',
+                                      p['P'] * p['M0'] / (2*np.pi))
+
+            # Set up the orbit model
+            orbit = xo.orbits.KeplerianOrbit(period=p['P'],
+                                             ecc=p['e'],
+                                             omega=p['omega'],
+                                             t_periastron=t_peri)
+
+        # design matrix
+        M = get_trend_design_matrix(data, ids, self.prior.poly_trend)
+
+        # FIXME: deal with v0_offsets, trend here:
+        with model:
+            v_trend_vec = tt.stack((p['v0'], p['dv0_1'], p['dv0_2']), axis=0)
+            trend = tt.dot(M, v_trend_vec)
+
+            rv_model = orbit.get_radial_velocity(x, K=p['K']) + trend
+
+            err = tt.sqrt(err**2 + p['s']**2)
+            pm.Normal("obs", mu=rv_model, sd=err, observed=y)
+
+        return mcmc_init
