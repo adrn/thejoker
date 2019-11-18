@@ -136,15 +136,15 @@ def design_matrix(nonlinear_p, data, prior):
 def get_M_Lambda_ivar(samples, prior, data):
     v_unit = data.rv.unit
     units = {'K': v_unit, 's': v_unit}
-    for i, k in enumerate(list(prior._linear_pars.keys())[1:]):  # skip K
+    for i, k in enumerate(list(prior._linear_equiv_units.keys())[1:]):  # skip K
         units[k] = v_unit / u.day**i
     packed_samples, _ = samples.pack(units=units)
 
     n_samples = packed_samples.shape[0]
-    n_linear = len(prior._linear_pars)
+    n_linear = len(prior._linear_equiv_units)
 
     Lambda = np.zeros(n_linear)
-    for i, k in enumerate(prior._linear_pars.keys()):
+    for i, k in enumerate(prior._linear_equiv_units.keys()):
         if k == 'K':
             continue  # set below
         Lambda[i] = prior.pars[k].distribution.sd.eval() ** 2
@@ -190,7 +190,7 @@ def marginal_ln_likelihood(samples, prior, data):
 
     """
     n_samples = len(samples)
-    n_linear = len(prior._linear_pars)
+    n_linear = len(prior._linear_equiv_units)
     mu = np.zeros(n_linear)
 
     marg_ll = np.zeros(n_samples)
@@ -215,7 +215,7 @@ def rejection_sample(samples, prior, data, rnd=None):
     data : `~thejoker.RVData`
     """
 
-    n_linear = len(prior._linear_pars)
+    n_linear = len(prior._linear_equiv_units)
     mu = np.zeros(n_linear)
 
     if rnd is None:
@@ -264,7 +264,7 @@ def get_aAbB(samples, prior, data):
     """
 
     n_samples = len(samples)
-    n_linear = len(prior._linear_pars)
+    n_linear = len(prior._linear_equiv_units)
     n_times = len(data)
     mu = np.zeros(n_linear)
 

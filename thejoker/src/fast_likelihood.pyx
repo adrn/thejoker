@@ -147,7 +147,7 @@ cdef class CJokerHelper:
         # Counting:
         self.n_times = len(data)  # number of data pints
         self.n_poly = prior.poly_trend  # polynomial trend terms
-        self.n_offsets = prior._n_offsets  # v0 offsets
+        self.n_offsets = prior.n_offsets  # v0 offsets
         self.n_linear = 1 + self.n_poly + self.n_offsets # K, trend
         self.n_pars = len(prior.par_names)
 
@@ -216,7 +216,7 @@ cdef class CJokerHelper:
         else:
             self.fixed_K_prior = 1
 
-        for i, name in enumerate(prior._linear_pars.keys()):
+        for i, name in enumerate(prior._linear_equiv_units.keys()):
             dist = prior.model[name].distribution
             _unit = getattr(prior.model[name], xu.UNIT_ATTR_NAME)
             to_unit = self.internal_units[name]
@@ -235,7 +235,7 @@ cdef class CJokerHelper:
                 self.mu[i] = mu
 
             else:  # v1, v2, etc.
-                j = i + self._n_offsets
+                j = i + self.n_offsets
                 self.Lambda[j] = (dist.sd.eval() * _unit).to_value(to_unit) ** 2
                 self.mu[j] = mu
         # ---------------------------------------------------------------------

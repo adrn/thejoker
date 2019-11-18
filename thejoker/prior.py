@@ -261,7 +261,7 @@ class JokerPrior:
                                      "'{}'.".format(type(pars)))
 
         # Set the number of polynomial trend parameters
-        self.poly_trend, _ = validate_poly_trend(poly_trend)
+        self.poly_trend, self._v_trend_names = validate_poly_trend(poly_trend)
 
         # Calibration offsets of velocity zero-point
         # TODO: support passing in v0_offsets as a dict with same keys as data
@@ -448,15 +448,16 @@ class JokerPrior:
 
         """
         sub_pars = {k: p for k, p in self.pars.items()
-                    if k in self._nonlinear_pars
-                    or ((k in self._linear_pars or k in self._v0_offset_pars)
+                    if k in self._nonlinear_equiv_units
+                    or ((k in self._linear_equiv_units
+                         or k in self._v0_offset_equiv_units)
                         and generate_linear)}
 
         if generate_linear:
             # TODO: we could warn that this is usually slow because of pymc3?
             par_names = self.par_names
         else:
-            par_names = list(self._nonlinear_pars.keys())
+            par_names = list(self._nonlinear_equiv_units.keys())
 
         pars_list = list(sub_pars.values())
         npars = len(pars_list)
