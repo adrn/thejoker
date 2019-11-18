@@ -450,7 +450,7 @@ class JokerPrior:
         sub_pars = {k: p for k, p in self.pars.items()
                     if k in self._nonlinear_equiv_units
                     or ((k in self._linear_equiv_units
-                         or k in self._v0_offset_equiv_units)
+                         or k in self._v0_offsets_equiv_units)
                         and generate_linear)}
 
         if generate_linear:

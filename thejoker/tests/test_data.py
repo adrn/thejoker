@@ -241,6 +241,9 @@ def test_plotting(inputs):
 
 
 def test_multi_data():
+    import exoplanet.units as xu
+    import pymc3 as pm
+
     rnd = np.random.RandomState(42)
 
     # Set up mulitple valid data objects:
@@ -253,23 +256,33 @@ def test_multi_data():
     _, raw3 = get_valid_input(rnd=rnd, size=4)
     data3 = RVData(raw3['t_obj'], raw3['rv'], raw3['err'])
 
-    prior = JokerPrior.default(1*u.day, 1*u.year,
-                               25*u.km/u.s,
-                               sigma_v=100*u.km/u.s)
+    prior1 = JokerPrior.default(1*u.day, 1*u.year,
+                                25*u.km/u.s,
+                                sigma_v=100*u.km/u.s)
 
     # Object should return input:
     multi_data, ids, trend_M = validate_prepare_data(data1,
-                                                     prior.poly_trend,
-                                                     prior.n_offsets)
+                                                     prior1.poly_trend,
+                                                     prior1.n_offsets)
     assert np.allclose(multi_data.rv.value, data1.rv.value)
     assert ids is None
     assert np.allclose(trend_M[:, 0], 1.)
 
     # Three valid objects as a list:
+    with pm.Model():
+        dv1 = xu.with_unit(pm.Normal('dv0_1', 0, 1.),
+                           u.km/u.s)
+        dv2 = xu.with_unit(pm.Normal('dv0_2', 4, 5.),
+                           u.km/u.s)
+        prior2 = JokerPrior.default(1*u.day, 1*u.year,
+                                    25*u.km/u.s,
+                                    sigma_v=100*u.km/u.s,
+                                    v0_offsets=[dv1, dv2])
+
     datas = [data1, data2, data3]
     multi_data, ids, trend_M = validate_prepare_data(datas,
-                                                     prior.poly_trend,
-                                                     prior.n_offsets)
+                                                     prior2.poly_trend,
+                                                     prior2.n_offsets)
     assert len(np.unique(ids)) == 3
     assert len(multi_data) == sum([len(d) for d in datas])
     assert 0 in ids and 1 in ids and 2 in ids
@@ -278,20 +291,32 @@ def test_multi_data():
     # Three valid objects with names:
     datas = {'apogee': data1, 'lamost': data2, 'weave': data3}
     multi_data, ids, trend_M = validate_prepare_data(datas,
-                                                     prior.poly_trend,
-                                                     prior.n_offsets)
+                                                     prior2.poly_trend,
+                                                     prior2.n_offsets)
     assert len(np.unique(ids)) == 3
     assert len(multi_data) == sum([len(d) for d in datas.values()])
     assert 'apogee' in ids and 'lamost' in ids and 'weave' in ids
     assert np.allclose(trend_M[:, 0], 1.)
 
+    # Check it fails if n_offsets != number of data sources
+    with pytest.raises(ValueError):
+        validate_prepare_data(datas,
+                              prior1.poly_trend,
+                              prior1.n_offsets)
+
+    with pytest.raises(ValueError):
+        validate_prepare_data(data1,
+                              prior2.poly_trend,
+                              prior2.n_offsets)
+
     # Check that this fails if one has a covariance matrix
     data_cov = RVData(raw3['t_obj'], raw3['rv'], raw3['cov'])
     with pytest.raises(NotImplementedError):
-        validate_prepare_data({'apogee': data1, 'weave': data_cov},
-                              prior.poly_trend, prior.n_offsets)
+        validate_prepare_data({'apogee': data1, 'test': data2,
+                               'weave': data_cov},
+                              prior2.poly_trend, prior2.n_offsets)
 
     with pytest.raises(NotImplementedError):
-        validate_prepare_data([data1, data_cov],
-                              prior.poly_trend,
-                              prior.n_offsets)
+        validate_prepare_data([data1, data2, data_cov],
+                              prior2.poly_trend,
+                              prior2.n_offsets)
