@@ -181,26 +181,3 @@ def test_iterative_rejection_sample(tmpdir, prior):
     for i in range(1, len(all_Ps)):
         assert u.allclose(all_Ps[0], all_Ps[i])
         assert u.allclose(all_Ks[0], all_Ks[i])
-
-
-@pytest.mark.skip(reason="TODO: need to re-implement this!")
-def test_mcmc_continue():
-    rnd = np.random.RandomState(42)
-
-    # First, try just running rejection_sample()
-    data = self.data['binary']
-    joker = TheJoker(self.joker_params['binary'], random_state=rnd)
-
-    samples = joker.rejection_sample(data, n_prior_samples=16384)
-    joker.mcmc_sample(data, samples, n_steps=8, n_burn=8,
-                        n_walkers=128, return_sampler=False)
-    joker.mcmc_sample(data, samples, n_steps=8, n_burn=8, n_walkers=128,
-                        return_sampler=True)
-
-    # Fancy K prior:
-    data = self.data['binary_Kprior']
-    joker = TheJoker(self.joker_params['binary_Kprior'], random_state=rnd)
-
-    samples = joker.rejection_sample(data, n_prior_samples=16384)
-    joker.mcmc_sample(data, samples, n_steps=8, n_burn=8,
-                        n_walkers=128, return_sampler=False)
