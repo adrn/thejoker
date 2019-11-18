@@ -275,7 +275,6 @@ class JokerPrior:
                             "of pymc3 variables that define the priors on "
                             "each offset term.")
 
-        self._n_offsets = len(v0_offsets)
         self.v0_offsets = v0_offsets
         pars.update({p.name: p for p in self.v0_offsets})
 
@@ -410,6 +409,10 @@ class JokerPrior:
     @property
     def par_units(self):
         return {p.name: getattr(p, xu.UNIT_ATTR_NAME, u.one) for p in self.pars}
+
+    @property
+    def n_offsets(self):
+        return len(self.v0_offsets)
 
     def __repr__(self):
         return f'<JokerPrior [{", ".join(self.par_names)}]>'

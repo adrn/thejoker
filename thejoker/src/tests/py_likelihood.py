@@ -11,7 +11,7 @@ from astroML.utils import log_multivariate_gaussian
 
 # Project
 from ...samples import JokerSamples
-from ...prior_helpers import FixedCompanionMass
+from ...distributions import FixedCompanionMass
 
 __all__ = ['get_ivar', 'likelihood_worker', 'marginal_ln_likelihood']
 

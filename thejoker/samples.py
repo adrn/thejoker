@@ -10,8 +10,10 @@ import numpy as np
 from twobody import KeplerOrbit, PolynomialRVTrend
 
 # Project
-from .prior_helpers import (_validate_polytrend, _get_nonlinear_equiv_units,
-                            _get_linear_equiv_units)
+from .prior_helpers import (validate_poly_trend, validate_n_offsets,
+                            get_nonlinear_equiv_units,
+                            get_linear_equiv_units,
+                            get_v0_offsets_equiv_units)
 from .samples_helpers import write_table_hdf5
 
 __all__ = ['JokerSamples']
@@ -20,7 +22,8 @@ __all__ = ['JokerSamples']
 class JokerSamples:
     _hdf5_path = 'samples'
 
-    def __init__(self, samples=None, prior=None, t0=None, **kwargs):
+    def __init__(self, samples=None, t0=None, n_offsets=None, poly_trend=None,
+                 **kwargs):
         """
         A dictionary-like object for storing prior or posterior samples from
         The Joker, with some extra functionality.
@@ -44,32 +47,36 @@ class JokerSamples:
         """
         self.tbl = QTable()
 
+        if poly_trend is None:
+            poly_trend = 1
+
+        if n_offsets is None:
+            n_offsets = 0
+
         if isinstance(samples, Table):
             t0 = samples.meta.pop('t0', t0)
-            poly_trend = samples.meta.pop('poly_trend', 1)
-            n_offsets = samples.meta.pop('n_offsets', 0)
-            _valid_units = samples.meta.pop('_valid_units', None)
+            poly_trend = samples.meta.pop('poly_trend', poly_trend)
+            n_offsets = samples.meta.pop('n_offsets', n_offsets)
             kwargs.update(samples.meta)
 
-        elif prior is not None:
-            _valid_units = prior._all_par_unit_equiv.copy()
-            poly_trend = prior.poly_trend
-            n_offsets = prior.n_offsets
+        # Validate input poly_trend / n_offsets:
+        poly_trend, _ = validate_poly_trend(poly_trend)
+        n_offsets, _ = validate_n_offsets(n_offsets)
 
-        else:
-            raise ValueError("Either pass in an astropy table with proper "
-                             "metadata, or specify the JokerPrior instance "
-                             "used to generate these samples must be specified "
-                             "via prior=...")
+        valid_units = {
+            **get_nonlinear_equiv_units(),
+            **get_linear_equiv_units(poly_trend),
+            **get_v0_offsets_equiv_units(n_offsets)
+        }
 
         # log-prior and log-likelihood values are also valid:
-        _valid_units['ln_prior'] = u.one
-        _valid_units['ln_likelihood'] = u.one
+        valid_units['ln_prior'] = u.one
+        valid_units['ln_likelihood'] = u.one
+        self._valid_units = valid_units
 
-        self.tbl.meta['poly_trend'] = poly_trend
         self.tbl.meta['t0'] = t0
+        self.tbl.meta['poly_trend'] = poly_trend
         self.tbl.meta['n_offsets'] = n_offsets
-        self.tbl.meta['_valid_units'] = _valid_units
         for k, v in kwargs.items():
             self.tbl.meta[k] = v
 
@@ -119,10 +126,6 @@ class JokerSamples:
     @property
     def n_offsets(self):
         return self.tbl.meta['n_offsets']
-
-    @property
-    def _valid_units(self):
-        return self.tbl.meta['_valid_units']
 
     @property
     def par_names(self):
@@ -178,9 +181,6 @@ class JokerSamples:
         M0 = self['M0']
         a = kwargs.pop('a', P * K / (2*np.pi) * np.sqrt(1 - e**2))
 
-        _, v_trend_names = _validate_polytrend(self.poly_trend)
-        names = list(_get_linear_equiv_units(v_trend_names).keys())
-
         if index is None:
             if len(self) == 1:
                 index = 0
@@ -194,6 +194,7 @@ class JokerSamples:
         omega = omega[index]
         M0 = M0[index]
 
+        names = list(get_linear_equiv_units(self.poly_trend).keys())
         trend_coeffs = [self[x][index] for x in names[1:]]  # skip K
 
         orbit.elements._P = P
@@ -286,7 +287,7 @@ class JokerSamples:
         return np.stack(arrs, axis=1), out_units
 
     @classmethod
-    def unpack(cls, packed_samples, units, prior, t0=None, **kwargs):
+    def unpack(cls, packed_samples, units, *kwargs):
         """
         Unpack the array of packed (prior) samples and return a
         `~thejoker.JokerSamples` instance.
@@ -299,7 +300,9 @@ class JokerSamples:
             columns in this dictionary determines the assumed order of the
             columns in the packed samples array.
         **kwargs
-            Additional keyword arguments are stored internally as metadata.
+            Additional keyword arguments are passed through to the initializer,
+            so this supports any arguments accepted by the initializer (e.g.,
+            ``t0``, ``n_offsets``, ``poly_trend``)
 
         Returns
         -------
@@ -310,7 +313,7 @@ class JokerSamples:
         packed_samples = np.array(packed_samples)
         nsamples, npars = packed_samples.shape
 
-        samples = cls(prior=prior, t0=t0, **kwargs)
+        samples = cls(**kwargs)
         for i, k in enumerate(list(units.keys())[:npars]):
             unit = units[k]
             samples[k] = packed_samples[:, i] * unit

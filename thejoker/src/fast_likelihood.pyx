@@ -21,7 +21,7 @@ import exoplanet.units as xu
 from libc.math cimport pow, log, fabs, pi
 
 # Project
-from ..prior_helpers import FixedCompanionMass
+from ..distributions import FixedCompanionMass
 
 
 cdef extern from "src/twobody.h":
