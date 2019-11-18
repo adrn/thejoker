@@ -417,7 +417,8 @@ def default_nonlinear_prior(P_min=None, P_max=None, s=None,
                                           u.radian)
 
         if 's' not in pars:
-            out_pars['s'] = xu.with_unit(pm.Constant('s', s.value),
+            out_pars['s'] = xu.with_unit(pm.Deterministic('s',
+                                                          tt.constant(s.value)),
                                          s.unit)
 
         if 'P' not in pars:
