@@ -7,7 +7,7 @@ import pytest
 
 # Project
 from ..samples import JokerSamples
-from ..samples_helpers import _custom_tbl_dtype_compare
+from ..samples_helpers import _custom_tbl_dtype_compare, is_P_unimodal
 
 
 def test_joker_samples(tmpdir):

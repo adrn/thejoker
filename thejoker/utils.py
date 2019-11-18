@@ -260,25 +260,3 @@ def tempfile_decorator(func):
         return func_return
 
     return wrapper
-
-
-def is_P_unimodal(samples, data):
-    """
-    Check whether the samples returned are within one period mode.
-
-    Parameters
-    ----------
-    samples : `~thejoker.JokerSamples`
-    data : `~thejoker.RVData`
-
-    Returns
-    -------
-    is_unimodal : bool
-    """
-
-    P_samples = samples['P'].to(u.day).value
-    P_min = np.min(P_samples)
-    T = np.ptp(data.t.tcb.mjd)
-    delta = 4*P_min**2 / (2*np.pi*T)
-
-    return np.ptp(P_samples) < delta
