@@ -258,14 +258,18 @@ def test_multi_data():
                                sigma_v=100*u.km/u.s)
 
     # Object should return input:
-    multi_data, ids, trend_M = validate_prepare_data(data1, prior)
+    multi_data, ids, trend_M = validate_prepare_data(data1,
+                                                     prior.poly_trend,
+                                                     prior.n_offsets)
     assert np.allclose(multi_data.rv.value, data1.rv.value)
     assert ids is None
     assert np.allclose(trend_M[:, 0], 1.)
 
     # Three valid objects as a list:
     datas = [data1, data2, data3]
-    multi_data, ids, trend_M = validate_prepare_data(datas, prior)
+    multi_data, ids, trend_M = validate_prepare_data(datas,
+                                                     prior.poly_trend,
+                                                     prior.n_offsets)
     assert len(np.unique(ids)) == 3
     assert len(multi_data) == sum([len(d) for d in datas])
     assert 0 in ids and 1 in ids and 2 in ids
@@ -273,7 +277,9 @@ def test_multi_data():
 
     # Three valid objects with names:
     datas = {'apogee': data1, 'lamost': data2, 'weave': data3}
-    multi_data, ids, trend_M = validate_prepare_data(datas, prior)
+    multi_data, ids, trend_M = validate_prepare_data(datas,
+                                                     prior.poly_trend,
+                                                     prior.n_offsets)
     assert len(np.unique(ids)) == 3
     assert len(multi_data) == sum([len(d) for d in datas.values()])
     assert 'apogee' in ids and 'lamost' in ids and 'weave' in ids
@@ -282,7 +288,10 @@ def test_multi_data():
     # Check that this fails if one has a covariance matrix
     data_cov = RVData(raw3['t_obj'], raw3['rv'], raw3['cov'])
     with pytest.raises(NotImplementedError):
-        validate_prepare_data({'apogee': data1, 'weave': data_cov}, prior)
+        validate_prepare_data({'apogee': data1, 'weave': data_cov},
+                              prior.poly_trend, prior.n_offsets)
 
     with pytest.raises(NotImplementedError):
-        validate_prepare_data([data1, data_cov], prior)
+        validate_prepare_data([data1, data_cov],
+                              prior.poly_trend,
+                              prior.n_offsets)

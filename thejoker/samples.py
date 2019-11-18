@@ -47,12 +47,14 @@ class JokerSamples:
         if isinstance(samples, Table):
             t0 = samples.meta.pop('t0', t0)
             poly_trend = samples.meta.pop('poly_trend', 1)
+            n_offsets = samples.meta.pop('n_offsets', 0)
             _valid_units = samples.meta.pop('_valid_units', None)
             kwargs.update(samples.meta)
 
         elif prior is not None:
             _valid_units = prior._all_par_unit_equiv.copy()
             poly_trend = prior.poly_trend
+            n_offsets = prior.n_offsets
 
         else:
             raise ValueError("Either pass in an astropy table with proper "
@@ -66,6 +68,7 @@ class JokerSamples:
 
         self.tbl.meta['poly_trend'] = poly_trend
         self.tbl.meta['t0'] = t0
+        self.tbl.meta['n_offsets'] = n_offsets
         self.tbl.meta['_valid_units'] = _valid_units
         for k, v in kwargs.items():
             self.tbl.meta[k] = v
@@ -112,6 +115,10 @@ class JokerSamples:
     @property
     def poly_trend(self):
         return self.tbl.meta['poly_trend']
+
+    @property
+    def n_offsets(self):
+        return self.tbl.meta['n_offsets']
 
     @property
     def _valid_units(self):

@@ -6,6 +6,9 @@ from astropy.time import Time
 import astropy.units as u
 import numpy as np
 
+# Project
+from .data_helpers import validate_prepare_data
+
 __all__ = ['plot_rv_curves']
 
 
@@ -52,6 +55,9 @@ def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
     else:
         fig = ax.figure
 
+    data, ids, _ = validate_prepare_data(data, samples.poly_trend,
+                                         samples.n_offsets)
+
     if t_grid is None:
         if data is None:
             raise ValueError('If data is not passed in, you must specify '
@@ -94,6 +100,10 @@ def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
     for i in range(n_plot):
         orbit = samples.get_orbit(i)
         model_rv[i] = orbit.radial_velocity(t_grid).to(rv_unit).value
+
+        # TODO: offset model_rv with v0_offset samples
+        # TODO: I think samples needs to know what names are the offsets...
+
     model_ylim = (np.percentile(model_rv.min(axis=1), 5),
                   np.percentile(model_rv.max(axis=1), 95))
 

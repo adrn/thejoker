@@ -22,7 +22,7 @@ def get_constant_term_design_matrix(data, ids=None):
     return constant_part
 
 
-def get_trend_design_matrix(data, ids, prior):
+def get_trend_design_matrix(data, ids, poly_trend):
     """
     TODO
     """
@@ -30,5 +30,5 @@ def get_trend_design_matrix(data, ids, prior):
     # sampling over v0 offsets, with the rest of the long-term trend columns
     const_M = get_constant_term_design_matrix(data, ids)
     dt = data._t_bmjd - data._t0_bmjd
-    trend_M = np.vander(dt, N=prior.poly_trend, increasing=True)[:, 1:]
+    trend_M = np.vander(dt, N=poly_trend, increasing=True)[:, 1:]
     return np.hstack((const_M, trend_M))

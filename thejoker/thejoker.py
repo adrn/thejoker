@@ -73,7 +73,9 @@ class TheJoker:
         return self._tempfile_path
 
     def _make_joker_helper(self, data):
-        all_data, ids, trend_M = validate_prepare_data(data, self.prior)
+        all_data, ids, trend_M = validate_prepare_data(data,
+                                                       self.prior.poly_trend,
+                                                       self.prior.n_offsets)
         joker_helper = CJokerHelper(all_data, self.prior, trend_M)
         return joker_helper
 
