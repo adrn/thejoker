@@ -352,7 +352,7 @@ class RVData:
         return ((self.t - t0) / P) % 1.
 
     def plot(self, ax=None, rv_unit=None, time_format='mjd', phase_fold=None,
-             relative_to_t0=False, add_labels=True, **kwargs):
+             relative_to_t0=False, add_labels=True, color_by=None, **kwargs):
         """
         Plot the data points.
 
@@ -395,9 +395,11 @@ class RVData:
         style.setdefault('linestyle', 'none')
         style.setdefault('alpha', 1.)
         style.setdefault('marker', 'o')
-        style.setdefault('color', 'k')
-        style.setdefault('ecolor', '#666666')
         style.setdefault('elinewidth', 1)
+
+        if style.get('color', 'k') is not None:
+            style.setdefault('color', 'k')
+            style.setdefault('ecolor', '#666666')
 
         if callable(time_format):
             t = time_format(self.t)

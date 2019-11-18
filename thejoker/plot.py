@@ -7,14 +7,17 @@ import astropy.units as u
 import numpy as np
 
 # Project
+from .data import RVData
 from .data_helpers import validate_prepare_data
+from .prior_helpers import get_v0_offsets_equiv_units
 
 __all__ = ['plot_rv_curves']
 
 
 def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
                    ax=None, plot_kwargs=dict(), data_plot_kwargs=dict(),
-                   add_labels=True, relative_to_t0=False):
+                   add_labels=True, relative_to_t0=False,
+                   apply_mean_v0_offset=True):
     """
     Plot radial velocity curves for the input set of orbital parameter
     samples over the input grid of times.
@@ -102,9 +105,6 @@ def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
         orbit = samples.get_orbit(i)
         model_rv[i] = orbit.radial_velocity(t_grid).to(rv_unit).value
 
-        # TODO: offset model_rv with v0_offset samples
-        # TODO: I think samples needs to know what names are the offsets...
-
     model_ylim = (np.percentile(model_rv.min(axis=1), 5),
                   np.percentile(model_rv.max(axis=1), 95))
 
@@ -117,6 +117,22 @@ def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
     ax.plot(bmjd, model_rv.T, **style)
 
     if data is not None:
+        if apply_mean_v0_offset:
+            data_rv = np.array(data.rv.value)  # copy
+            data_err = np.array(data.rv_err.to_value(data.rv.unit))
+
+            unq_ids = np.unique(ids)
+            dv0_names = get_v0_offsets_equiv_units(samples.n_offsets).keys()
+            for i, name in enumerate(dv0_names):
+                mask = ids == unq_ids[i+1]
+                offset_samples = samples[name].to_value(data.rv.unit)
+                data_rv[mask] -= np.mean(offset_samples)
+                data_err[mask] = np.sqrt(data_err[mask]**2 +
+                                         np.var(offset_samples))
+            data = RVData(t=data.t,
+                          rv=data_rv * data.rv.unit,
+                          rv_err=data_err * data.rv.unit)
+
         data_style = data_plot_kwargs.copy()
         data_style.setdefault('rv_unit', rv_unit)
         data_style.setdefault('markersize', 4.)
@@ -139,8 +155,13 @@ def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
         ax.set_ylabel('RV [{}]'
                       .format(rv_unit.to_string(format='latex_inline')))
 
-    # TODO: should we ever set the limits based on the data, computed above?
-    ylim = model_ylim
+    if data_ylim is not None:
+        ylim = (min(data_ylim[0], model_ylim[0]),
+                max(data_ylim[1], model_ylim[1]))
+
+    else:
+        ylim = model_ylim
+
     ax.set_ylim(ylim)
 
     return fig

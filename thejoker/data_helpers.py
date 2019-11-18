@@ -69,7 +69,7 @@ def validate_prepare_data(data, poly_trend, n_offsets):
                              "or a dictionary with RVData instances as values.")
 
         trend_M = get_trend_design_matrix(data, None, poly_trend)
-        return data, None, trend_M
+        return data, np.zeros(len(data), dtype=int), trend_M
 
     # Turn a list-like into a dict object:
     if not hasattr(data, 'keys'):
