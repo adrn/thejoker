@@ -9,9 +9,12 @@ import exoplanet.units as xu
 
 # Project
 from .samples import JokerSamples
-from .prior_helpers import (UniformLog, FixedCompanionMass,
-                            _validate_polytrend, _get_nonlinear_equiv_units,
-                            _get_linear_equiv_units)
+from .distributions import UniformLog, FixedCompanionMass
+from .prior_helpers import (get_nonlinear_equiv_units,
+                            get_linear_equiv_units,
+                            validate_poly_trend,
+                            get_v0_offsets_equiv_units,
+                            validate_sigma_v)
 
 __all__ = ['JokerPrior']
 
@@ -120,40 +123,6 @@ def default_nonlinear_prior(P_min=None, P_max=None, s=None,
     return out_pars
 
 
-def _validate_sigma_v(sigma_v, poly_trend, v_names):
-    if isinstance(sigma_v, u.Quantity):
-        if not sigma_v.isscalar:
-            raise ValueError("You must pass in a scalar value for sigma_v if "
-                             "passing in a single quantity.")
-        sigma_v = {'v0': sigma_v}
-
-    if hasattr(sigma_v, 'keys'):
-        for name in v_names:
-            if name not in sigma_v.keys():
-                raise ValueError("If specifying the standard-deviations of "
-                                 "the polynomial trend parameter prior, you "
-                                 "must pass in values for all parameter names."
-                                 "Expected keys: {}, received: {}"
-                                 .format(v_names, sigma_v.keys()))
-        return sigma_v
-
-    try:
-        if len(sigma_v) != poly_trend:
-            raise ValueError("You must pass in a single sigma value for "
-                             "each velocity trend parameter: You passed in "
-                             "{} values, but poly_trend={}"
-                             .format(len(sigma_v), poly_trend))
-        sigma_v = {name: val for name, val in zip(v_names, sigma_v)}
-
-    except TypeError:
-        raise TypeError("Invalid input for velocity trend prior sigma "
-                        "values. This must either be a scalar Quantity (if "
-                        "poly_trend=1) or an iterable of Quantity objects "
-                        "(if poly_trend>1)")
-
-    return sigma_v
-
-
 @u.quantity_input(sigma_K0=u.km/u.s, P0=u.day)
 def default_linear_prior(sigma_K0=None, P0=None, sigma_v=None,
                          poly_trend=1, model=None, pars=None):
@@ -187,7 +156,7 @@ def default_linear_prior(sigma_K0=None, P0=None, sigma_v=None,
     out_pars = dict()
 
     # set up poly. trend names:
-    poly_trend, v_names = _validate_polytrend(poly_trend)
+    poly_trend, v_names = validate_poly_trend(poly_trend)
 
     # get period/ecc from dict of nonlinear parameters
     P = model.named_vars.get('P', None)
@@ -197,7 +166,7 @@ def default_linear_prior(sigma_K0=None, P0=None, sigma_v=None,
                          "nonlinear parameters on the model.")
 
     if v_names and 'v0' not in pars:
-        sigma_v = _validate_sigma_v(sigma_v, poly_trend, v_names)
+        sigma_v = validate_sigma_v(sigma_v, poly_trend, v_names)
 
     with model:
         if 'K' not in pars:
@@ -292,9 +261,9 @@ class JokerPrior:
                                      "'{}'.".format(type(pars)))
 
         # Set the number of polynomial trend parameters
-        self.poly_trend, self._v_trend_names = _validate_polytrend(poly_trend)
+        self.poly_trend, _ = validate_poly_trend(poly_trend)
 
-        # TODO: FIXME: enable support for this
+        # Calibration offsets of velocity zero-point
         # TODO: support passing in v0_offsets as a dict with same keys as data
         if v0_offsets is None:
             v0_offsets = []
@@ -306,7 +275,6 @@ class JokerPrior:
                             "of pymc3 variables that define the priors on "
                             "each offset term.")
 
-        self._v0_offset_pars = {p.name: u.m/u.s for p in v0_offsets}
         self._n_offsets = len(v0_offsets)
         self.v0_offsets = v0_offsets
         pars.update({p.name: p for p in self.v0_offsets})
@@ -315,11 +283,12 @@ class JokerPrior:
         # Note: these are *not* the units assumed internally by the code, but
         # are only used to validate that the units for each parameter are
         # equivalent to these
-        self._nonlinear_pars = _get_nonlinear_equiv_units()
-        self._linear_pars = _get_linear_equiv_units(self._v_trend_names)
-        self._all_par_unit_equiv = {**self._nonlinear_pars,
-                                    **self._linear_pars,
-                                    **self._v0_offset_pars}
+        self._nonlinear_equiv_units = get_nonlinear_equiv_units()
+        self._linear_equiv_units = get_linear_equiv_units(self.poly_trend)
+        self._v0_offsets_equiv_units = get_v0_offsets_equiv_units(self.n_offsets)
+        self._all_par_unit_equiv = {**self._nonlinear_equiv_units,
+                                    **self._linear_equiv_units,
+                                    **self._v0_offsets_equiv_units}
 
         # At this point, pars must be a dictionary: validate that all
         # parameters are specified and that they all have units
@@ -342,9 +311,10 @@ class JokerPrior:
                                  f"The units for this parameter must be "
                                  f"transformable to '{equiv_unit}'")
 
-        # Enforce that the priors on all linear parameters are Normal (or normal subclass)
-        for name in (list(self._linear_pars.keys())
-                     + list(self._v0_offset_pars.keys())):
+        # Enforce that the priors on all linear parameters are Normal (or a
+        # subclass of Normal)
+        for name in (list(self._linear_equiv_units.keys())
+                     + list(self._v0_offsets_equiv_units.keys())):
             if not isinstance(pars[name].distribution, pm.Normal):
                 raise ValueError("Priors on the linear parameters (K, v0, "
                                  "etc.) must be independent Normal "
@@ -408,7 +378,8 @@ class JokerPrior:
             A list of additional Gaussian parameters that set systematic offsets
             of subsets of the data. TODO: link to tutorial here
         model : `pymc3.Model` (optional)
-            If not specified, this will create a model instance and store it on the prior object.
+            If not specified, this will create a model instance and store it on
+            the prior object.
         pars : dict, list (optional)
             Either a list of pymc3 variables, or a dictionary of variables with
             keys set to the variable names. If any of these variables are
@@ -432,9 +403,9 @@ class JokerPrior:
 
     @property
     def par_names(self):
-        return (list(self._nonlinear_pars.keys())
-                + list(self._linear_pars.keys())
-                + [off.name for off in self.v0_offsets])
+        return (list(self._nonlinear_equiv_units.keys())
+                + list(self._linear_equiv_units.keys())
+                + list(self._v0_offsets_equiv_units))
 
     @property
     def par_units(self):
@@ -454,7 +425,8 @@ class JokerPrior:
 
             Right now, generating samples with the prior values is slow (i.e.
             with ``return_logprobs=True``) because of pymc3 issues (see
-            discussion here: https://discourse.pymc.io/t/draw-values-speed-scaling-with-transformed-variables/4076).
+            discussion here:
+            https://discourse.pymc.io/t/draw-values-speed-scaling-with-transformed-variables/4076).
             This will hopefully be resolved in the future...
 
         Parameters
