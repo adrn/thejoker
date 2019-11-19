@@ -265,7 +265,7 @@ def test_multi_data():
                                                      prior1.poly_trend,
                                                      prior1.n_offsets)
     assert np.allclose(multi_data.rv.value, data1.rv.value)
-    assert ids is None
+    assert np.all(ids == 0)
     assert np.allclose(trend_M[:, 0], 1.)
 
     # Three valid objects as a list:
