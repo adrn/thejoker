@@ -7,3 +7,4 @@ corner
 nbsphinx
 nbconvert
 ipykernel
+astroML
