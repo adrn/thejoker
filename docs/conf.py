@@ -180,21 +180,35 @@ intersphinx_mapping['pymc3'] = ('https://docs.pymc.io/', None)
 intersphinx_mapping['twobody'] = ('http://twobody.readthedocs.io/en/latest/',
                                   None)
 
-# add nbsphinx extension
-extensions += ['nbsphinx']
-extensions += ['IPython.sphinxext.ipython_console_highlighting']
-
 # see if we're running on travis
 if 'CI' in os.environ:
-    ON_TRAVIS = True
+    ON_CI = True
 else:
-    ON_TRAVIS = False
+    ON_CI = False
 
 # Use astropy plot style
 plot_rcparams = dict()
-if not ON_TRAVIS:
+if not ON_CI:
     plot_rcparams['text.usetex'] = True
 plot_rcparams['savefig.facecolor'] = 'none'
 plot_rcparams['savefig.bbox'] = 'tight'
 plot_apply_rcparams = True
 plot_formats = [('png', 512)]
+
+
+# nbsphinx config:
+
+extensions += ['nbsphinx']
+extensions += ['IPython.sphinxext.ipython_console_highlighting']
+extensions += ['sphinx.ext.mathjax']
+
+mathjax_config = {
+    'TeX': {'equationNumbers': {'autoNumber': 'AMS', 'useLabelIds': True}},
+}
+
+nbsphinx_execute_arguments = [
+    "--InlineBackend.rc={'figure.dpi': 250}",
+]
+
+if ON_CI:
+    nbsphinx_kernel_name = 'python3'
