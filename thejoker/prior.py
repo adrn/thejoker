@@ -8,6 +8,7 @@ from exoplanet.distributions.eccentricity import kipping13
 import exoplanet.units as xu
 
 # Project
+from .logging import logger
 from .samples import JokerSamples
 from .distributions import UniformLog, FixedCompanionMass
 from .prior_helpers import (get_nonlinear_equiv_units,
@@ -306,7 +307,13 @@ class JokerPrior:
             with self.model:
                 for par in pars_list:
                     logp_name = f'{par.name}_log_prior'
-                    dist = par.distribution.logp(par)
+                    try:
+                        dist = par.distribution.logp(par)
+                    except AttributeError:
+                        logger.warn("Cannot auto-compute log-prior value for "
+                                    f"parameter {par} because it is defined as "
+                                    "a transformation from another variable.")
+                        continue
 
                     if logp_name in self.model.named_vars.keys():
                         logp_var = self.model.named_vars[logp_name]
@@ -405,17 +412,29 @@ def default_nonlinear_prior(P_min=None, P_max=None, s=None,
             out_pars['e'] = xu.with_unit(kipping13('e'),
                                          u.one)
 
-        if 'omega' not in pars:
-            out_pars['omega'] = xu.with_unit(pm.Uniform('omega',
-                                                        lower=0,
-                                                        upper=2*np.pi),
-                                             u.radian)
-
-        if 'M0' not in pars:
-            out_pars['M0'] = xu.with_unit(pm.Uniform('M0',
-                                                     lower=0,
-                                                     upper=2*np.pi),
+        if 'omega' not in pars and 'M0' not in pars:
+            # It's better to sample in omega + M0, omega
+            w_M0 = xu.with_unit(pm.Triangular('w_M0', 0, 4*np.pi, 2*np.pi),
+                                u.radian)
+            omega = xu.with_unit(pm.Uniform('omega', 0, 2*np.pi),
+                                 u.radian)
+            out_pars['omega'] = omega
+            out_pars['M0'] = xu.with_unit(pm.Deterministic('M0', w_M0 - omega),
                                           u.radian)
+
+        else:
+            # If either omega or M0 is specified by user, default to U(0,2π)
+            if 'omega' not in pars:
+                out_pars['omega'] = xu.with_unit(pm.Uniform('omega',
+                                                            lower=0,
+                                                            upper=2*np.pi),
+                                                 u.radian)
+
+            if 'M0' not in pars:
+                out_pars['M0'] = xu.with_unit(pm.Uniform('M0',
+                                                         lower=0,
+                                                         upper=2*np.pi),
+                                              u.radian)
 
         if 's' not in pars:
             out_pars['s'] = xu.with_unit(pm.Deterministic('s',
