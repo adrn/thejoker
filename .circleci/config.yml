@@ -95,6 +95,24 @@ jobs:
           command: |
             DOCS_URL="${CIRCLE_BUILD_URL}/artifacts/${CIRCLE_NODE_INDEX}/${CIRCLE_WORKING_DIRECTORY/#\~/$HOME}/build/html/index.html"; echo $DOCS_URL
 
+workflows:
+ thejoker:
+   jobs:
+      - egg-info-36
+      - egg-info-37
+      - test-36:
+          requires:
+            - egg-info-36
+      - test-37:
+          requires:
+            - egg-info-37
+      - test-coverage:
+          requires:
+            - test-37
+      - build-docs:
+          requires:
+            - test-37
+
 notify:
   webhooks:
     - url: https://giles.cadair.com/circleci
