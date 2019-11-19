@@ -31,12 +31,11 @@ class TheJoker:
     prior : `~thejoker.JokerPrior`
         The specification of the prior probability distribution over all
         parameters used in The Joker.
-    pool : ``schwimmbad.BasePool`` (optional)
-        A processing pool (default is a ``schwimmbad.SerialPool`` instance).
+    pool : `schwimmbad.BasePool` (optional)
+        A processing pool (default is a `schwimmbad.SerialPool` instance).
     random_state : `numpy.random.RandomState` (optional)
-        A ``RandomState`` instance to serve as a parent for the random
-        number generators. See the :ref:`random numbers <random-numbers>` page
-        for more information.
+        A `numpy.random.RandomState` instance for controlling random number
+        generation.
     tempfile_path : str (optional)
         A location on disk where The Joker may store some temporary files. Any
         files written here by The Joker should be cleaned up: If any files in
