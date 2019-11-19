@@ -13,6 +13,7 @@ from .logging import logger
 from .data_helpers import validate_prepare_data
 from .samples_helpers import is_P_unimodal
 from .likelihood_helpers import get_trend_design_matrix
+from .prior_helpers import validate_n_offsets, validate_poly_trend
 from .prior import JokerPrior, _validate_model
 from .src.fast_likelihood import CJokerHelper
 from .utils import tempfile_decorator
@@ -342,9 +343,15 @@ class TheJoker:
         # design matrix
         M = get_trend_design_matrix(data, ids, self.prior.poly_trend)
 
-        # FIXME: deal with v0_offsets, trend here:
+        # deal with v0_offsets, trend here:
+        _, offset_names = validate_n_offsets(self.prior.n_offsets)
+        _, vtrend_names = validate_poly_trend(self.prior.poly_trend)
+
         with model:
-            v_trend_vec = tt.stack((p['v0'], p['dv0_1'], p['dv0_2']), axis=0)
+            v_pars = ([p['v0']]
+                      + [p[name] for name in offset_names]
+                      + [p[name] for name in vtrend_names[1:]])  # skip v0
+            v_trend_vec = tt.stack(v_pars, axis=0)
             trend = tt.dot(M, v_trend_vec)
 
             rv_model = orbit.get_radial_velocity(x, K=p['K']) + trend
