@@ -133,11 +133,11 @@ More examples / tutorials
 .. toctree::
     :maxdepth: 1
 
-    examples/multiproc-example.ipynb
-    examples/astrometric-orbit.ipynb
-    examples/velocity-trends.ipynb
-    examples/custom-prior-sampling.ipynb
-    examples/continue-with-emcee.ipynb
+    examples/1-Getting-started.ipynb
+    examples/2-Customize-prior.ipynb
+    examples/3-Polynomial-velocity-trend.ipynb
+    examples/4-Continue-sampling-mcmc.ipynb
+    examples/5-Calibration-offsets.ipynb
 
 .. examples/mpi.rst
 
