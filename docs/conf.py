@@ -199,19 +199,18 @@ plot_formats = [('png', 512)]
 
 
 # nbsphinx config:
-exclude_patterns.append('make-data.ipynb')
+exclude_patterns.append('make-data.*')
+exclude_patterns.append('*/make-data.*')
 
 extensions += ['nbsphinx']
 extensions += ['IPython.sphinxext.ipython_console_highlighting']
+
 extensions += ['sphinx.ext.mathjax']
+mathjax_path = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
 
-mathjax_config = {
-    'TeX': {'equationNumbers': {'autoNumber': 'AMS', 'useLabelIds': True}},
-}
-
-nbsphinx_execute_arguments = [
-    "--InlineBackend.rc={'figure.dpi': 250}",
-]
+# nbsphinx_execute_arguments = [
+#     "--InlineBackend.rc={'figure.dpi': 250}",
+# ]
 
 nbsphinx_timeout = 600
 
