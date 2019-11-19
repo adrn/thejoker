@@ -210,5 +210,7 @@ nbsphinx_execute_arguments = [
     "--InlineBackend.rc={'figure.dpi': 250}",
 ]
 
+nbsphinx_timeout = 600
+
 if ON_CI:
     nbsphinx_kernel_name = 'python3'
