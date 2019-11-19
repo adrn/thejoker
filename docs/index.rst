@@ -105,7 +105,7 @@ below to see how these were made):
     prior = JokerPrior.default(P_min=8*u.day, P_max=512*u.day,
                            sigma_K0=30*u.km/u.s, sigma_v=100*u.km/u.s)
     pool = schwimmbad.MultiPool()
-    joker = TheJoker(params, pool=pool)
+    joker = TheJoker(prior, pool=pool)
 
     prior_samples = prior.sample(size=65536)
     samples = joker.rejection_sample(data, prior_samples)
