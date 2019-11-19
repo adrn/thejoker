@@ -7,3 +7,4 @@ git+https://github.com/adrn/schwimmbad
 twobody>=0.5
 h5py
 tables
+pyyaml
