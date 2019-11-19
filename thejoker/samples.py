@@ -252,6 +252,16 @@ class JokerSamples:
         all samples"""
         return self._apply(np.std)
 
+    def wrap_K(self):
+        """
+        Change negative K values to positive K values and wrap omega to adjust
+        """
+        mask = self.tbl['K'] < 0
+        if np.any(mask):
+            self.tbl['K'][mask] = np.abs(self.tbl['K'])
+            self.tbl['omega'][mask] = self.tbl['omega'][mask] + np.pi * u.rad
+            self.tbl['omega'][mask] = self.tbl['omega'][mask] % (2*np.pi*u.rad)
+
     # Packing and unpacking
     def pack(self, units=None, nonlinear_only=True):
         """
