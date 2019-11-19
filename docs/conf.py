@@ -179,6 +179,8 @@ intersphinx_mapping['h5py'] = ('http://docs.h5py.org/en/latest/', None)
 intersphinx_mapping['pymc3'] = ('https://docs.pymc.io/', None)
 intersphinx_mapping['twobody'] = ('http://twobody.readthedocs.io/en/latest/',
                                   None)
+intersphinx_mapping['scwhimmbad'] = (
+    'http://schwimmbad.readthedocs.io/en/latest/', None)
 
 # see if we're running on travis
 if 'CI' in os.environ:
@@ -197,6 +199,7 @@ plot_formats = [('png', 512)]
 
 
 # nbsphinx config:
+exclude_patterns.append('make-data.ipynb')
 
 extensions += ['nbsphinx']
 extensions += ['IPython.sphinxext.ipython_console_highlighting']
@@ -214,3 +217,6 @@ nbsphinx_timeout = 600
 
 if ON_CI:
     nbsphinx_kernel_name = 'python3'
+
+else:
+    nbsphinx_kernel_name = os.environ.get('NBSPHINX_KERNEL', 'python3')
