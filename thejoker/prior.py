@@ -158,8 +158,9 @@ class JokerPrior:
         self.pars = pars
 
     @classmethod
-    def default(cls, P_min, P_max, sigma_K0=None, P0=1*u.year, sigma_v=None,
-                s=None, poly_trend=1, v0_offsets=None, model=None, pars=None):
+    def default(cls, P_min=None, P_max=None, sigma_K0=None, P0=1*u.year,
+                sigma_v=None, s=None, poly_trend=1, v0_offsets=None,
+                model=None, pars=None):
         r"""
         An alternative initializer to set up the default prior for The Joker.
 
