@@ -32,8 +32,6 @@ jobs:
       - image: circleci/python:3.6
     steps:
       - checkout
-      - run: *apt-install
-      - run: *pip-install
       - run: python setup.py egg_info
 
   egg-info-37:
@@ -41,8 +39,6 @@ jobs:
       - image: circleci/python:3.7
     steps:
       - checkout
-      - run: *apt-install
-      - run: *pip-install
       - run: python setup.py egg_info
 
   # Now the tests:
@@ -53,7 +49,9 @@ jobs:
       - checkout
       - run: *apt-install
       - run: *pip-install-dev
-      - run: python setup.py test
+      - run: |
+        . venv/bin/activate
+        python setup.py test
 
   test-37:
     docker:
@@ -62,7 +60,9 @@ jobs:
       - checkout
       - run: *apt-install
       - run: *pip-install-dev
-      - run: python setup.py test
+      - run: |
+        . venv/bin/activate
+        python setup.py test
 
   test-coverage:
     docker:
@@ -71,9 +71,11 @@ jobs:
       - checkout
       - run: *apt-install
       - run: *pip-install-dev
-      - run: pip install coveralls
-      - run: python setup.py test --coverage
-      - run: coveralls --rcfile='thejoker/tests/coveragerc'
+      - run: |
+        . venv/bin/activate
+        pip install coveralls
+        python setup.py test --coverage
+        coveralls --rcfile='thejoker/tests/coveragerc'
 
   # docs build
   build-docs:
@@ -87,6 +89,7 @@ jobs:
       - run:
           name: Build documentation
           command: |
+            . venv/bin/activate
             python setup.py install build_docs -w
       - store_artifacts:
           path: build/html
