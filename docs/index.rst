@@ -35,7 +35,6 @@ Examples / tutorials
     examples/3-Polynomial-velocity-trend.ipynb
     examples/4-Continue-sampling-mcmc.ipynb
     examples/5-Calibration-offsets.ipynb
-    examples/TEST.ipynb
 
 Getting started
 ===============
