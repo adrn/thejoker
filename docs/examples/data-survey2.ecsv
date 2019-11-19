@@ -1,0 +1,24 @@
+# %ECSV 0.9
+# ---
+# datatype:
+# - {name: bjd, datatype: float64}
+# - {name: rv, unit: km / s, datatype: float64}
+# - {name: rv_err, unit: km / s, datatype: float64}
+# meta: !!omap
+# - __serialized_columns__:
+#     rv:
+#       __class__: astropy.units.quantity.Quantity
+#       unit: !astropy.units.Unit {unit: km / s}
+#       value: !astropy.table.SerializedColumn {name: rv}
+#     rv_err:
+#       __class__: astropy.units.quantity.Quantity
+#       unit: !astropy.units.Unit {unit: km / s}
+#       value: !astropy.table.SerializedColumn {name: rv_err}
+# schema: astropy-2.0
+bjd rv rv_err
+2458633.684029827 46.651270125455305 0.18693183471087446
+2458651.093013961 60.07629656638019 0.1191108119326531
+2458681.1844630856 50.315415165066945 1.4816286466144513
+2458712.13777645 50.19848725072212 0.11609735489141554
+2458718.7788334447 55.550087585095184 0.5031215659650875
+2458722.2223505606 58.21544652344367 2.546181917835539
