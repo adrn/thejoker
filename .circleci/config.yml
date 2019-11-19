@@ -49,9 +49,11 @@ jobs:
       - checkout
       - run: *apt-install
       - run: *pip-install-dev
-      - run: |
-        . venv/bin/activate
-        python setup.py test
+      - run:
+          name: Run setup test
+          command: |
+            . venv/bin/activate
+            python3 setup.py test
 
   test-37:
     docker:
@@ -60,9 +62,11 @@ jobs:
       - checkout
       - run: *apt-install
       - run: *pip-install-dev
-      - run: |
-        . venv/bin/activate
-        python setup.py test
+      - run:
+          name: Run setup test
+          command: |
+            . venv/bin/activate
+            python3 setup.py test
 
   test-coverage:
     docker:
@@ -71,11 +75,13 @@ jobs:
       - checkout
       - run: *apt-install
       - run: *pip-install-dev
-      - run: |
-        . venv/bin/activate
-        pip install coveralls
-        python setup.py test --coverage
-        coveralls --rcfile='thejoker/tests/coveragerc'
+      - run:
+          name: Run test coverage
+          command: |
+            . venv/bin/activate
+            pip install coveralls
+            python3 setup.py test --coverage
+            coveralls --rcfile='thejoker/tests/coveragerc'
 
   # docs build
   build-docs:
