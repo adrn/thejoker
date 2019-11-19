@@ -25,39 +25,28 @@
 # Thus, any C-extensions that are needed to build the documentation will *not*
 # be accessible, and the documentation will not build correctly.
 
-import datetime
 import os
 import sys
+import datetime
+from importlib import import_module
 
 try:
-    import astropy_helpers
+    from sphinx_astropy.conf.v1 import *  # noqa
 except ImportError:
-    # Building from inside the docs/ directory?
-    if os.path.basename(os.getcwd()) == 'docs':
-        a_h_path = os.path.abspath(os.path.join('..', 'astropy_helpers'))
-        if os.path.isdir(a_h_path):
-            sys.path.insert(1, a_h_path)
-
-# Load all of the global Astropy configuration
-from sphinx_astropy.conf import *
+    print('ERROR: the documentation requires the sphinx-astropy package to be installed')
+    sys.exit(1)
 
 # Get configuration information from setup.cfg
-try:
-    from ConfigParser import ConfigParser
-except ImportError:
-    from configparser import ConfigParser
+from configparser import ConfigParser
 conf = ConfigParser()
 
 conf.read([os.path.join(os.path.dirname(__file__), '..', 'setup.cfg')])
 setup_cfg = dict(conf.items('metadata'))
 
-# see if we're running on travis
-if 'CI' in os.environ:
-    ON_TRAVIS = True
-else:
-    ON_TRAVIS = False
-
 # -- General configuration ----------------------------------------------------
+
+# By default, highlight as Python 3.
+highlight_language = 'python3'
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #needs_sphinx = '1.2'
@@ -73,20 +62,14 @@ exclude_patterns.append('**.ipynb_checkpoints')
 
 # This is added to the end of RST files - a good place to put substitutions to
 # be used globally.
-# TODO: swap this once bugfix is in nbsphinx
-#   see: https://github.com/spatialaudio/nbsphinx/issues/38
-# rst_epilog = ""
 rst_epilog += """
 .. |thejoker| replace:: *The Joker*
 """
 
-# Add h5py to intersphinx mapping
-intersphinx_mapping['h5py'] = ('http://docs.h5py.org/en/latest/', None)
-
 # -- Project information ------------------------------------------------------
 
 # This does not *have* to match the package name, but typically does
-project = setup_cfg['package_name']
+project = setup_cfg['name']
 author = setup_cfg['author']
 copyright = '{0}, {1}'.format(
     datetime.datetime.now().year, setup_cfg['author'])
@@ -95,22 +78,14 @@ copyright = '{0}, {1}'.format(
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 
-__import__(setup_cfg['package_name'])
-package = sys.modules[setup_cfg['package_name']]
+import_module(setup_cfg['name'])
+package = sys.modules[setup_cfg['name']]
 
 # The short X.Y version.
 version = package.__version__.split('-', 1)[0]
 # The full version, including alpha/beta/rc tags.
 release = package.__version__
 
-# Use astropy plot style
-plot_rcparams = dict()
-if not ON_TRAVIS:
-    plot_rcparams['text.usetex'] = True
-plot_rcparams['savefig.facecolor'] = 'none'
-plot_rcparams['savefig.bbox'] = 'tight'
-plot_apply_rcparams = True
-plot_formats = [('png', 512)]
 
 # -- Options for HTML output --------------------------------------------------
 
@@ -122,13 +97,6 @@ plot_formats = [('png', 512)]
 # global configuration are listed below, commented out.
 
 
-# Please update these texts to match the name of your package.
-html_theme_options = {
-    'logotext1': 'The',  # white,  semi-bold
-    'logotext2': 'Joker',  # orange, light
-    'logotext3': ':docs'   # white,  light
-}
-
 # Add any paths that contain custom themes here, relative to this directory.
 # To use a different custom theme, add the directory containing the theme.
 #html_theme_path = []
@@ -138,8 +106,20 @@ html_theme_options = {
 # name of a builtin theme or the name of a custom theme in html_theme_path.
 #html_theme = None
 
+
+# Please update these texts to match the name of your package.
+html_theme_options = {
+    'logotext1': 'The',  # white,  semi-bold
+    'logotext2': 'Joker',  # orange, light
+    'logotext3': ':docs'   # white,  light
+}
+
 # Custom sidebar templates, maps document names to template names.
 #html_sidebars = {}
+
+# The name of an image file (relative to this directory) to place at the top
+# of the sidebar.
+#html_logo = ''
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
@@ -158,7 +138,6 @@ html_title = '{0} v{1}'.format(project, release)
 # Output file base name for HTML help builder.
 htmlhelp_basename = project + 'doc'
 
-# Static files to copy after template files
 html_static_path = ['_static']
 html_style = 'thejoker.css'
 
@@ -181,7 +160,7 @@ man_pages = [('index', project.lower(), project + u' Documentation',
 # -- Options for the edit_on_github extension ---------------------------------
 
 if eval(setup_cfg.get('edit_on_github')):
-    extensions += ['astropy_helpers.sphinx.ext.edit_on_github']
+    extensions += ['sphinx_astropy.ext.edit_on_github']
 
     versionmod = __import__(setup_cfg['package_name'] + '.version')
     edit_on_github_project = setup_cfg['github_project']
@@ -196,14 +175,47 @@ if eval(setup_cfg.get('edit_on_github')):
 # -- Resolving issue number to links in changelog -----------------------------
 github_issues_url = 'https://github.com/{0}/issues/'.format(setup_cfg['github_project'])
 
-# -- Custom --
+intersphinx_mapping['h5py'] = ('http://docs.h5py.org/en/latest/', None)
+intersphinx_mapping['pymc3'] = ('https://docs.pymc.io/', None)
+intersphinx_mapping['twobody'] = ('http://twobody.readthedocs.io/en/latest/',
+                                  None)
+intersphinx_mapping['scwhimmbad'] = (
+    'http://schwimmbad.readthedocs.io/en/latest/', None)
 
-# add nbsphinx extension
+# see if we're running on travis
+if 'CI' in os.environ:
+    ON_CI = True
+else:
+    ON_CI = False
+
+# Use astropy plot style
+plot_rcparams = dict()
+if not ON_CI:
+    plot_rcparams['text.usetex'] = True
+plot_rcparams['savefig.facecolor'] = 'none'
+plot_rcparams['savefig.bbox'] = 'tight'
+plot_apply_rcparams = True
+plot_formats = [('png', 512)]
+
+
+# nbsphinx config:
+exclude_patterns.append('make-data.*')
+exclude_patterns.append('*/make-data.*')
+
 extensions += ['nbsphinx']
 extensions += ['IPython.sphinxext.ipython_console_highlighting']
-# try:
-#     source_parsers['.ipynb'] = 'nbsphinx.NotebookParser'
-# except NameError:
-#     source_parsers = {'.ipynb': 'nbsphinx.NotebookParser'}
 
-nbsphinx_timeout = 300
+extensions += ['sphinx.ext.mathjax']
+mathjax_path = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
+
+# nbsphinx_execute_arguments = [
+#     "--InlineBackend.rc={'figure.dpi': 250}",
+# ]
+
+nbsphinx_timeout = 600
+
+if ON_CI:
+    nbsphinx_kernel_name = 'python3'
+
+else:
+    nbsphinx_kernel_name = os.environ.get('NBSPHINX_KERNEL', 'python3')

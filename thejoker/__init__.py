@@ -1,25 +1,16 @@
-from ._astropy_init import *
+from ._astropy_init import *  # noqa
 
-# Enforce Python version check during package import.
-# This is the same check as the one at the top of setup.py
-import sys
-
-__minimum_python_version__ = "3.6"
-
-class UnsupportedPythonError(Exception):
-    pass
-
-if sys.version_info < tuple((int(val) for val in __minimum_python_version__.split('.'))):
-    raise UnsupportedPythonError("packagename does not support Python < {}"
-                                 .format(__minimum_python_version__))
 
 # For egg_info test builds to pass, put package imports here.
-if not _ASTROPY_SETUP_:
-    from .sampler import *
-    from .data import *
-    from .utils import *
+if not _ASTROPY_SETUP_:  # noqa
+    from .thejoker import TheJoker
+    from .data import RVData
+    from .samples import JokerSamples
+    from .prior import JokerPrior
+    from .plot import plot_rv_curves
 
-__bibtex__ = __citation__ = """@ARTICLE{2017ApJ...837...20P,
+
+__bibtex__ = __citation__ = """@ARTICLE{thejoker,
        author = {{Price-Whelan}, Adrian M. and {Hogg}, David W. and
          {Foreman-Mackey}, Daniel and {Rix}, Hans-Walter},
         title = "{The Joker: A Custom Monte Carlo Sampler for Binary-star and Exoplanet Radial Veloc\
@@ -42,3 +33,12 @@ archivePrefix = {arXiv},
       adsnote = {Provided by the SAO/NASA Astrophysics Data System}
 }
 """
+
+
+__all__ = [
+    'TheJoker',
+    'RVData',
+    'JokerSamples',
+    'JokerPrior',
+    'plot_rv_curves'
+]

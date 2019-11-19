@@ -1,0 +1,10 @@
+-r requirements.txt
+pytest
+sphinx
+sphinx-astropy
+pytest-astropy
+corner
+nbsphinx
+nbconvert
+ipykernel
+astroML

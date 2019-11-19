@@ -5,49 +5,60 @@ The Joker [YO-ker] /'joʊkər/
 Introduction
 ============
 
-|thejoker| [#f1]_ is a custom Monte Carlo sampler for the two-body problem and
-is therefore useful for constraining star-star or star-planet systems. It is
-designed to generate posterior samples over the orbital parameters of the
-primary (observed) star given time-domain radial velocity measurements of this
-star. Though it is assumed the system has only a primary and a companion,
-|thejoker| can also be used for hierarchical systems in which the velocity
-perturbations from a third or other bodies are much longer than the dominant
-companion. See the paper [#f2]_ for more details about the method and
-applications.
-
-|thejoker| is particularly useful for sparse or low-quality radial velocity
-data.
+|thejoker| [#f1]_ is a custom Monte Carlo sampler for the `two-body problem
+<https://en.wikipedia.org/wiki/Two-body_problem>`_ that generates posterior
+samplings in Keplerian orbital parameters given radial velocity observations of
+stars. It is designed to deliver converged posterior samplings even when the
+radial velocity measurements are sparse or very noisy. It is therefore useful
+for constraining the orbital properties of binary star or star-planet systems.
+Though it fundamentally assumes that any system has two massive bodies (and only
+the primary is observed), |thejoker| can also be used for hierarchical systems
+in which the velocity perturbations from a third or other bodies are much longer
+than the dominant companion. See the paper [#f2]_ for more details about the
+method and applications.
 
 .. toctree::
     :maxdepth: 1
 
     install
     whats-new
-    random-numbers
-    faq
+
+
+Examples / tutorials
+====================
+
+.. toctree::
+    :maxdepth: 1
+
+    examples/1-Getting-started.ipynb
+    examples/2-Customize-prior.ipynb
+    examples/3-Polynomial-velocity-trend.ipynb
+    examples/4-Continue-sampling-mcmc.ipynb
+    examples/5-Calibration-offsets.ipynb
 
 Getting started
 ===============
 
-Generating samples with |thejoker| requires specifying three things:
+Generating samples with |thejoker| requires three things:
 
-    #. **The data**, `~thejoker.data.RVData`: radial velocity measurements,
+    #. **The data**, `~thejoker.RVData`: radial velocity measurements,
        uncertainties, and observation times
-    #. **The model parameters**, `~thejoker.sampler.params.JokerParams`:
-       hyper-parameters, what parameters to sample over
-    #. **The sampler parameters**, `~thejoker.sampler.sampler.TheJoker`: how
-       many prior samples to generate, etc.
+    #. **The priors**, `~thejoker.JokerPrior`:
+       the prior distributions over the parameters in *The Joker*
+    #. **The sampler**, `~thejoker.TheJoker`: the work horse that runs the
+       rejection sampler
 
-Here we'll work through a simple example to generate samples for orbital
-parameters for some sparse, pre-generated data (shown below). We'll first turn
-these data into a `~thejoker.data.RVData` object:
+Here, we'll work through a simple example to generate poserior samples for
+orbital parameters given some sparse, simulated radial velocity data (shown
+below). We'll first use these plain arrays to construct a `~thejoker.RVData`
+object:
 
-    >>> from thejoker.data import RVData
     >>> import astropy.units as u
+    >>> import thejoker as tj
     >>> t = [0., 49.452, 95.393, 127.587, 190.408]
     >>> rv = [38.77, 39.70, 37.45, 38.31, 38.31] * u.km/u.s
     >>> err = [0.184, 0.261, 0.112, 0.155, 0.223] * u.km/u.s
-    >>> data = RVData(t=t, rv=rv, stddev=err)
+    >>> data = tj.RVData(t=t, rv=rv, rv_err=err)
     >>> ax = data.plot() # doctest: +SKIP
     >>> ax.set_xlim(-10, 200) # doctest: +SKIP
 
@@ -62,26 +73,30 @@ these data into a `~thejoker.data.RVData` object:
     rv = [38.77, 39.70, 37.45, 38.31, 38.31] * u.km/u.s
     err = [0.184, 0.261, 0.112, 0.155, 0.223] * u.km/u.s
 
-    data = RVData(t=t, rv=rv, stddev=err)
+    data = RVData(t=t, rv=rv, rv_err=err)
     ax = data.plot() # doctest: +SKIP
     ax.set_xlim(-10, 200)
 
-We next need to specify some hyper-parameters for |thejoker|. At minimum, we
-have to specify the minimum and maximum period to consider, and a prior on the
-linear parameters in the model (the semi-amplitude and velocity zero-point):
+We next need to specify the prior distributions for the parameters of
+|thejoker|. The default prior, explained in the docstring of
+`~thejoker.JokerPrior.default()`, assumes some reasonable defaults where
+possible, but requires specifying the minimum and maximum period to sample over,
+along with parameters that specify the prior over the linear parameters in *The
+Joker* (the velocity semi-amplitude, ``K``, and the systemic velocity, ``v0``):
 
     >>> import numpy as np
-    >>> from thejoker.sampler import JokerParams
-    >>> params = JokerParams(P_min=8*u.day, P_max=512*u.day,
-    ...                      linear_par_Lambda=np.diag([1e2, 1e2])**2)
+    >>> prior = tj.JokerPrior.default(P_min=2*u.day, P_max=256*u.day,
+    ...                               sigma_K0=30*u.km/u.s,
+    ...                               sigma_v=100*u.km/u.s)
 
-Finally we can create the sampler object and run:
+With the data and prior created, we can now instantiate the sampler object and
+run the rejection sampler:
 
-    >>> from thejoker.sampler import TheJoker
-    >>> joker = TheJoker(params)
-    >>> samples = joker.rejection_sample(data, n_prior_samples=65536) # doctest: +SKIP
+    >>> joker = tj.TheJoker(prior)
+    >>> prior_samples = prior.sample(size=100_000)
+    >>> samples = joker.rejection_sample(data, prior_samples) # doctest: +SKIP
 
-Of the 65536 prior samples we considered, only a handful pass the rejection
+Of the 100_000 prior samples we generated, only a handful pass the rejection
 sampling step of |thejoker|. Let's visualize the surviving samples in the
 subspace of the period :math:`P` and velocity semi-amplitude :math:`K`. We'll
 also plot the true values as a green marker. As a separate plot, we'll also
@@ -92,8 +107,7 @@ below to see how these were made):
     :align: center
     :width: 512
 
-    from thejoker.data import RVData
-    from thejoker.sampler import JokerParams, TheJoker
+    from thejoker import JokerPrior, TheJoker, RVData
     from thejoker.plot import plot_rv_curves
     import astropy.units as u
     import schwimmbad
@@ -102,20 +116,21 @@ below to see how these were made):
     rv = [38.77, 39.70, 37.45, 38.31, 38.31] * u.km/u.s
     err = [0.184, 0.261, 0.112, 0.155, 0.223] * u.km/u.s
 
-    data = RVData(t=t, rv=rv, stddev=err)
-    params = JokerParams(P_min=8*u.day, P_max=512*u.day,
-                         linear_par_Lambda=np.diag([1e2, 1e2])**2)
+    data = RVData(t=t, rv=rv, rv_err=err)
+    prior = JokerPrior.default(P_min=2*u.day, P_max=256*u.day,
+                               sigma_K0=30*u.km/u.s, sigma_v=100*u.km/u.s)
     pool = schwimmbad.MultiPool()
-    joker = TheJoker(params, pool=pool)
+    joker = TheJoker(prior, pool=pool)
 
-    samples = joker.rejection_sample(data, n_prior_samples=65536)
+    prior_samples = prior.sample(size=100_000)
+    samples = joker.rejection_sample(data, prior_samples)
 
     fig, ax = plt.subplots(1, 1, figsize=(6,6)) # doctest: +SKIP
     ax.scatter(samples['P'].value, samples['K'].to(u.km/u.s).value,
                marker='.', color='k', alpha=0.45) # doctest: +SKIP
     ax.set_xlabel("$P$ [day]")
     ax.set_ylabel("$K$ [km/s]")
-    ax.set_xlim(-5, 128)
+    ax.set_xlim(2, 256)
     ax.set_ylim(0.75, 3.)
 
     ax.scatter(61.942, 1.3959, marker='o', color='#31a354', zorder=-100)
@@ -127,28 +142,12 @@ below to see how these were made):
     ax.set_xlim(-5, 205)
 
 
-More examples / tutorials
-=========================
-
-.. toctree::
-    :maxdepth: 1
-
-    examples/multiproc-example.ipynb
-    examples/astrometric-orbit.ipynb
-    examples/velocity-trends.ipynb
-    examples/custom-prior-sampling.ipynb
-    examples/continue-with-emcee.ipynb
-
-.. examples/mpi.rst
-
 API
 ===
 
-.. toctree::
-    :maxdepth: 1
+.. automodapi:: thejoker
+    :no-inheritance-diagram:
 
-    data
-    sampler
 
 .. rubric:: Footnotes
 
