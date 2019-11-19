@@ -101,7 +101,7 @@ below to see how these were made):
     rv = [38.77, 39.70, 37.45, 38.31, 38.31] * u.km/u.s
     err = [0.184, 0.261, 0.112, 0.155, 0.223] * u.km/u.s
 
-    data = RVData(t=t, rv=rv, stddev=err)
+    data = RVData(t=t, rv=rv, rv_err=err)
     prior = JokerPrior.default(P_min=8*u.day, P_max=512*u.day,
                            sigma_K0=30*u.km/u.s, sigma_v=100*u.km/u.s)
     pool = schwimmbad.MultiPool()
