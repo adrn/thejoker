@@ -149,7 +149,7 @@ class RVData:
 
     @classmethod
     def guess_from_table(cls, tbl, time_kwargs=None, rv_unit=None,
-                         fuzzy=False):
+                         fuzzy=False, t0=None):
         """
         Try to construct an ``RVData`` instance by guessing column names from
         the input table.
@@ -308,7 +308,7 @@ class RVData:
             if err_data is not None and err_data.unit is u.one:
                 err_data = err_data * rv_unit
 
-        return cls(time, rv_data, err_data)
+        return cls(time, rv_data, err_data, t0=t0)
 
     # ------------------------------------------------------------------------
     # To other classes
