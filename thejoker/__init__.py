@@ -1,8 +1,8 @@
-from ._astropy_init import _ASTROPY_SETUP_
+from ._astropy_init import *  # noqa
 
 
 # For egg_info test builds to pass, put package imports here.
-if not _ASTROPY_SETUP_:
+if not _ASTROPY_SETUP_:  # noqa
     from .thejoker import TheJoker
     from .data import RVData
     from .samples import JokerSamples

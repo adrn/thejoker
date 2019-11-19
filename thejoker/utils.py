@@ -2,6 +2,7 @@
 
 # Standard library
 import inspect
+import contextlib
 from tempfile import NamedTemporaryFile
 
 # Third-party
@@ -260,3 +261,14 @@ def tempfile_decorator(func):
         return func_return
 
     return wrapper
+
+
+@contextlib.contextmanager
+def random_state_context(random_state):
+    state = np.random.get_state()
+    if random_state is not None:
+        np.random.set_state(random_state.get_state())
+    try:
+        yield
+    finally:
+        np.random.set_state(state)

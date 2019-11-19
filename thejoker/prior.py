@@ -4,6 +4,7 @@ import numpy as np
 import pymc3 as pm
 from pymc3.distributions import draw_values
 import theano.tensor as tt
+from exoplanet.distributions import Angle
 from exoplanet.distributions.eccentricity import kipping13
 import exoplanet.units as xu
 
@@ -16,6 +17,7 @@ from .prior_helpers import (get_nonlinear_equiv_units,
                             validate_poly_trend,
                             get_v0_offsets_equiv_units,
                             validate_sigma_v)
+from .utils import random_state_context
 
 __all__ = ['JokerPrior']
 
@@ -257,7 +259,8 @@ class JokerPrior:
     def __str__(self):
         return ", ".join(self.par_names)
 
-    def sample(self, size=1, generate_linear=False, return_logprobs=False):
+    def sample(self, size=1, generate_linear=False, return_logprobs=False,
+               random_state=None):
         """
         Generate random samples from the prior.
 
@@ -323,7 +326,8 @@ class JokerPrior:
 
                     log_prior.append(logp_var)
 
-        samples_values = draw_values(pars_list + log_prior, size=size)
+        with random_state_context(random_state):
+            samples_values = draw_values(pars_list + log_prior, size=size)
         raw_samples = {p.name: samples
                        for p, samples in zip(pars_list,
                                              samples_values[:npars])}
@@ -412,29 +416,23 @@ def default_nonlinear_prior(P_min=None, P_max=None, s=None,
             out_pars['e'] = xu.with_unit(kipping13('e'),
                                          u.one)
 
-        if 'omega' not in pars and 'M0' not in pars:
-            # It's better to sample in omega + M0, omega
-            w_M0 = xu.with_unit(pm.Triangular('w_M0', 0, 4*np.pi, 2*np.pi),
-                                u.radian)
-            omega = xu.with_unit(pm.Uniform('omega', 0, 2*np.pi),
-                                 u.radian)
-            out_pars['omega'] = omega
-            out_pars['M0'] = xu.with_unit(pm.Deterministic('M0', w_M0 - omega),
-                                          u.radian)
+        # FIXME: enable this
+        # if 'omega' not in pars and 'M0' not in pars:
+        #     # It's better to sample in omega + M0, omega
+        #     w_p_M0 = xu.with_unit(Angle('w_p_M0'), u.radian)
+        #     w_m_M0 = xu.with_unit(Angle('w_m_M0'), u.radian)
+        #     out_pars['omega'] = xu.with_unit(
+        #         pm.Deterministic('omega', (w_p_M0 + w_m_M0) / 2), u.radian)
+        #     out_pars['M0'] = xu.with_unit(
+        #         pm.Deterministic('M0', (w_p_M0 - w_m_M0) / 2), u.radian)
 
-        else:
-            # If either omega or M0 is specified by user, default to U(0,2π)
-            if 'omega' not in pars:
-                out_pars['omega'] = xu.with_unit(pm.Uniform('omega',
-                                                            lower=0,
-                                                            upper=2*np.pi),
-                                                 u.radian)
+        # else:
+        # If either omega or M0 is specified by user, default to U(0,2π)
+        if 'omega' not in pars:
+            out_pars['omega'] = xu.with_unit(Angle('omega'), u.rad)
 
-            if 'M0' not in pars:
-                out_pars['M0'] = xu.with_unit(pm.Uniform('M0',
-                                                         lower=0,
-                                                         upper=2*np.pi),
-                                              u.radian)
+        if 'M0' not in pars:
+            out_pars['M0'] = xu.with_unit(Angle('M0'), u.rad)
 
         if 's' not in pars:
             out_pars['s'] = xu.with_unit(pm.Deterministic('s',
