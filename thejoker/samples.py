@@ -262,6 +262,8 @@ class JokerSamples:
             self.tbl['omega'][mask] = self.tbl['omega'][mask] + np.pi * u.rad
             self.tbl['omega'][mask] = self.tbl['omega'][mask] % (2*np.pi*u.rad)
 
+        return self
+
     # Packing and unpacking
     def pack(self, units=None, nonlinear_only=True):
         """
