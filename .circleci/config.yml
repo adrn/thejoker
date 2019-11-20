@@ -24,7 +24,25 @@ pip-install-dev: &pip-install-dev
     pip install -U pip
     pip install --progress-bar off -r requirements-dev.txt
 
+master-or-pr-check: &master-or-pr-check
+  name: Only build branches that aren't "master" if this is a PR
+  command: |
+    if [[ -z "${CIRCLE_PULL_REQUEST}" && "${CIRCLE_BRANCH}" != "master" ]]; then
+      circleci step halt
+    fi
+
+ci-skip-check: &ci-skip-check
+  name: Check for [ci skip]
+  command: bash .circleci/ci_skip_check.sh
+
 jobs:
+
+  checks:
+    machine:
+      image: ubuntu-1604:201903-01
+    steps:
+      - run: *ci-skip-check
+      - run: *master-or-pr-check
 
   # First, the egg-info tests:
   egg-info-36:
@@ -104,11 +122,21 @@ jobs:
           command: |
             DOCS_URL="${CIRCLE_BUILD_URL}/artifacts/${CIRCLE_NODE_INDEX}/${CIRCLE_WORKING_DIRECTORY/#\~/$HOME}/docs/_build/html/index.html"; echo $DOCS_URL
 
+general:
+  branches:
+    only:
+      - master
+
 workflows:
- thejoker:
-   jobs:
-      - egg-info-36
-      - egg-info-37
+  thejoker:
+    jobs:
+      - checks
+      - egg-info-36:
+          requires:
+            - checks
+      - egg-info-37:
+          requires:
+            - checks
       - test-36:
           requires:
             - egg-info-36
