@@ -3,8 +3,8 @@ The Joker [YO-ker]
 
 .. image:: https://img.shields.io/badge/Made%20at-%23AstroHackWeek-8063d5.svg?style=flat
         :target: http://astrohackweek.org/
-.. image:: http://img.shields.io/travis/adrn/thejoker/master.svg?style=flat
-        :target: http://travis-ci.org/adrn/thejoker
+.. image:: https://circleci.com/gh/adrn/thejoker.svg?style=svg
+        :target: https://circleci.com/gh/adrn/thejoker
 .. image:: https://coveralls.io/repos/github/adrn/thejoker/badge.svg?branch=master
         :target: https://coveralls.io/github/adrn/thejoker?branch=master
 
@@ -26,7 +26,6 @@ To install the latest stable release, use `pip`::
 
 To install the development version::
 
-    pip install twobody
     pip install git+https://github.com/adrn/thejoker
 
 Attribution
