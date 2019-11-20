@@ -50,6 +50,12 @@ def get_valid_input(rnd=None, size=32):
     err = rnd.uniform(0.1, 0.5, size=len(t_arr)) * u.km/u.s
     cov = (np.diag(err.value) * err.unit) ** 2
 
+    _tbl = Table()
+    _tbl['rv'] = np.arange(10)
+    _tbl['rv'].unit = u.km/u.s
+    _tbl['rv_err'] = np.arange(10)
+    _tbl['rv_err'].unit = u.km/u.s
+
     raw = {'t_arr': t_arr,
            't_obj': t_obj,
            'rv': rv,
@@ -59,6 +65,7 @@ def get_valid_input(rnd=None, size=32):
     return [dict(t=t_arr, rv=rv, rv_err=err),
             (t_arr, rv, err),
             (t_obj, rv, err),
+            (t_obj, _tbl['rv'], _tbl['rv_err']),
             (t_arr, rv, cov),
             (t_obj, rv, cov)], raw
 
@@ -151,6 +158,9 @@ def test_data_methods(inputs):
     data1.rv *= 1.5
     assert np.all(data2._t_bmjd != data1._t_bmjd)
     assert np.all(data2.rv != data1.rv)
+
+    assert isinstance(data1.rv, u.Quantity)
+    assert isinstance(data1.rv_err, u.Quantity)
 
     # check slicing
     data2 = data1[:16]

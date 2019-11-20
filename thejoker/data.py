@@ -43,10 +43,10 @@ class RVData:
             _t_bmjd = np.atleast_1d(t)
         self._t_bmjd = _t_bmjd
 
-        self.rv = np.atleast_1d(rv)
+        self.rv = u.Quantity(np.atleast_1d(rv))
 
         # Figure out what kind of error is specified
-        self.rv_err = np.atleast_1d(rv_err)
+        self.rv_err = u.Quantity(np.atleast_1d(rv_err))
 
         if self.rv_err.ndim == 1:
             self._has_cov = False
