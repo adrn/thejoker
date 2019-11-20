@@ -416,17 +416,6 @@ def default_nonlinear_prior(P_min=None, P_max=None, s=None,
             out_pars['e'] = xu.with_unit(kipping13('e'),
                                          u.one)
 
-        # FIXME: enable this
-        # if 'omega' not in pars and 'M0' not in pars:
-        #     # It's better to sample in omega + M0, omega
-        #     w_p_M0 = xu.with_unit(Angle('w_p_M0'), u.radian)
-        #     w_m_M0 = xu.with_unit(Angle('w_m_M0'), u.radian)
-        #     out_pars['omega'] = xu.with_unit(
-        #         pm.Deterministic('omega', (w_p_M0 + w_m_M0) / 2), u.radian)
-        #     out_pars['M0'] = xu.with_unit(
-        #         pm.Deterministic('M0', (w_p_M0 - w_m_M0) / 2), u.radian)
-
-        # else:
         # If either omega or M0 is specified by user, default to U(0,2π)
         if 'omega' not in pars:
             out_pars['omega'] = xu.with_unit(Angle('omega'), u.rad)
