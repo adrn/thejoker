@@ -258,7 +258,7 @@ class JokerSamples:
         """
         mask = self.tbl['K'] < 0
         if np.any(mask):
-            self.tbl['K'][mask] = np.abs(self.tbl['K'])
+            self.tbl['K'][mask] = np.abs(self.tbl['K'][mask])
             self.tbl['omega'][mask] = self.tbl['omega'][mask] + np.pi * u.rad
             self.tbl['omega'][mask] = self.tbl['omega'][mask] % (2*np.pi*u.rad)
 
