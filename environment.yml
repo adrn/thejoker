@@ -8,10 +8,6 @@ dependencies:
   - astropy
   - numpy
   - matplotlib
-  - scipy
-  - h5py
-  - emcee
-  - cython
   - pip:
-    - schwimmbad
-    - twobody
+    - -r requirements-dev.txt
+
