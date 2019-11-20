@@ -38,14 +38,6 @@ ci-skip-check: &ci-skip-check
 
 jobs:
 
-  checks:
-    machine:
-      image: ubuntu-1604:201903-01
-    steps:
-      - checkout
-      - run: *ci-skip-check
-      - run: *master-or-pr-check
-
   # First, the egg-info tests:
   egg-info-36:
     docker:
@@ -67,6 +59,8 @@ jobs:
       - image: circleci/python:3.6
     steps:
       - checkout
+      - run: *ci-skip-check
+      - run: *master-or-pr-check
       - run: *apt-install
       - run: *pip-install-dev
       - run:
@@ -80,6 +74,8 @@ jobs:
       - image: circleci/python:3.7
     steps:
       - checkout
+      - run: *ci-skip-check
+      - run: *master-or-pr-check
       - run: *apt-install
       - run: *pip-install-dev
       - run:
@@ -93,6 +89,8 @@ jobs:
       - image: circleci/python:3.7
     steps:
       - checkout
+      - run: *ci-skip-check
+      - run: *master-or-pr-check
       - run: *apt-install
       - run: *pip-install-dev
       - run:
@@ -109,6 +107,8 @@ jobs:
       - image: circleci/python:3.7
     steps:
       - checkout
+      - run: *ci-skip-check
+      - run: *master-or-pr-check
       - run: *apt-install
       - run: *pip-install-dev
 
@@ -124,21 +124,11 @@ jobs:
           command: |
             DOCS_URL="${CIRCLE_BUILD_URL}/artifacts/${CIRCLE_NODE_INDEX}/${CIRCLE_WORKING_DIRECTORY/#\~/$HOME}/docs/_build/html/index.html"; echo $DOCS_URL
 
-general:
-  branches:
-    only:
-      - master
-
 workflows:
   thejoker:
     jobs:
-      - checks
-      - egg-info-36:
-          requires:
-            - checks
-      - egg-info-37:
-          requires:
-            - checks
+      - egg-info-36
+      - egg-info-37
       - test-36:
           requires:
             - egg-info-36
