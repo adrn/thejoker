@@ -378,3 +378,7 @@ class JokerSamples:
         """
         tbl = QTable.read(filename, path=cls._hdf5_path)
         return cls(samples=tbl, **tbl.meta)
+
+    def copy(self):
+        """Return a copy of this instance"""
+        return self.__class__(self.tbl.copy(), t0=self.t0)
