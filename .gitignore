@@ -54,3 +54,4 @@ distribute-*.tar.gz
 docs/_static/logo*
 notebooks
 *.hdf5
+*/theano_cache/*
