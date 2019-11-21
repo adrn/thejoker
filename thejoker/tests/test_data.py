@@ -51,9 +51,9 @@ def get_valid_input(rnd=None, size=32):
     cov = (np.diag(err.value) * err.unit) ** 2
 
     _tbl = Table()
-    _tbl['rv'] = np.arange(10)
+    _tbl['rv'] = rnd.uniform(size=len(rv))
     _tbl['rv'].unit = u.km/u.s
-    _tbl['rv_err'] = np.arange(10)
+    _tbl['rv_err'] = rnd.uniform(size=len(rv))
     _tbl['rv_err'].unit = u.km/u.s
 
     raw = {'t_arr': t_arr,
