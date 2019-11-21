@@ -7,7 +7,7 @@ if not _ASTROPY_SETUP_:  # noqa
     from .data import RVData
     from .samples import JokerSamples
     from .prior import JokerPrior
-    from .plot import plot_rv_curves
+    from .plot import *
 
 
 __bibtex__ = __citation__ = """@ARTICLE{thejoker,

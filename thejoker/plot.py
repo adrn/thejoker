@@ -11,7 +11,7 @@ from .data import RVData
 from .data_helpers import validate_prepare_data
 from .prior_helpers import get_v0_offsets_equiv_units
 
-__all__ = ['plot_rv_curves']
+__all__ = ['plot_rv_curves', 'plot_phase_fold']
 
 
 def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
@@ -54,9 +54,8 @@ def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
 
     if ax is None:
         import matplotlib.pyplot as plt
-        fig, ax = plt.subplots(1, 1)
-    else:
-        fig = ax.figure
+        ax = plt.gca()
+    fig = ax.figure
 
     if data is not None:
         data, ids, _ = validate_prepare_data(data, samples.poly_trend,
@@ -91,6 +90,7 @@ def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
         rv_unit = u.km/u.s
 
     # default plotting style
+    # TODO: move default style to global style config
     style = plot_kwargs.copy()
     style.setdefault('linestyle', '-')
     style.setdefault('linewidth', 0.5)
@@ -163,5 +163,130 @@ def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
         ylim = model_ylim
 
     ax.set_ylim(ylim)
+
+    return fig
+
+
+def plot_phase_fold(sample, data=None, ax=None, add_labels=True,
+                    show_s_errorbar=True, residual=False,
+                    remove_trend=True, plot_kwargs=None, data_plot_kwargs=None):
+    """
+    Plot phase-folded radial velocity curves for the input orbital parameter
+    sample, optionally with data phase-folded to the same period.
+
+    Parameters
+    ----------
+    samples : :class:`~thejoker.sampler.JokerSamples`
+        Posterior samples from The Joker.
+    data : `~thejoker.data.RVData`, optional
+        Over-plot the data as well.
+    ax : `~matplotlib.Axes`, optional
+        A matplotlib axes object to plot on to. If not specified, will
+        create a new figure and plot on that.
+    add_labels : bool, optional
+        Add labels to the axes or not.
+    show_s_errorbar : bool, optional
+        Plot an additional error bar to show the extra uncertainty ``s`` value
+        for this sample.
+    residual : bool, optional
+        Plot the residual of the data relative to the model.
+    remove_trend : bool, optional
+        Remove the long-term velocity trend from the data and model before
+        plotting.
+    plot_kwargs : dict, optional
+        Passed to `matplotlib.pyplot.plot()` for plotting the orbits.
+    data_plot_kwargs : dict, optional
+        Passed to `thejoker.data.RVData.plot()`.
+
+    Returns
+    -------
+    fig : `~matplotlib.Figure`
+    """
+
+    if ax is None:
+        import matplotlib.pyplot as plt
+        ax = plt.gca()
+    fig = ax.figure
+
+    # TODO: what do if passing in multiple samples?
+
+    if data is not None:
+        data, ids, _ = validate_prepare_data(data, sample.poly_trend,
+                                             sample.n_offsets)
+        rv_unit = data.rv.unit
+    else:
+        rv_unit = sample['v0'].unit
+
+    # plotting styles:
+    if plot_kwargs is None:
+        plot_kwargs = dict()
+    if data_plot_kwargs is None:
+        data_plot_kwargs = dict()
+
+    # TODO: move default style to global style config
+    orbit_style = plot_kwargs.copy()
+    orbit_style.setdefault('linestyle', '-')
+    orbit_style.setdefault('linewidth', 0.5)
+    orbit_style.setdefault('alpha', 1.)
+    orbit_style.setdefault('marker', '')
+    orbit_style.setdefault('color', '#555555')
+    orbit_style.setdefault('rasterized', True)
+
+    data_style = data_plot_kwargs.copy()
+    data_style.setdefault('linestyle', 'none')
+    data_style.setdefault('marker', 'o')
+    data_style.setdefault('markersize', 4.)
+    data_style.setdefault('zorder', 10)
+
+    # Get orbit from input sample
+    orbit = sample.get_orbit()
+    P = sample['P'][0]
+    M0 = sample['M0'][0]
+
+    if data is not None:
+        rv = data.rv
+
+        if remove_trend:
+            # HACK:
+            trend = orbit._vtrend
+            orbit._vtrend = lambda t: 0.
+            rv = rv - trend(data.t)
+
+        v0_offset_names = get_v0_offsets_equiv_units(sample.n_offsets).keys()
+        for i, offset_name in zip(range(1, sample.n_offsets+1),
+                                  v0_offset_names):
+            rv[ids == i] -= sample[offset_name][0]
+
+        t0 = data.t0 + (P * M0/(2*np.pi*u.rad)).to(u.day,
+                                                   u.dimensionless_angles())
+        phase = data.phase(P=P, t0=t0)
+
+        if residual:
+            rv = rv - orbit.radial_velocity(data.t)
+
+        # plot the phase-folded data and orbit
+        ax.errorbar(phase, rv.to(rv_unit).value,
+                    data.rv_err.to(rv_unit).value,
+                    **data_style)
+
+        if show_s_errorbar and 's' in sample.par_names:
+            ax.errorbar(phase, rv.to(rv_unit).value,
+                        np.sqrt(data.rv_err**2 +
+                                sample['s']**2).to(rv_unit).value,
+                        linestyle='none', marker='', elinewidth=0.,
+                        color='#aaaaaa', alpha=0.9, capsize=0,
+                        zorder=9)
+
+    elif data is None and residual:
+        raise ValueError("TODO: not allowed")
+
+    phase_grid = np.linspace(0, 1, 1024)
+    if not residual:
+        ax.plot(phase_grid, orbit.radial_velocity(t0 + P * phase_grid),
+                **orbit_style)
+
+    if add_labels:
+        ax.set_xlabel(r'phase, $\frac{M-M_0}{2\pi}$')
+        ax.set_ylabel(f'RV [{data.rv.unit:latex_inline}]')
 
     return fig

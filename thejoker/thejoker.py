@@ -360,7 +360,7 @@ class TheJoker:
 
         return mcmc_init
 
-    def trace_to_samples(self, trace, names=None):
+    def trace_to_samples(self, trace, data, names=None):
         """
         Create a ``JokerSamples`` instance from a pymc3 trace object.
 
@@ -370,8 +370,13 @@ class TheJoker:
         """
         df = pm.trace_to_dataframe(trace)
 
+        data, *_ = validate_prepare_data(data,
+                                         self.prior.poly_trend,
+                                         self.prior.n_offsets)
+
         samples = JokerSamples(poly_trend=self.prior.poly_trend,
-                               n_offsets=self.prior.n_offsets)
+                               n_offsets=self.prior.n_offsets,
+                               t0=data.t0)
 
         if names is None:
             names = self.prior.par_names
