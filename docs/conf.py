@@ -177,10 +177,10 @@ github_issues_url = 'https://github.com/{0}/issues/'.format(setup_cfg['github_pr
 
 intersphinx_mapping['h5py'] = ('http://docs.h5py.org/en/latest/', None)
 intersphinx_mapping['pymc3'] = ('https://docs.pymc.io/', None)
-intersphinx_mapping['twobody'] = ('http://twobody.readthedocs.io/en/latest/',
+intersphinx_mapping['twobody'] = ('https://twobody.readthedocs.io/en/latest/',
                                   None)
 intersphinx_mapping['scwhimmbad'] = (
-    'http://schwimmbad.readthedocs.io/en/latest/', None)
+    'https://schwimmbad.readthedocs.io/en/latest/', None)
 
 # see if we're running on travis
 if 'CI' in os.environ:
