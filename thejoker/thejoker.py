@@ -360,7 +360,7 @@ class TheJoker:
 
         return mcmc_init
 
-    def trace_to_samples(self, trace, remove_constants=True):
+    def trace_to_samples(self, trace, names=None):
         """
         Create a ``JokerSamples`` instance from a pymc3 trace object.
 
@@ -368,20 +368,16 @@ class TheJoker:
         ----------
         trace : `~pymc3.backends.base.MultiTrace`
         """
-        from pymc3.model import Factor, TransformedRV
-
         df = pm.trace_to_dataframe(trace)
 
         samples = JokerSamples(poly_trend=self.prior.poly_trend,
                                n_offsets=self.prior.n_offsets)
-        for name in self.prior.par_names:
-            par = self.prior.pars[name]
-            if (remove_constants
-                and isinstance(par, tt.TensorVariable)
-                and not (isinstance(par, Factor)
-                         or isinstance(par, TransformedRV))):
-                continue
 
+        if names is None:
+            names = self.prior.par_names
+
+        for name in names:
+            par = self.prior.pars[name]
             unit = getattr(par, xu.UNIT_ATTR_NAME)
             samples[name] = df[name].values * unit
 
