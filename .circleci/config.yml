@@ -25,13 +25,8 @@ pip-install-dev: &pip-install-dev
     pip install --progress-bar off -r requirements-dev.txt
 
 master-or-pr-check: &master-or-pr-check
-  name: Only build branches that aren't "master" if this is a PR
-  command: |
-    if [[ -z "${CIRCLE_PULL_REQUEST}"] && ["${CIRCLE_BRANCH}" != "master" ]];
-    then
-      echo "HALTING"
-      circleci step halt
-    fi
+  name: Only build branches that are "master", or a PR
+  command: bash .circleci/branch_name_check.sh
 
 ci-skip-check: &ci-skip-check
   name: Check for [ci skip]
@@ -125,6 +120,23 @@ jobs:
           command: |
             DOCS_URL="${CIRCLE_BUILD_URL}/artifacts/${CIRCLE_NODE_INDEX}/${CIRCLE_WORKING_DIRECTORY/#\~/$HOME}/docs/_build/html/index.html"; echo $DOCS_URL
 
+  # Execute notebooks and prepare for RTD build
+  execute-nbs:
+    docker:
+      - image: circleci/python:3.7
+    steps:
+      - checkout
+      - add_ssh_keys: # add GitHub SSH keys
+          fingerprints:
+            - 21:3a:31:0c:f7:f4:94:ed:1c:4f:16:cb:67:60:61:0a
+      - run: *ci-skip-check
+      - run: *master-or-pr-check
+      - run: *apt-install
+      - run: *pip-install-dev
+      - run:
+          name: Execute notebooks
+          command: bash .circleci/execute_notebooks.sh
+
 workflows:
   thejoker:
     jobs:
@@ -142,6 +154,9 @@ workflows:
       - build-docs:
           requires:
             - test-37
+      - execute-nbs:
+          requires:
+            - build-docs
 
 notify:
   webhooks:
