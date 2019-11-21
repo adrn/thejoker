@@ -1,4 +1,5 @@
 # Third-party
+from astropy.time import Time
 import astropy.units as u
 import numpy as np
 import pytest
@@ -27,6 +28,7 @@ def test_plot_rv_curves(prior):
 
     data, _ = make_data()
     samples = prior.sample(100, generate_linear=True)
+    samples.tbl.meta['t0'] = Time('J2000')
 
     t_grid = np.random.uniform(56000, 56500, 1024)
     t_grid.sort()
