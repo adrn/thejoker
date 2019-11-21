@@ -37,8 +37,8 @@ Tutorials
     examples/5-Calibration-offsets.ipynb
 
 
-Real world examples
-===================
+Science demonstrations
+======================
 
 .. toctree::
     :maxdepth: 1
