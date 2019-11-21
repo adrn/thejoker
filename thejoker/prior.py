@@ -260,7 +260,7 @@ class JokerPrior:
         return ", ".join(self.par_names)
 
     def sample(self, size=1, generate_linear=False, return_logprobs=False,
-               random_state=None):
+               random_state=None, **kwargs):
         """
         Generate random samples from the prior.
 
@@ -280,6 +280,9 @@ class JokerPrior:
             Also generate samples in the linear parameters.
         return_logprobs : bool (optional)
             Generate the log-prior probability at the position of each sample.
+        **kwargs
+            Additional keyword arguments are passed to the
+            `~thejoker.JokerSamples` initializer.
 
         Returns
         -------
@@ -334,7 +337,8 @@ class JokerPrior:
 
         # Apply units if they are specified:
         prior_samples = JokerSamples(poly_trend=self.poly_trend,
-                                     n_offsets=self.n_offsets)
+                                     n_offsets=self.n_offsets,
+                                     **kwargs)
         for name in par_names:
             p = sub_pars[name]
             unit = getattr(p, xu.UNIT_ATTR_NAME, u.one)
