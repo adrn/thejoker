@@ -27,7 +27,8 @@ pip-install-dev: &pip-install-dev
 master-or-pr-check: &master-or-pr-check
   name: Only build branches that aren't "master" if this is a PR
   command: |
-    if [[ -z "${CIRCLE_PULL_REQUEST}" || "${CIRCLE_BRANCH}" != "master" ]]; then
+    if [[ -z "${CIRCLE_PULL_REQUEST}"] && ["${CIRCLE_BRANCH}" != "master" ]];
+    then
       echo "HALTING"
       circleci step halt
     fi
