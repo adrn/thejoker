@@ -197,6 +197,7 @@ class JokerSamples:
         names = list(get_linear_equiv_units(self.poly_trend).keys())
         trend_coeffs = [self[x][index] for x in names[1:]]  # skip K
 
+        orbit.elements.t0 = self.t0
         orbit.elements._P = P
         orbit.elements._e = e * u.dimensionless_unscaled
         orbit.elements._a = a
