@@ -24,8 +24,8 @@ method and applications.
     whats-new
 
 
-Examples / tutorials
-====================
+Tutorials
+=========
 
 .. toctree::
     :maxdepth: 1
@@ -35,6 +35,16 @@ Examples / tutorials
     examples/3-Polynomial-velocity-trend.ipynb
     examples/4-Continue-sampling-mcmc.ipynb
     examples/5-Calibration-offsets.ipynb
+
+
+Real world examples
+===================
+
+.. toctree::
+    :maxdepth: 1
+
+    examples/Thompson-black-hole.ipynb
+
 
 Getting started
 ===============
