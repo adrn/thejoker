@@ -2,7 +2,7 @@ astropy
 cython
 theano
 pymc3>=3.7
-exoplanet>=0.2.3
+exoplanet>=0.2.2
 git+https://github.com/adrn/schwimmbad
 twobody>=0.5
 h5py
