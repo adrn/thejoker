@@ -2,6 +2,7 @@
 from astropy.time import Time
 import astropy.units as u
 from astropy.tests.helper import quantity_allclose
+import h5py
 import numpy as np
 import pytest
 
@@ -112,6 +113,11 @@ def test_append_write(tmpdir):
     fn = str(tmpdir / 'test-tbl.hdf5')
     samples.write(fn)
     samples.write(fn, append=True)
+
+    fn2 = str(tmpdir / 'test-tbl2.hdf5')
+    with h5py.File(fn2, 'w') as f:
+        g = f.create_group('2M00')
+        samples.write(g)
 
     samples2 = JokerSamples.read(fn)
     assert np.all(samples2['P'][:N] == samples2['P'][N:])

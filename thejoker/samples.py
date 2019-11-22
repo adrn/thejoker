@@ -337,7 +337,7 @@ class JokerSamples:
             samples[k] = packed_samples[:, i] * unit
         return samples
 
-    def write(self, filename, overwrite=False, append=False):
+    def write(self, output, overwrite=False, append=False):
         """
         Write the samples data to a file.
 
@@ -346,19 +346,21 @@ class JokerSamples:
 
         Parameters
         ----------
-        filename : str
-            The output filename.
+        output : str, `h5py.File`, `h5py.Group`
+            The output filename or ``h5py`` group.
         overwrite : bool (optional)
             Overwrite the existing file.
         append : bool (optional)
             Append the samples to an existing table in the specified filename.
         """
-        ext = os.path.splitext(filename)[1]
-        if ext not in ['.hdf5', '.h5']:
-            raise NotImplementedError("We currently only support writing to "
-                                      "HDF5 files, with extension .hdf5 or .h5")
+        if isinstance(output, str):
+            ext = os.path.splitext(output)[1]
+            if ext not in ['.hdf5', '.h5']:
+                raise NotImplementedError("We currently only support writing "
+                                          "to HDF5 files, with extension .hdf5 "
+                                          "or .h5")
 
-        write_table_hdf5(self.tbl, filename, path=self._hdf5_path,
+        write_table_hdf5(self.tbl, output, path=self._hdf5_path,
                          compression=False,
                          append=append, overwrite=overwrite,
                          serialize_meta=True, metadata_conflicts='error',
