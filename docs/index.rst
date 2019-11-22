@@ -120,7 +120,6 @@ below to see how these were made):
     from thejoker import JokerPrior, TheJoker, RVData
     from thejoker.plot import plot_rv_curves
     import astropy.units as u
-    import schwimmbad
 
     t = [0., 49.452, 95.393, 127.587, 190.408]
     rv = [38.77, 39.70, 37.45, 38.31, 38.31] * u.km/u.s
@@ -129,8 +128,7 @@ below to see how these were made):
     data = RVData(t=t, rv=rv, rv_err=err)
     prior = JokerPrior.default(P_min=2*u.day, P_max=256*u.day,
                                sigma_K0=30*u.km/u.s, sigma_v=100*u.km/u.s)
-    pool = schwimmbad.MultiPool()
-    joker = TheJoker(prior, pool=pool)
+    joker = TheJoker(prior)
 
     prior_samples = prior.sample(size=100_000)
     samples = joker.rejection_sample(data, prior_samples)
