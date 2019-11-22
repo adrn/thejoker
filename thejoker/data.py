@@ -321,8 +321,18 @@ class RVData:
 
         ts = TimeSeries(time=self.t, data={'rv': self.rv,
                                            'rv_err': self.rv_err})
-
+        ts.meta['t0'] = self.t0
         return ts
+
+    @classmethod
+    def from_timeseries(cls, f):
+        from astropy.timeseries import TimeSeries
+        ts = TimeSeries.read(f)
+        t0 = ts.meta.get('t0', None)
+        return cls(t=ts['time'],
+                   rv=ts['rv'],
+                   rv_err=ts['rv_err'],
+                   t0=t0)
 
     # ------------------------------------------------------------------------
     # Other methods

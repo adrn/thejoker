@@ -145,7 +145,7 @@ def test_rvdata_init():
 
 @pytest.mark.parametrize("inputs",
                          get_valid_input()[0])
-def test_data_methods(inputs):
+def test_data_methods(tmpdir, inputs):
 
     # check that copy works
     if isinstance(inputs, tuple):
@@ -172,6 +172,14 @@ def test_data_methods(inputs):
     # converting to a timeseries object:
     ts = data1.to_timeseries()
     assert isinstance(ts, TimeSeries)
+
+    filename = str(tmpdir / 'test.hdf5')
+    ts.write(filename, serialize_meta=True)
+    data2 = RVData.from_timeseries(filename)
+    assert u.allclose(data1.t.mjd, data2.t.mjd)
+    assert u.allclose(data1.rv, data2.rv)
+    assert u.allclose(data1.rv_err, data2.rv_err)
+    assert u.allclose(data1.t0.mjd, data2.t0.mjd)
 
     # get phase from data object
     phase1 = data1.phase(P=15.*u.day)
