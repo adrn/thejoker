@@ -111,13 +111,18 @@ jobs:
       - run: *apt-install
       - run: *pip-install-dev
       - run:
+          name: Install
+          command: |
+            . venv/bin/activate
+            python setup.py install
+      - run:
           name: Execute notebooks
           command: bash .circleci/execute_notebooks.sh
       - run:
           name: Build documentation
           command: |
             . venv/bin/activate
-            python setup.py install build_docs -w
+            python setup.py build_docs -w
       - store_artifacts:
           path: docs/_build/html
       - run:
