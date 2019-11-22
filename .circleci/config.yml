@@ -103,11 +103,16 @@ jobs:
       - image: circleci/python:3.7
     steps:
       - checkout
+      - add_ssh_keys: # add GitHub SSH keys
+          fingerprints:
+            - 21:3a:31:0c:f7:f4:94:ed:1c:4f:16:cb:67:60:61:0a
       - run: *ci-skip-check
       - run: *master-or-pr-check
       - run: *apt-install
       - run: *pip-install-dev
-
+      - run:
+          name: Execute notebooks
+          command: bash .circleci/execute_notebooks.sh
       - run:
           name: Build documentation
           command: |
@@ -119,23 +124,6 @@ jobs:
           name: Built documentation is available at
           command: |
             DOCS_URL="${CIRCLE_BUILD_URL}/artifacts/${CIRCLE_NODE_INDEX}/${CIRCLE_WORKING_DIRECTORY/#\~/$HOME}/docs/_build/html/index.html"; echo $DOCS_URL
-
-  # Execute notebooks and prepare for RTD build
-  execute-nbs:
-    docker:
-      - image: circleci/python:3.7
-    steps:
-      - checkout
-      - add_ssh_keys: # add GitHub SSH keys
-          fingerprints:
-            - 21:3a:31:0c:f7:f4:94:ed:1c:4f:16:cb:67:60:61:0a
-      - run: *ci-skip-check
-      - run: *master-or-pr-check
-      - run: *apt-install
-      - run: *pip-install-dev
-      - run:
-          name: Execute notebooks
-          command: bash .circleci/execute_notebooks.sh
 
 workflows:
   thejoker:
@@ -154,9 +142,6 @@ workflows:
       - build-docs:
           requires:
             - test-37
-      - execute-nbs:
-          requires:
-            - build-docs
 
 notify:
   webhooks:
