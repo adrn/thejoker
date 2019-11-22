@@ -6,5 +6,6 @@ pytest-astropy
 corner
 nbsphinx
 nbconvert
+nbformat
 ipykernel
 astroML
