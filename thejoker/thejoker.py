@@ -139,7 +139,7 @@ class TheJoker:
         data : `~thejoker.RVData`
             The radial velocity data, or an iterable containing ``RVData``
             objects for each data source.
-        prior_samples : str, `~thejoker.JokerSamples`
+        prior_samples : str, `~thejoker.JokerSamples`, int
             Either a path to a file containing prior samples generated from The
             Joker, or a `~thejoker.JokerSamples` instance containing the prior
             samples.
@@ -177,6 +177,10 @@ class TheJoker:
             The posterior samples produced from The Joker.
 
         """
+        if isinstance(prior_samples, int):
+            N = prior_samples
+            prior_samples = self.prior.sample(size=N)
+
         from .multiproc_helpers import rejection_sample_helper
         joker_helper = self._make_joker_helper(data)  # also validates data
         samples = rejection_sample_helper(
