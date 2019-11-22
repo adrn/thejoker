@@ -9,6 +9,7 @@ if [[ -z $CIRCLE_PULL_REQUEST ]]; then
     git checkout -b executed-notebooks
 
     cd docs
+    cp _static/notebook_setup.py examples/
 
     python run_notebooks.py $*
 
