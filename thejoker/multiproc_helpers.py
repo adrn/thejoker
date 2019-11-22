@@ -301,7 +301,8 @@ def iterative_rejection_helper(joker_helper, prior_samples_file, pool,
         # We should never get here!!
         raise RuntimeError("Hit maximum number of iterations!")
 
-    full_samples_idx = all_idx[good_samples_idx[:n_requested_samples]]
+    good_samples_idx = good_samples_idx[:n_requested_samples]
+    full_samples_idx = all_idx[good_samples_idx]
 
     # generate linear parameters
     samples = make_full_samples(joker_helper, prior_samples_file, pool,

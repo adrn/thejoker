@@ -116,7 +116,7 @@ def test_rejection_sample(tmpdir, prior):
     data, orbit = make_data()
     flat_data, orbit = make_data(K=0.1*u.m/u.s)
 
-    prior_samples = prior.sample(size=16384)
+    prior_samples = prior.sample(size=16384, return_logprobs=True)
     filename = str(tmpdir / f'samples.hdf5')
     prior_samples.write(filename, overwrite=True)
 
@@ -127,6 +127,10 @@ def test_rejection_sample(tmpdir, prior):
         samples = joker.rejection_sample(data, _samples)
         assert len(samples) > 0
         assert len(samples) < 10  # HACK: this should generally be true...
+
+        # Check that return_logprobs works
+        samples = joker.rejection_sample(data, _samples, return_logprobs=True)
+        assert len(samples) > 0
 
         samples = joker.rejection_sample(flat_data, _samples)
         assert len(samples) > 10  # HACK: this should generally be true...
@@ -155,7 +159,7 @@ def test_rejection_sample(tmpdir, prior):
 def test_iterative_rejection_sample(tmpdir, prior):
     data, orbit = make_data(n_times=3)
 
-    prior_samples = prior.sample(size=100_000)
+    prior_samples = prior.sample(size=10_000, return_logprobs=True)
     filename = str(tmpdir / f'samples.hdf5')
     prior_samples.write(filename, overwrite=True)
 
@@ -165,6 +169,11 @@ def test_iterative_rejection_sample(tmpdir, prior):
         # pass JokerSamples instance, process all samples:
         samples = joker.iterative_rejection_sample(data, _samples,
                                                    n_requested_samples=4)
+        assert len(samples) > 1
+
+        samples = joker.iterative_rejection_sample(data, _samples,
+                                                   n_requested_samples=4,
+                                                   return_logprobs=True)
         assert len(samples) > 1
 
     # Check that setting the random state makes it deterministic

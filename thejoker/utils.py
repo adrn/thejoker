@@ -236,8 +236,10 @@ def tempfile_decorator(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         args = list(args)
-        prior_samples = kwargs.get('prior_samples',
-                                   args.pop(func_args.index('prior_samples')))
+        if 'prior_samples' in kwargs:
+            prior_samples = kwargs['prior_samples']
+        else:
+            prior_samples = args.pop(func_args.index('prior_samples'))
 
         if not isinstance(prior_samples, str):
             if not isinstance(prior_samples, JokerSamples):
