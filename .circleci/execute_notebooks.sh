@@ -8,9 +8,8 @@ if [[ -z $CIRCLE_PULL_REQUEST ]]; then
     git branch -D executed-notebooks || true
     git checkout -b executed-notebooks
 
-    cd docs
-
     . venv/bin/activate
+    cd docs
     python run_notebooks.py $*
 
     git add examples/*.ipynb
