@@ -15,13 +15,9 @@ np.import_array()
 import cython
 cimport cython
 cimport scipy.linalg.cython_lapack as lapack
-import exoplanet.units as xu
 
 # from libc.stdio cimport printf
 from libc.math cimport pow, log, fabs, pi
-
-# Project
-from ..distributions import FixedCompanionMass
 
 
 cdef extern from "src/twobody.h":
@@ -201,6 +197,7 @@ cdef class CJokerHelper:
 
         # put v0_offsets variances into Lambda
         # - validated to be Normal() in JokerPrior
+        import exoplanet.units as xu
         for i in range(self.n_offsets):
             name = prior.v0_offsets[i].name
             dist = prior.v0_offsets[i].distribution
@@ -213,6 +210,7 @@ cdef class CJokerHelper:
 
         # ---------------------------------------------------------------------
         # TODO: This is a bit of a hack:
+        from ..distributions import FixedCompanionMass
         if isinstance(prior.pars['K'].distribution, FixedCompanionMass):
             self.fixed_K_prior = 0
         else:

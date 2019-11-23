@@ -3,10 +3,6 @@ import os
 
 # Third-party
 import numpy as np
-import pymc3 as pm
-import exoplanet as xo
-import exoplanet.units as xu
-import theano.tensor as tt
 
 # Project
 from .logging import logger
@@ -299,6 +295,10 @@ class TheJoker:
         mcmc_init : dict
 
         """
+        import pymc3 as pm
+        import exoplanet as xo
+        import exoplanet.units as xu
+        import theano.tensor as tt
 
         model = _validate_model(model)
 
@@ -372,6 +372,9 @@ class TheJoker:
         ----------
         trace : `~pymc3.backends.base.MultiTrace`
         """
+        import pymc3 as pm
+        import exoplanet.units as xu
+
         df = pm.trace_to_dataframe(trace)
 
         data, *_ = validate_prepare_data(data,

@@ -1,17 +1,10 @@
 # Third-party
 import astropy.units as u
 import numpy as np
-import pymc3 as pm
-from pymc3.distributions import draw_values
-import theano.tensor as tt
-from exoplanet.distributions import Angle
-from exoplanet.distributions.eccentricity import kipping13
-import exoplanet.units as xu
 
 # Project
 from .logging import logger
 from .samples import JokerSamples
-from .distributions import UniformLog, FixedCompanionMass
 from .prior_helpers import (get_nonlinear_equiv_units,
                             get_linear_equiv_units,
                             validate_poly_trend,
@@ -23,6 +16,8 @@ __all__ = ['JokerPrior']
 
 
 def _validate_model(model):
+    import pymc3 as pm
+
     # validate input model
     if model is None:
         try:
@@ -73,6 +68,9 @@ class JokerPrior:
             pymc3 model context.
 
         """
+        import theano.tensor as tt
+        import pymc3 as pm
+        import exoplanet.units as xu
 
         self.model = _validate_model(model)
 
@@ -247,6 +245,7 @@ class JokerPrior:
 
     @property
     def par_units(self):
+        import exoplanet.units as xu
         return {p.name: getattr(p, xu.UNIT_ATTR_NAME, u.one) for p in self.pars}
 
     @property
@@ -290,6 +289,9 @@ class JokerPrior:
             The random samples.
 
         """
+        from pymc3.distributions import draw_values
+        import exoplanet.units as xu
+
         sub_pars = {k: p for k, p in self.pars.items()
                     if k in self._nonlinear_equiv_units
                     or ((k in self._linear_equiv_units
@@ -393,6 +395,13 @@ def default_nonlinear_prior(P_min=None, P_max=None, s=None,
         This is either required, or this function must be called within a pymc3
         model context.
     """
+    import theano.tensor as tt
+    import pymc3 as pm
+    from exoplanet.distributions import Angle
+    from exoplanet.distributions.eccentricity import kipping13
+    import exoplanet.units as xu
+    from .distributions import UniformLog
+
     model = pm.modelcontext(model)
 
     if pars is None:
@@ -472,6 +481,10 @@ def default_linear_prior(sigma_K0=None, P0=None, sigma_v=None,
         This is either required, or this function must be called within a pymc3
         model context.
     """
+    import pymc3 as pm
+    import exoplanet.units as xu
+    from .distributions import FixedCompanionMass
+
     model = pm.modelcontext(model)
 
     if pars is None:
