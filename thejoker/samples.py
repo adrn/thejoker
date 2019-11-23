@@ -5,7 +5,7 @@ import os
 
 # Third-party
 import astropy.units as u
-from astropy.table import Table, QTable
+from astropy.table import Table, QTable, Row
 import numpy as np
 from twobody import KeplerOrbit, PolynomialRVTrend
 
@@ -45,7 +45,6 @@ class JokerSamples:
         **kwargs
             Additional keyword arguments are stored internally as metadata.
         """
-        self.tbl = QTable()
 
         if poly_trend is None:
             poly_trend = 1
@@ -53,11 +52,19 @@ class JokerSamples:
         if n_offsets is None:
             n_offsets = 0
 
-        if isinstance(samples, Table):
+        if isinstance(samples, Table) or isinstance(samples, Row):
             t0 = samples.meta.pop('t0', t0)
             poly_trend = samples.meta.pop('poly_trend', poly_trend)
             n_offsets = samples.meta.pop('n_offsets', n_offsets)
             kwargs.update(samples.meta)
+
+            if isinstance(samples, Table):
+                self.tbl = QTable()
+            elif isinstance(samples, Row):
+                self.tbl = samples
+
+        else:
+            self.tbl = QTable()
 
         # Validate input poly_trend / n_offsets:
         poly_trend, _ = validate_poly_trend(poly_trend)
@@ -91,7 +98,6 @@ class JokerSamples:
 
     def __getitem__(self, key):
         if isinstance(key, int):
-            key = slice(key, key+1)
             return self.__class__(samples=self.tbl[key])
 
         elif isinstance(key, str) and key in self.par_names:
@@ -132,7 +138,10 @@ class JokerSamples:
         return self.tbl.colnames
 
     def __len__(self):
-        return len(self.tbl)
+        if isinstance(self.tbl, Table):
+            return len(self.tbl)
+        else:
+            return 1
 
     def __repr__(self):
         return (f'<JokerSamples [{", ".join(self.par_names)}] '
@@ -181,21 +190,21 @@ class JokerSamples:
         M0 = self['M0']
         a = kwargs.pop('a', P * K / (2*np.pi) * np.sqrt(1 - e**2))
 
+        names = list(get_linear_equiv_units(self.poly_trend).keys())
+        trend_coeffs = [self[x] for x in names[1:]]  # skip K
+
         if index is None:
-            if len(self) == 1:
-                index = 0
-            else:
+            if len(self) > 1:
                 raise ValueError("You must specify an index when the number "
                                  f"of samples is >1 (here, it's {len(self)})")
 
-        P = P[index]
-        e = e[index]
-        a = a[index]
-        omega = omega[index]
-        M0 = M0[index]
-
-        names = list(get_linear_equiv_units(self.poly_trend).keys())
-        trend_coeffs = [self[x][index] for x in names[1:]]  # skip K
+        else:
+            P = P[index]
+            e = e[index]
+            a = a[index]
+            omega = omega[index]
+            M0 = M0[index]
+            trend_coeffs = [x[index] for x in trend_coeffs]
 
         orbit.elements.t0 = self.t0
         orbit.elements._P = P
