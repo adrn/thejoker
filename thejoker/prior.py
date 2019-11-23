@@ -291,6 +291,7 @@ class JokerPrior:
         """
         from pymc3.distributions import draw_values
         import exoplanet.units as xu
+        import pymc3 as pm
 
         sub_pars = {k: p for k, p in self.pars.items()
                     if k in self._nonlinear_equiv_units
@@ -318,9 +319,10 @@ class JokerPrior:
                     try:
                         dist = par.distribution.logp(par)
                     except AttributeError:
-                        logger.warn("Cannot auto-compute log-prior value for "
-                                    f"parameter {par} because it is defined as "
-                                    "a transformation from another variable.")
+                        logger.debug("Cannot auto-compute log-prior value for "
+                                     f"parameter {par} because it is defined "
+                                     "as a transformation from another "
+                                     "variable.")
                         continue
 
                     if logp_name in self.model.named_vars.keys():
@@ -398,9 +400,8 @@ def default_nonlinear_prior(P_min=None, P_max=None, s=None,
     import theano.tensor as tt
     import pymc3 as pm
     from exoplanet.distributions import Angle
-    from exoplanet.distributions.eccentricity import kipping13
     import exoplanet.units as xu
-    from .distributions import UniformLog
+    from .distributions import UniformLog, Kipping13Global
 
     model = pm.modelcontext(model)
 
@@ -426,7 +427,7 @@ def default_nonlinear_prior(P_min=None, P_max=None, s=None,
         # because this can only get executed if the param is not already
         # defined, otherwise variables are defined twice in the model
         if 'e' not in pars:
-            out_pars['e'] = xu.with_unit(kipping13('e'),
+            out_pars['e'] = xu.with_unit(Kipping13Global('e'),
                                          u.one)
 
         # If either omega or M0 is specified by user, default to U(0,2π)

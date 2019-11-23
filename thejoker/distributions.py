@@ -81,3 +81,30 @@ class FixedCompanionMass(pm.Normal):
         sigma = tt.min([self._max_K.value,
                         sigma_K0 * (P/P0)**(-1/3) / np.sqrt(1-e**2)])
         super().__init__(mu=mu, sigma=sigma)
+
+
+class Kipping13Long(pm.Beta):
+
+    def __init__(self):
+        r"""
+        The inferred long-period eccentricity distribution from Kipping (2013).
+        """
+        super().__init__(1.12, 3.09)
+
+
+class Kipping13Short(pm.Beta):
+
+    def __init__(self):
+        r"""
+        The inferred short-period eccentricity distribution from Kipping (2013).
+        """
+        super().__init__(0.697, 3.27)
+
+
+class Kipping13Global(pm.Beta):
+
+    def __init__(self):
+        r"""
+        The inferred global eccentricity distribution from Kipping (2013).
+        """
+        super().__init__(0.867, 3.03)
