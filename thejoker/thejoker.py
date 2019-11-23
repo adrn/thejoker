@@ -325,7 +325,10 @@ class TheJoker:
         mcmc_init = dict()
         for name in self.prior.par_names:
             unit = getattr(self.prior.pars[name], xu.UNIT_ATTR_NAME)
-            mcmc_init[name] = joker_samples[name].to_value(unit)[0]
+            if joker_samples[name].shape == ():
+                mcmc_init[name] = joker_samples[name].to_value(unit)
+            else:
+                mcmc_init[name] = joker_samples[name].to_value(unit)[0]
 
         if 't_peri' in model.named_vars:
             logger.info('pymc3 model has already been setup for running MCMC - '
