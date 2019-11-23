@@ -316,6 +316,7 @@ def iterative_rejection_helper(joker_helper, prior_samples_file, pool,
 
         with tb.open_file(prior_samples_file, mode='r') as f:
             data = f.root[JokerSamples._hdf5_path]
-            samples['ln_prior'] = data.read_coordinates(full_samples_idx)
+            samples['ln_prior'] = data.read_coordinates(full_samples_idx,
+                                                        field='ln_prior')
 
     return samples
