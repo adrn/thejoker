@@ -10,6 +10,8 @@ import numpy as np
 from twobody import KeplerOrbit, PolynomialRVTrend
 
 # Project
+from .src.fast_likelihood import (_nonlinear_packed_order,
+                                  _nonlinear_internal_units)
 from .prior_helpers import (validate_poly_trend, validate_n_offsets,
                             get_nonlinear_equiv_units,
                             get_linear_equiv_units,
@@ -302,21 +304,19 @@ class JokerSamples:
         if units is None:
             units = dict()
         out_units = OrderedDict()
+        [units.setdefault(k, v) for k, v in _nonlinear_internal_units.items()]
 
-        maybe_no_s = False
         if names is None:
-            maybe_no_s = True
-            names = self.par_names
+            if nonlinear_only:
+                names = _nonlinear_packed_order
+            else:
+                names = self.par_names
 
         arrs = []
         for name in names:
             unit = units.get(name, self.tbl[name].unit)
             arrs.append(self.tbl[name].to_value(unit))
             out_units[name] = unit
-
-        if 's' not in self.par_names and not maybe_no_s:
-            arrs.append(np.zeros_like(arrs[0]))
-            out_units['s'] = u.m/u.s
 
         return np.stack(arrs, axis=1), out_units
 
