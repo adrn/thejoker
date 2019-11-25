@@ -82,8 +82,8 @@ class TheJoker:
         joker_helper = CJokerHelper(all_data, self.prior, trend_M)
         return joker_helper
 
-    @tempfile_decorator
-    def marginal_ln_likelihood(self, data, prior_samples, n_batches=None):
+    def marginal_ln_likelihood(self, data, prior_samples, n_batches=None,
+                               in_memory=False):
         f"""
         Compute the marginal log-likelihood at each of the input prior samples.
 
@@ -102,6 +102,9 @@ class TheJoker:
             computation pool, this doesn't have any impact. If using
             multiprocessing or MPI, this determines how many batches to split
             the samples into before scattering over all workers.
+        in_memory : bool (optional)
+            Load all prior samples or keep all prior samples in memory and run
+            all calculations without creating a temporary cache file.
 
         Returns
         -------
@@ -110,18 +113,29 @@ class TheJoker:
             sample.
         """
         from .multiproc_helpers import marginal_ln_likelihood_helper
-        joker_helper = self._make_joker_helper(data)  # also validates data
-        return marginal_ln_likelihood_helper(joker_helper, prior_samples,
-                                             self.pool, n_batches=n_batches)
+        from .likelihood_helpers import marginal_ln_likelihood_inmem
 
-    @tempfile_decorator
+        joker_helper = self._make_joker_helper(data)  # also validates data
+
+        if in_memory:
+            if isinstance(prior_samples, JokerSamples):
+                prior_samples, _ = prior_samples.pack(
+                    units=joker_helper.internal_units,
+                    names=joker_helper.packed_order)
+            return marginal_ln_likelihood_inmem(joker_helper, prior_samples)
+
+        else:
+            return marginal_ln_likelihood_helper(joker_helper, prior_samples,
+                                                 self.pool, n_batches=n_batches)
+
     def rejection_sample(self, data, prior_samples,
                          n_prior_samples=None,
                          max_posterior_samples=None,
                          n_linear_samples=1,
                          return_logprobs=False,
                          n_batches=None,
-                         randomize_prior_order=False):
+                         randomize_prior_order=False,
+                         in_memory=False):
         f"""
         Run The Joker's rejection sampling on prior samples to get posterior
         samples for the input data.
@@ -166,6 +180,9 @@ class TheJoker:
             rejection sampler. This is only useful if you are using a large
             library of prior samples, and choosing to run on a subset of those
             samples.
+        in_memory : bool (optional)
+            Load all prior samples or keep all prior samples in memory and run
+            all calculations without creating a temporary cache file.
 
         Returns
         -------
@@ -173,27 +190,52 @@ class TheJoker:
             The posterior samples produced from The Joker.
 
         """
-        if isinstance(prior_samples, int):
-            N = prior_samples
-            prior_samples = self.prior.sample(size=N)
-
         from .multiproc_helpers import rejection_sample_helper
+        from .likelihood_helpers import rejection_sample_inmem
+
         joker_helper = self._make_joker_helper(data)  # also validates data
-        samples = rejection_sample_helper(
-            joker_helper,
-            prior_samples,
-            pool=self.pool,
-            random_state=self.random_state,
-            n_prior_samples=n_prior_samples,
-            max_posterior_samples=max_posterior_samples,
-            n_linear_samples=n_linear_samples,
-            return_logprobs=return_logprobs,
-            n_batches=n_batches,
-            randomize_prior_order=randomize_prior_order)
+
+        if isinstance(prior_samples, int):
+            # If an integer, generate that many prior samples first
+            N = prior_samples
+            prior_samples = self.prior.sample(size=N,
+                                              return_logprobs=return_logprobs)
+
+        if in_memory:
+            if isinstance(prior_samples, JokerSamples):
+                ln_prior = None
+                if return_logprobs:
+                    ln_prior = prior_samples['ln_prior']
+
+                prior_samples, _ = prior_samples.pack(
+                    units=joker_helper.internal_units,
+                    names=joker_helper.packed_order)
+            else:
+                ln_prior = return_logprobs
+
+            samples = rejection_sample_inmem(
+                joker_helper,
+                prior_samples,
+                random_state=self.random_state,
+                ln_prior=ln_prior,
+                max_posterior_samples=max_posterior_samples,
+                n_linear_samples=n_linear_samples)
+
+        else:
+            samples = rejection_sample_helper(
+                joker_helper,
+                prior_samples,
+                pool=self.pool,
+                random_state=self.random_state,
+                n_prior_samples=n_prior_samples,
+                max_posterior_samples=max_posterior_samples,
+                n_linear_samples=n_linear_samples,
+                return_logprobs=return_logprobs,
+                n_batches=n_batches,
+                randomize_prior_order=randomize_prior_order)
 
         return samples
 
-    @tempfile_decorator
     def iterative_rejection_sample(self, data, prior_samples,
                                    n_requested_samples,
                                    max_prior_samples=None,
@@ -250,7 +292,8 @@ class TheJoker:
             A factor used to adaptively grow the number of prior samples to
             evaluate on. Larger numbers make the trial batches grow faster.
         in_memory : bool (optional)
-            Load all prior samples and run in memory.
+            Load all prior samples or keep all prior samples in memory and run
+            all calculations without creating a temporary cache file.
 
         Returns
         -------
@@ -262,9 +305,29 @@ class TheJoker:
 
         joker_helper = self._make_joker_helper(data)  # also validates data
 
-        if isinstance(prior_samples, str) or not in_memory:
-            # TODO: cache to file...
+        if in_memory:
+            if isinstance(prior_samples, JokerSamples):
+                ln_prior = None
+                if return_logprobs:
+                    ln_prior = prior_samples['ln_prior']
 
+                prior_samples, _ = prior_samples.pack(
+                    units=joker_helper.internal_units,
+                    names=joker_helper.packed_order)
+            else:
+                ln_prior = return_logprobs
+
+            samples = iterative_rejection_inmem(
+                joker_helper,
+                prior_samples,
+                random_state=self.random_state,
+                n_requested_samples=n_requested_samples,
+                ln_prior=ln_prior,
+                init_batch_size=init_batch_size,
+                growth_factor=growth_factor,
+                n_linear_samples=n_linear_samples)
+
+        else:
             samples = iterative_rejection_helper(
                 joker_helper,
                 prior_samples,
@@ -278,45 +341,6 @@ class TheJoker:
                 return_logprobs=return_logprobs,
                 n_batches=n_batches,
                 randomize_prior_order=randomize_prior_order)
-
-        elif isinstance(prior_samples, JokerSamples) and in_memory:
-            # TODO:
-
-            ln_prior = None
-            if return_logprobs:
-                ln_prior = prior_samples['ln_prior']
-            batch, _ = prior_samples.pack(units=joker_helper.internal_units,
-                                          names=joker_helper.packed_order)
-
-            if randomize_prior_order:
-                # TODO:
-                pass
-
-            samples = self.iterative_rejection_sample(
-                data, batch,
-                n_requested_samples=n_requested_samples,
-                max_prior_samples=max_prior_samples,
-                n_linear_samples=n_linear_samples,
-                return_logprobs=ln_prior,
-                n_batches=n_batches,
-                init_batch_size=init_batch_size,
-                growth_factor=growth_factor,
-                in_memory=in_memory)
-
-        elif isinstance(prior_samples, np.ndarray) and in_memory:
-            # TODO: Trust...
-            samples = iterative_rejection_inmem(
-                joker_helper,
-                prior_samples,
-                random_state=self.random_state,
-                n_requested_samples=n_requested_samples,
-                ln_prior=return_logprobs,
-                init_batch_size=init_batch_size,
-                growth_factor=growth_factor,
-                n_linear_samples=n_linear_samples)
-
-        else:
-            raise ValueError("TODO")
 
         return samples
 

@@ -5,7 +5,8 @@ import tables as tb
 # Project
 from .logging import logger
 from .samples import JokerSamples
-from .utils import batch_tasks, read_batch, table_contains_column
+from .utils import (batch_tasks, read_batch, table_contains_column,
+                    tempfile_decorator)
 
 
 def run_worker(worker, pool, prior_samples_file, task_args=(), n_batches=None,
@@ -15,7 +16,7 @@ def run_worker(worker, pool, prior_samples_file, task_args=(), n_batches=None,
         n_samples = f.root[JokerSamples._hdf5_path].shape[0]
 
     if n_prior_samples is not None and samples_idx is not None:
-        raise ValueError("Dont specify both n_prior_samples and samples_idx")
+        raise ValueError("Don't specify both n_prior_samples and samples_idx")
 
     elif samples_idx is not None:
         n_samples = len(samples_idx)
@@ -73,6 +74,7 @@ def marginal_ln_likelihood_worker(task):
     return np.array(ll)
 
 
+@tempfile_decorator
 def marginal_ln_likelihood_helper(joker_helper, prior_samples_file, pool,
                                   n_batches=None, n_prior_samples=None,
                                   samples_idx=None):
@@ -137,6 +139,7 @@ def make_full_samples(joker_helper, prior_samples_file, pool, random_state,
     return samples
 
 
+@tempfile_decorator
 def rejection_sample_helper(joker_helper, prior_samples_file, pool,
                             random_state,
                             n_prior_samples=None,
@@ -213,6 +216,7 @@ def rejection_sample_helper(joker_helper, prior_samples_file, pool,
     return samples
 
 
+@tempfile_decorator
 def iterative_rejection_helper(joker_helper, prior_samples_file, pool,
                                random_state,
                                n_requested_samples,
