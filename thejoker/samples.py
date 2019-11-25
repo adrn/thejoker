@@ -275,7 +275,7 @@ class JokerSamples:
         return self
 
     # Packing and unpacking
-    def pack(self, units=None, nonlinear_only=True):
+    def pack(self, units=None, names=None, nonlinear_only=True):
         """
         Pack the sample data into a single numpy array (i.e. strip the units and
         return those separately).
@@ -285,6 +285,8 @@ class JokerSamples:
         units : `dict` (optional)
             If specified, this controls the units that the samples are converted
             to before packing into a single array.
+        names : `list` (optional)
+            The order of names to pack into.
         nonlinear_only : bool (optional)
             Only pack the data for the nonlinear parameters into the returned
             array.
@@ -301,13 +303,18 @@ class JokerSamples:
             units = dict()
         out_units = OrderedDict()
 
+        maybe_no_s = False
+        if names is None:
+            maybe_no_s = True
+            names = self.par_names
+
         arrs = []
-        for name in self.par_names:
+        for name in names:
             unit = units.get(name, self.tbl[name].unit)
             arrs.append(self.tbl[name].to_value(unit))
             out_units[name] = unit
 
-        if 's' not in self.par_names:
+        if 's' not in self.par_names and not maybe_no_s:
             arrs.append(np.zeros_like(arrs[0]))
             out_units['s'] = u.m/u.s
 
