@@ -25,13 +25,20 @@ cdef extern from "src/twobody.h":
                             double P, double K, double e, double omega,
                             double phi0, double t0, double tol, int maxiter)
 
-# Log of 2π
 cdef:
-    double LN_2PI = 1.8378770664093453
     double INF = float('inf')
     # TODO: these should be pulled from the instance of TheJoker!
     double anomaly_tol = 1E-10  # passed to c_rv_from_elements
     int anomaly_maxiter = 128   # passed to c_rv_from_elements
+
+
+# NOTE: if this order is changed, make sure to change the indexing order at
+# the two other NOTE's below
+_nonlinear_packed_order = ['P', 'e', 'omega', 'M0', 's']
+_nonlinear_internal_units = {'P': u.day,
+                             'e' : u.one,
+                             'omega': u.radian,
+                             'M0': u.radian}
 
 
 cdef void get_ivar(double[::1] ivar, double s, double[::1] new_ivar):
@@ -121,10 +128,10 @@ cdef class CJokerHelper:
         # Note: order here matters! This is the order in which prior samples
         # will be unpacked externally!
         self.internal_units = {}
-        self.internal_units['P'] = u.day
-        self.internal_units['e'] = u.one
-        self.internal_units['omega'] = u.radian
-        self.internal_units['M0'] = u.radian
+        self.internal_units['P'] = _nonlinear_internal_units['P']
+        self.internal_units['e'] = _nonlinear_internal_units['e']
+        self.internal_units['omega'] = _nonlinear_internal_units['omega']
+        self.internal_units['M0'] = _nonlinear_internal_units['M0']
         self.internal_units['s'] = self.data.rv.unit
         self.internal_units['K'] = self.data.rv.unit
         self.internal_units['v0'] = self.data.rv.unit
@@ -138,9 +145,7 @@ cdef class CJokerHelper:
 
         # The assumed order of the nonlinear parameters used below to read from
         # packed samples array
-        # NOTE: if this order is changed, make sure to change the indexing order
-        # at the two other NOTE's below
-        self.packed_order = ['P', 'e', 'omega', 'M0', 's']
+        self.packed_order = _nonlinear_packed_order
 
         # Counting:
         self.n_times = len(data)  # number of data pints
