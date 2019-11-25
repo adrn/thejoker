@@ -241,7 +241,9 @@ def tempfile_decorator(func):
         else:
             prior_samples = args.pop(func_args.index('prior_samples'))
 
-        if not isinstance(prior_samples, str):
+        in_memory = kwargs.get('in_memory', False)
+
+        if not isinstance(prior_samples, str) and not in_memory:
             if not isinstance(prior_samples, JokerSamples):
                 raise TypeError("prior_samples must either be a string "
                                 "filename specifying a cache file contining "
