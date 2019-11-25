@@ -291,7 +291,6 @@ class JokerPrior:
         """
         from pymc3.distributions import draw_values
         import exoplanet.units as xu
-        import pymc3 as pm
 
         if dtype is None:
             dtype = np.float64
@@ -308,39 +307,38 @@ class JokerPrior:
             par_names = list(self._nonlinear_equiv_units.keys())
 
         pars_list = list(sub_pars.values())
-        npars = len(pars_list)
 
-        log_prior = []
-        if return_logprobs:
-            # Note: This is really slow! Waiting for upstream fixes to pymc3...
-
-            # Add deterministic variables to track the value of the prior at
-            # each sample generated:
-            with self.model:
-                for par in pars_list:
-                    logp_name = f'{par.name}_log_prior'
-                    try:
-                        dist = par.distribution.logp(par)
-                    except AttributeError:
-                        logger.debug("Cannot auto-compute log-prior value for "
-                                     f"parameter {par} because it is defined "
-                                     "as a transformation from another "
-                                     "variable.")
-                        continue
-
-                    if logp_name in self.model.named_vars.keys():
-                        logp_var = self.model.named_vars[logp_name]
-                    else:
-                        # doesn't exist in the model yet, so add it
-                        logp_var = pm.Deterministic(logp_name, dist)
-
-                    log_prior.append(logp_var)
+        # MAJOR HACK RELATED TO UPSTREAM ISSUES WITH pymc3:
+        init_shapes = dict()
+        for par in pars_list:
+            if hasattr(par, 'distribution'):
+                init_shapes[par.name] = par.distribution.shape
+                par.distribution.shape = (size, )
 
         with random_state_context(random_state):
-            samples_values = draw_values(pars_list + log_prior, size=size)
+            samples_values = draw_values(pars_list)
         raw_samples = {p.name: samples.astype(dtype)
-                       for p, samples in zip(pars_list,
-                                             samples_values[:npars])}
+                       for p, samples in zip(pars_list, samples_values)}
+
+        if return_logprobs:
+            logp = []
+            for par in pars_list:
+                try:
+                    _logp = par.distribution.logp(raw_samples[par.name]).eval()
+                except AttributeError:
+                    logger.debug("Cannot auto-compute log-prior value for "
+                                 f"parameter {par} because it is defined "
+                                 "as a transformation from another "
+                                 "variable.")
+                    continue
+
+                logp.append(_logp)
+            log_prior = np.sum(logp, axis=0)
+
+        # CONTINUED MAJOR HACK RELATED TO UPSTREAM ISSUES WITH pymc3:
+        for par in pars_list:
+            if hasattr(par, 'distribution'):
+                par.distribution.shape = init_shapes[par.name]
 
         # Apply units if they are specified:
         prior_samples = JokerSamples(poly_trend=self.poly_trend,
@@ -356,10 +354,7 @@ class JokerPrior:
             prior_samples[p.name] = np.atleast_1d(raw_samples[p.name]) * unit
 
         if return_logprobs:
-            log_prior = {p.name: vals
-                         for p, vals in zip(pars_list, samples_values[npars:])}
-            prior_samples['ln_prior'] = np.sum([v for v in log_prior.values()],
-                                               axis=0)
+            prior_samples['ln_prior'] = log_prior
 
         # TODO: right now, elsewhere, we assume the log_prior is a single value
         # for each sample (i.e. the total prior value). In principle, we could
