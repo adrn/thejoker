@@ -176,7 +176,7 @@ def read_batch_slice(prior_samples_file, columns, slice, units=None):
             arr = f.root[path].read(slice.start, slice.stop, slice.step,
                                     field=name)
             if batch is None:
-                batch = np.zeros((len(arr), len(columns)))
+                batch = np.zeros((len(arr), len(columns)), dtype=arr.dtype)
             batch[:, i] = arr
 
         if units is not None:

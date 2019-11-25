@@ -64,6 +64,9 @@ def marginal_ln_likelihood_worker(task):
     batch = read_batch(prior_samples_file, joker_helper.packed_order,
                        slice_or_idx, units=joker_helper.internal_units)
 
+    if batch.dtype != np.float64:
+        batch = batch.astype(np.float64)
+
     # memoryview is returned
     ll = joker_helper.batch_marginal_ln_likelihood(batch)
 
@@ -282,7 +285,7 @@ def iterative_rejection_helper(joker_helper, prior_samples_file, pool,
         logger.log(1, f"{n_good} good samples after rejection sampling")
 
         if n_good >= n_requested_samples:
-            logger.debug("Enough samples found!")
+            logger.log(1, "Enough samples found!")
             break
 
         start_idx += n_process

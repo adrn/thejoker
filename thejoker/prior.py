@@ -259,7 +259,7 @@ class JokerPrior:
         return ", ".join(self.par_names)
 
     def sample(self, size=1, generate_linear=False, return_logprobs=False,
-               random_state=None, **kwargs):
+               random_state=None, dtype=None, **kwargs):
         """
         Generate random samples from the prior.
 
@@ -292,6 +292,9 @@ class JokerPrior:
         from pymc3.distributions import draw_values
         import exoplanet.units as xu
         import pymc3 as pm
+
+        if dtype is None:
+            dtype = np.float64
 
         sub_pars = {k: p for k, p in self.pars.items()
                     if k in self._nonlinear_equiv_units
@@ -335,7 +338,7 @@ class JokerPrior:
 
         with random_state_context(random_state):
             samples_values = draw_values(pars_list + log_prior, size=size)
-        raw_samples = {p.name: samples
+        raw_samples = {p.name: samples.astype(dtype)
                        for p, samples in zip(pars_list,
                                              samples_values[:npars])}
 

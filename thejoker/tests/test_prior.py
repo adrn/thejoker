@@ -1,5 +1,6 @@
 # Third-party
 import astropy.units as u
+import numpy as np
 import pytest
 import pymc3 as pm
 import exoplanet.units as xu
@@ -169,3 +170,13 @@ def test_init_sample(case):
     for k in samples.par_names:
         assert hasattr(samples[k], 'unit')
         assert samples[k].unit == expected_units[k]
+
+
+def test_dtype():
+    # Things that don't need to be checked for all cases above
+    prior, expected_units = get_prior(0)
+
+    # check returned dtypes
+    samples = prior.sample(size=100, dtype=np.float32)
+    for name in samples.par_names:
+        assert samples[name].dtype == np.float32
