@@ -229,23 +229,23 @@ def read_random_batch(prior_samples_file, columns, size, units=None,
 def tempfile_decorator(func):
     wrapped_signature = inspect.signature(func)
     func_args = list(wrapped_signature.parameters.keys())
-    if 'prior_samples' not in func_args:
+    if 'prior_samples_file' not in func_args:
         raise ValueError("Cant decorate function because it doesn't contain an "
-                         "argument called 'prior_samples'")
+                         "argument called 'prior_samples_file'")
 
     @wraps(func)
     def wrapper(*args, **kwargs):
         args = list(args)
-        if 'prior_samples' in kwargs:
-            prior_samples = kwargs['prior_samples']
+        if 'prior_samples_file' in kwargs:
+            prior_samples = kwargs['prior_samples_file']
         else:
-            prior_samples = args.pop(func_args.index('prior_samples'))
+            prior_samples = args.pop(func_args.index('prior_samples_file'))
 
         in_memory = kwargs.get('in_memory', False)
 
         if not isinstance(prior_samples, str) and not in_memory:
             if not isinstance(prior_samples, JokerSamples):
-                raise TypeError("prior_samples must either be a string "
+                raise TypeError("prior_samples_file must either be a string "
                                 "filename specifying a cache file contining "
                                 "prior samples, or must be a JokerSamples "
                                 f"instance, not: {type(prior_samples)}")
@@ -253,13 +253,13 @@ def tempfile_decorator(func):
             with NamedTemporaryFile(mode='r+', suffix='.hdf5') as f:
                 # write samples to tempfile and recursively call this method
                 prior_samples.write(f.name, overwrite=True)
-                kwargs['prior_samples'] = f.name
+                kwargs['prior_samples_file'] = f.name
                 func_return = func(*args, **kwargs)
 
         else:
             # FIXME: it's a string, so it's probably a filename, but we should
             # validate the contents of the file!
-            kwargs['prior_samples'] = prior_samples
+            kwargs['prior_samples_file'] = prior_samples
             func_return = func(*args, **kwargs)
 
         return func_return
