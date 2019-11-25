@@ -104,6 +104,8 @@ def make_full_samples_worker(task):
                        slice_or_idx=slice_or_idx,
                        units=joker_helper.internal_units)
 
+    if batch.dtype != np.float64:
+        batch = batch.astype(np.float64)
     raw_samples, _ = joker_helper.batch_get_posterior_samples(batch,
                                                               n_linear_samples,
                                                               random_state)
