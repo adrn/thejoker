@@ -289,6 +289,7 @@ class JokerPrior:
             The random samples.
 
         """
+        from theano.gof.fg import MissingInputError
         from pymc3.distributions import draw_values
         import exoplanet.units as xu
 
@@ -325,7 +326,7 @@ class JokerPrior:
             for par in pars_list:
                 try:
                     _logp = par.distribution.logp(raw_samples[par.name]).eval()
-                except AttributeError:
+                except (AttributeError, MissingInputError):
                     logger.debug("Cannot auto-compute log-prior value for "
                                  f"parameter {par} because it is defined "
                                  "as a transformation from another "
