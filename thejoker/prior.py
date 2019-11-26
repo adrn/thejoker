@@ -290,6 +290,7 @@ class JokerPrior:
             The random samples.
 
         """
+        from theano.gof.fg import MissingInputError
         from pymc3.distributions import draw_values
         import exoplanet.units as xu
 
