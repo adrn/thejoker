@@ -127,7 +127,7 @@ def iterative_rejection_inmem(joker_helper, prior_samples_batch, random_state,
     # The "magic numbers" below control how fast the iterative batches grow
     # in size, and the maximum number of iterations
     maxiter = 128  # MAGIC NUMBER
-    safety_factor = 4  # MAGIC NUMBER
+    safety_factor = 1  # MAGIC NUMBER
     if init_batch_size is None:
         n_process = growth_factor * n_requested_samples  # MAGIC NUMBER
     else:
