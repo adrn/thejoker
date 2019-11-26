@@ -44,7 +44,7 @@ def batch_tasks(n_tasks, n_batches, arr=None, args=None, start_idx=0):
     args = list(args)
 
     tasks = []
-    if n_batches > 0 and n_tasks > n_batches:
+    if n_batches > 0 and n_tasks >= n_batches:
         # chunk by the number of batches, often the pool size
         base_batch_size = n_tasks // n_batches
         rmdr = n_tasks % n_batches
