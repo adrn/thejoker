@@ -84,7 +84,8 @@ def marginal_ln_likelihood_helper(joker_helper, prior_samples_file, pool,
     results = run_worker(marginal_ln_likelihood_worker, pool,
                          prior_samples_file,
                          task_args=task_args, n_batches=n_batches,
-                         samples_idx=samples_idx)
+                         samples_idx=samples_idx,
+                         n_prior_samples=n_prior_samples)
     return np.concatenate(results)
 
 
