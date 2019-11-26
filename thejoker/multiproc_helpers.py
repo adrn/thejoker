@@ -273,7 +273,7 @@ def iterative_rejection_helper(joker_helper, prior_samples_file, pool,
         logger.log(1, f"iteration {i}, computing {n_process} likelihoods")
 
         marg_lls = marginal_ln_likelihood_helper(
-            joker_helper, prior_samples_file, pool,
+            joker_helper, prior_samples_file, pool=pool,
             n_batches=None, n_prior_samples=None,
             samples_idx=all_idx[start_idx:start_idx + n_process])
 
