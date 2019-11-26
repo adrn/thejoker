@@ -126,7 +126,8 @@ class TheJoker:
 
         else:
             return marginal_ln_likelihood_helper(joker_helper, prior_samples,
-                                                 self.pool, n_batches=n_batches)
+                                                 pool=self.pool,
+                                                 n_batches=n_batches)
 
     def rejection_sample(self, data, prior_samples,
                          n_prior_samples=None,
