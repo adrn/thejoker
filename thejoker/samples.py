@@ -5,7 +5,7 @@ import os
 
 # Third-party
 import astropy.units as u
-from astropy.table import Table, QTable, Row
+from astropy.table import Table, QTable, Row, meta, serialize
 import numpy as np
 from twobody import KeplerOrbit, PolynomialRVTrend
 
@@ -390,6 +390,22 @@ class JokerSamples:
                          maxshape=(None, ))
 
     @classmethod
+    def _read_tables(cls, group, path='samples'):
+        samples = group[f'{path}']
+        metadata = group[f'{path}.__table_column_meta__']
+
+        header = meta.get_header_from_yaml(
+            h.decode('utf-8') for h in metadata.read())
+
+        table = Table(np.array(samples.read()))
+        if 'meta' in list(header.keys()):
+            table.meta = header['meta']
+
+        table = serialize._construct_mixins_from_columns(table)
+
+        return cls(table)
+
+    @classmethod
     def read(cls, filename):
         """
         Read the samples data to a file.
@@ -402,6 +418,10 @@ class JokerSamples:
         filename : str
             The output filename.
         """
+        import tables as tb
+        if isinstance(filename, tb.group.Group):
+            return cls._read_tables(filename)
+
         tbl = QTable.read(filename, path=cls._hdf5_path)
         return cls(samples=tbl, **tbl.meta)
 
