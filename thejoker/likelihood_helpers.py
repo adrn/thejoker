@@ -120,7 +120,8 @@ def iterative_rejection_inmem(joker_helper, prior_samples_batch, random_state,
                               ln_prior=None,
                               init_batch_size=None,
                               growth_factor=128,
-                              n_linear_samples=1):
+                              n_linear_samples=1,
+                              randomize_prior_order=False):
 
     n_total_samples = len(prior_samples_batch)
 
@@ -143,13 +144,19 @@ def iterative_rejection_inmem(joker_helper, prior_samples_batch, random_state,
 
     all_idx = np.arange(0, n_total_samples, 1)
 
+    # TODO: NOTE the replace=True. Sometimes, the same sample will appear twice
+    # in the return! But this is MUCH faster than replace=False...
+    if randomize_prior_order:
+        all_idx = np.random.choice(all_idx, size=n_total_samples, replace=True)
+
     all_marg_lls = np.array([])
     start_idx = 0
     for i in range(maxiter):
         logger.log(1, f"iteration {i}, computing {n_process} likelihoods")
 
         marg_lls = marginal_ln_likelihood_inmem(
-            joker_helper, prior_samples_batch[start_idx:start_idx + n_process])
+            joker_helper,
+            prior_samples_batch[all_idx[start_idx:start_idx + n_process]])
         all_marg_lls = np.concatenate((all_marg_lls, marg_lls))
 
         # get indices of samples that pass rejection step

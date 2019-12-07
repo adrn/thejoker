@@ -326,7 +326,8 @@ class TheJoker:
                 ln_prior=ln_prior,
                 init_batch_size=init_batch_size,
                 growth_factor=growth_factor,
-                n_linear_samples=n_linear_samples)
+                n_linear_samples=n_linear_samples,
+                randomize_prior_order=randomize_prior_order)
 
         else:
             samples = iterative_rejection_helper(
