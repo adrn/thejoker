@@ -1,6 +1,7 @@
 # Third-party
 import astropy.units as u
 import numpy as np
+from theano.gof import MissingInputError
 
 # Project
 from .logging import logger
@@ -326,10 +327,15 @@ class JokerPrior:
                 try:
                     _logp = par.distribution.logp(raw_samples[par.name]).eval()
                 except AttributeError:
-                    logger.debug("Cannot auto-compute log-prior value for "
-                                 f"parameter {par} because it is defined "
-                                 "as a transformation from another "
-                                 "variable.")
+                    logger.warning("Cannot auto-compute log-prior value for "
+                                   f"parameter {par} because it is defined "
+                                   "as a transformation from another "
+                                   "variable.")
+                    continue
+                except MissingInputError:
+                    logger.warning("Cannot auto-compute log-prior value for "
+                                   f"parameter {par} because it depends on "
+                                   "other variables.")
                     continue
 
                 logp.append(_logp)
