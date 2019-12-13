@@ -152,6 +152,13 @@ class JokerSamples:
     def __str__(self):
         return self.__repr__()
 
+    @property
+    def isscalar(self):
+        if isinstance(self.tbl, Row):
+            return True
+        else:
+            return False
+
     ##########################################################################
     # Interaction with TwoBody
 
@@ -256,7 +263,7 @@ class JokerSamples:
         returning the values for that sample
         """
         med_val = np.percentile(self['P'], 0.5, interpolation='nearest')
-        median_i, = np.where(self['P'].value == med_val)
+        median_i, = np.where(self['P'] == med_val)
         return self[median_i]
 
     def std(self):
