@@ -12,7 +12,7 @@ except ImportError:
 
 # Package
 from ..prior import JokerPrior
-from ..plot import plot_rv_curves
+from ..plot import plot_rv_curves, plot_phase_fold
 from .test_sampler import make_data
 
 
@@ -37,3 +37,20 @@ def test_plot_rv_curves(prior):
 
     fig, ax = plt.subplots(1, 1, figsize=(12, 5))
     plot_rv_curves(samples, t_grid, ax=ax)
+
+
+@pytest.mark.skipif(not HAS_MPL, reason='matplotlib not installed')
+@pytest.mark.parametrize('prior', [
+    JokerPrior.default(10*u.day, 20*u.day,
+                       25*u.km/u.s, sigma_v=100*u.km/u.s),
+    JokerPrior.default(10*u.day, 20*u.day,
+                       25*u.km/u.s, poly_trend=2,
+                       sigma_v=[100*u.km/u.s, 0.2*u.km/u.s/u.day])
+])
+def test_plot_phase_fold(prior):
+
+    data, _ = make_data()
+    samples = prior.sample(100, generate_linear=True, t0=Time('J2000'))
+
+    plot_phase_fold(samples.median(), data)
+    plot_phase_fold(samples[0:1], data)
