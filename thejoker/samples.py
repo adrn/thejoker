@@ -263,7 +263,10 @@ class JokerSamples:
         returning the values for that sample
         """
         med_val = np.percentile(self['P'], 0.5, interpolation='nearest')
-        median_i, = np.where(self['P'] == med_val)
+        if hasattr(med_val, 'unit'):
+            med_val = med_val.value
+
+        median_i, = np.where(self['P'].value == med_val)
         return self[median_i]
 
     def std(self):
