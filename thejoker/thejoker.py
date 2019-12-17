@@ -345,7 +345,7 @@ class TheJoker:
 
         return samples
 
-    def setup_mcmc(self, data, joker_samples, model=None):
+    def setup_mcmc(self, data, joker_samples, model=None, use_cached=False):
         """
         Setup the model to run MCMC using pymc3.
 
@@ -403,10 +403,20 @@ class TheJoker:
             else:
                 mcmc_init[name] = joker_samples[name].to_value(unit)[0]
 
-        if 't_peri' in model.named_vars:
-            logger.info('pymc3 model has already been setup for running MCMC - '
-                        'using the previously setup model parameters.')
+        if 't_peri' in model.named_vars and use_cached:
+            logger.debug('pymc3 model has already been setup for running MCMC '
+                         '- using the previously setup model parameters.')
             return mcmc_init
+
+        # remove previously-added parameters:
+        names = ['t_peri', 'obs']
+        to_remove = []
+        for name in names:
+            for i, par in enumerate(model.vars):
+                if par.name == name:
+                    to_remove.append(par)
+                    del model.named_vars[name]
+        [model.vars.remove(p) for p in to_remove]
 
         p = self.prior.pars
         with model:
