@@ -42,7 +42,7 @@ class UniformLog(pm.Continuous):
         )
 
     def logp(self, value):
-        return tt.ones_like(tt.as_tensor_variable(value)) * -np.log(self._fac)
+        return -tt.as_tensor_variable(value) * -np.log(self._fac)
 
 
 class FixedCompanionMass(pm.Normal):
