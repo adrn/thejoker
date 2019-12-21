@@ -167,8 +167,8 @@ def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
     return fig
 
 
-def plot_phase_fold(sample, data=None, ax=None, add_labels=True,
-                    show_s_errorbar=True, residual=False,
+def plot_phase_fold(sample, data=None, phase_grid=None, ax=None,
+                    add_labels=True, show_s_errorbar=True, residual=False,
                     remove_trend=True, plot_kwargs=None, data_plot_kwargs=None):
     """
     Plot phase-folded radial velocity curves for the input orbital parameter
@@ -240,8 +240,8 @@ def plot_phase_fold(sample, data=None, ax=None, add_labels=True,
 
     # Get orbit from input sample
     orbit = sample.get_orbit()
-    P = sample['P'][0]
-    M0 = sample['M0'][0]
+    P = sample['P'].item()
+    M0 = sample['M0'].item()
 
     if data is not None:
         rv = data.rv
@@ -255,7 +255,8 @@ def plot_phase_fold(sample, data=None, ax=None, add_labels=True,
         v0_offset_names = get_v0_offsets_equiv_units(sample.n_offsets).keys()
         for i, offset_name in zip(range(1, sample.n_offsets+1),
                                   v0_offset_names):
-            rv[ids == i] -= sample[offset_name][0]
+            _tmp = sample[offset_name].item()
+            rv[ids == i] -= _tmp
 
         t0 = data.t0 + (P * M0/(2*np.pi*u.rad)).to(u.day,
                                                    u.dimensionless_angles())
@@ -280,7 +281,8 @@ def plot_phase_fold(sample, data=None, ax=None, add_labels=True,
     elif data is None and residual:
         raise ValueError("TODO: not allowed")
 
-    phase_grid = np.linspace(0, 1, 1024)
+    if phase_grid is None:
+        phase_grid = np.linspace(0, 1, 4096)  # MAGIC NUMBER
     if not residual:
         ax.plot(phase_grid, orbit.radial_velocity(t0 + P * phase_grid),
                 **orbit_style)

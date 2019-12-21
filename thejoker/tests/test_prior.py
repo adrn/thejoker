@@ -158,6 +158,11 @@ def test_init_sample(case):
         assert hasattr(samples[k], 'unit')
         assert samples[k].unit == expected_units[k]
 
+    samples = prior.sample(size=10, generate_linear=True)
+    for k in samples.par_names:
+        assert hasattr(samples[k], 'unit')
+        assert samples[k].unit == expected_units[k]
+
     samples = prior.sample(size=10, return_logprobs=True)
     assert 'ln_prior' in samples.par_names
     for k in samples.par_names:

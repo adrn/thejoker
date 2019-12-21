@@ -44,6 +44,7 @@ Science demonstrations
     :maxdepth: 1
 
     examples/Thompson-black-hole.ipynb
+    examples/Strader-circular-only.ipynb
 
 
 Getting started

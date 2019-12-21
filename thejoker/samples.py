@@ -5,11 +5,13 @@ import os
 
 # Third-party
 import astropy.units as u
-from astropy.table import Table, QTable, Row
+from astropy.table import Table, QTable, Row, meta, serialize
 import numpy as np
 from twobody import KeplerOrbit, PolynomialRVTrend
 
 # Project
+from .src.fast_likelihood import (_nonlinear_packed_order,
+                                  _nonlinear_internal_units)
 from .prior_helpers import (validate_poly_trend, validate_n_offsets,
                             get_nonlinear_equiv_units,
                             get_linear_equiv_units,
@@ -261,7 +263,10 @@ class JokerSamples:
         returning the values for that sample
         """
         med_val = np.percentile(self['P'], 0.5, interpolation='nearest')
-        median_i, = np.where(self['P'] == med_val)
+        if hasattr(med_val, 'unit'):
+            med_val = med_val.value
+
+        median_i, = np.where(self['P'].value == med_val)
         return self[median_i]
 
     def std(self):
@@ -282,7 +287,7 @@ class JokerSamples:
         return self
 
     # Packing and unpacking
-    def pack(self, units=None, nonlinear_only=True):
+    def pack(self, units=None, names=None, nonlinear_only=True):
         """
         Pack the sample data into a single numpy array (i.e. strip the units and
         return those separately).
@@ -292,6 +297,8 @@ class JokerSamples:
         units : `dict` (optional)
             If specified, this controls the units that the samples are converted
             to before packing into a single array.
+        names : `list` (optional)
+            The order of names to pack into.
         nonlinear_only : bool (optional)
             Only pack the data for the nonlinear parameters into the returned
             array.
@@ -307,16 +314,19 @@ class JokerSamples:
         if units is None:
             units = dict()
         out_units = OrderedDict()
+        [units.setdefault(k, v) for k, v in _nonlinear_internal_units.items()]
+
+        if names is None:
+            if nonlinear_only:
+                names = _nonlinear_packed_order
+            else:
+                names = self.par_names
 
         arrs = []
-        for name in self.par_names:
+        for name in names:
             unit = units.get(name, self.tbl[name].unit)
             arrs.append(self.tbl[name].to_value(unit))
             out_units[name] = unit
-
-        if 's' not in self.par_names:
-            arrs.append(np.zeros_like(arrs[0]))
-            out_units['s'] = u.m/u.s
 
         return np.stack(arrs, axis=1), out_units
 
@@ -383,6 +393,22 @@ class JokerSamples:
                          maxshape=(None, ))
 
     @classmethod
+    def _read_tables(cls, group, path='samples'):
+        samples = group[f'{path}']
+        metadata = group[f'{path}.__table_column_meta__']
+
+        header = meta.get_header_from_yaml(
+            h.decode('utf-8') for h in metadata.read())
+
+        table = Table(np.array(samples.read()))
+        if 'meta' in list(header.keys()):
+            table.meta = header['meta']
+
+        table = serialize._construct_mixins_from_columns(table)
+
+        return cls(table)
+
+    @classmethod
     def read(cls, filename):
         """
         Read the samples data to a file.
@@ -395,6 +421,10 @@ class JokerSamples:
         filename : str
             The output filename.
         """
+        import tables as tb
+        if isinstance(filename, tb.group.Group):
+            return cls._read_tables(filename)
+
         tbl = QTable.read(filename, path=cls._hdf5_path)
         return cls(samples=tbl, **tbl.meta)
 

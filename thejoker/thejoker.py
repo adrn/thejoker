@@ -82,8 +82,8 @@ class TheJoker:
         joker_helper = CJokerHelper(all_data, self.prior, trend_M)
         return joker_helper
 
-    @tempfile_decorator
-    def marginal_ln_likelihood(self, data, prior_samples, n_batches=None):
+    def marginal_ln_likelihood(self, data, prior_samples, n_batches=None,
+                               in_memory=False):
         f"""
         Compute the marginal log-likelihood at each of the input prior samples.
 
@@ -102,6 +102,9 @@ class TheJoker:
             computation pool, this doesn't have any impact. If using
             multiprocessing or MPI, this determines how many batches to split
             the samples into before scattering over all workers.
+        in_memory : bool (optional)
+            Load all prior samples or keep all prior samples in memory and run
+            all calculations without creating a temporary cache file.
 
         Returns
         -------
@@ -110,18 +113,30 @@ class TheJoker:
             sample.
         """
         from .multiproc_helpers import marginal_ln_likelihood_helper
-        joker_helper = self._make_joker_helper(data)  # also validates data
-        return marginal_ln_likelihood_helper(joker_helper, prior_samples,
-                                             self.pool, n_batches=n_batches)
+        from .likelihood_helpers import marginal_ln_likelihood_inmem
 
-    @tempfile_decorator
+        joker_helper = self._make_joker_helper(data)  # also validates data
+
+        if in_memory:
+            if isinstance(prior_samples, JokerSamples):
+                prior_samples, _ = prior_samples.pack(
+                    units=joker_helper.internal_units,
+                    names=joker_helper.packed_order)
+            return marginal_ln_likelihood_inmem(joker_helper, prior_samples)
+
+        else:
+            return marginal_ln_likelihood_helper(joker_helper, prior_samples,
+                                                 pool=self.pool,
+                                                 n_batches=n_batches)
+
     def rejection_sample(self, data, prior_samples,
                          n_prior_samples=None,
                          max_posterior_samples=None,
                          n_linear_samples=1,
                          return_logprobs=False,
                          n_batches=None,
-                         randomize_prior_order=False):
+                         randomize_prior_order=False,
+                         in_memory=False):
         f"""
         Run The Joker's rejection sampling on prior samples to get posterior
         samples for the input data.
@@ -166,6 +181,9 @@ class TheJoker:
             rejection sampler. This is only useful if you are using a large
             library of prior samples, and choosing to run on a subset of those
             samples.
+        in_memory : bool (optional)
+            Load all prior samples or keep all prior samples in memory and run
+            all calculations without creating a temporary cache file.
 
         Returns
         -------
@@ -173,27 +191,52 @@ class TheJoker:
             The posterior samples produced from The Joker.
 
         """
-        if isinstance(prior_samples, int):
-            N = prior_samples
-            prior_samples = self.prior.sample(size=N)
-
         from .multiproc_helpers import rejection_sample_helper
+        from .likelihood_helpers import rejection_sample_inmem
+
         joker_helper = self._make_joker_helper(data)  # also validates data
-        samples = rejection_sample_helper(
-            joker_helper,
-            prior_samples,
-            pool=self.pool,
-            random_state=self.random_state,
-            n_prior_samples=n_prior_samples,
-            max_posterior_samples=max_posterior_samples,
-            n_linear_samples=n_linear_samples,
-            return_logprobs=return_logprobs,
-            n_batches=n_batches,
-            randomize_prior_order=randomize_prior_order)
+
+        if isinstance(prior_samples, int):
+            # If an integer, generate that many prior samples first
+            N = prior_samples
+            prior_samples = self.prior.sample(size=N,
+                                              return_logprobs=return_logprobs)
+
+        if in_memory:
+            if isinstance(prior_samples, JokerSamples):
+                ln_prior = None
+                if return_logprobs:
+                    ln_prior = prior_samples['ln_prior']
+
+                prior_samples, _ = prior_samples.pack(
+                    units=joker_helper.internal_units,
+                    names=joker_helper.packed_order)
+            else:
+                ln_prior = return_logprobs
+
+            samples = rejection_sample_inmem(
+                joker_helper,
+                prior_samples,
+                random_state=self.random_state,
+                ln_prior=ln_prior,
+                max_posterior_samples=max_posterior_samples,
+                n_linear_samples=n_linear_samples)
+
+        else:
+            samples = rejection_sample_helper(
+                joker_helper,
+                prior_samples,
+                pool=self.pool,
+                random_state=self.random_state,
+                n_prior_samples=n_prior_samples,
+                max_posterior_samples=max_posterior_samples,
+                n_linear_samples=n_linear_samples,
+                return_logprobs=return_logprobs,
+                n_batches=n_batches,
+                randomize_prior_order=randomize_prior_order)
 
         return samples
 
-    @tempfile_decorator
     def iterative_rejection_sample(self, data, prior_samples,
                                    n_requested_samples,
                                    max_prior_samples=None,
@@ -202,7 +245,8 @@ class TheJoker:
                                    n_batches=None,
                                    randomize_prior_order=False,
                                    init_batch_size=None,
-                                   growth_factor=128):
+                                   growth_factor=128,
+                                   in_memory=False):
 
         """This is an experimental sampling method that adaptively generates
         posterior samples given a large library of prior samples. The advantage
@@ -248,6 +292,9 @@ class TheJoker:
         growth_factor : int (optional)
             A factor used to adaptively grow the number of prior samples to
             evaluate on. Larger numbers make the trial batches grow faster.
+        in_memory : bool (optional)
+            Load all prior samples or keep all prior samples in memory and run
+            all calculations without creating a temporary cache file.
 
         Returns
         -------
@@ -255,24 +302,50 @@ class TheJoker:
             The posterior samples produced from The Joker.
         """
         from .multiproc_helpers import iterative_rejection_helper
+        from .likelihood_helpers import iterative_rejection_inmem
+
         joker_helper = self._make_joker_helper(data)  # also validates data
-        samples = iterative_rejection_helper(
-            joker_helper,
-            prior_samples,
-            init_batch_size=init_batch_size,
-            growth_factor=growth_factor,
-            pool=self.pool,
-            random_state=self.random_state,
-            n_requested_samples=n_requested_samples,
-            max_prior_samples=max_prior_samples,
-            n_linear_samples=n_linear_samples,
-            return_logprobs=return_logprobs,
-            n_batches=n_batches,
-            randomize_prior_order=randomize_prior_order)
+
+        if in_memory:
+            if isinstance(prior_samples, JokerSamples):
+                ln_prior = None
+                if return_logprobs:
+                    ln_prior = prior_samples['ln_prior']
+
+                prior_samples, _ = prior_samples.pack(
+                    units=joker_helper.internal_units,
+                    names=joker_helper.packed_order)
+            else:
+                ln_prior = return_logprobs
+
+            samples = iterative_rejection_inmem(
+                joker_helper,
+                prior_samples,
+                random_state=self.random_state,
+                n_requested_samples=n_requested_samples,
+                ln_prior=ln_prior,
+                init_batch_size=init_batch_size,
+                growth_factor=growth_factor,
+                n_linear_samples=n_linear_samples)
+
+        else:
+            samples = iterative_rejection_helper(
+                joker_helper,
+                prior_samples,
+                init_batch_size=init_batch_size,
+                growth_factor=growth_factor,
+                pool=self.pool,
+                random_state=self.random_state,
+                n_requested_samples=n_requested_samples,
+                max_prior_samples=max_prior_samples,
+                n_linear_samples=n_linear_samples,
+                return_logprobs=return_logprobs,
+                n_batches=n_batches,
+                randomize_prior_order=randomize_prior_order)
 
         return samples
 
-    def setup_mcmc(self, data, joker_samples, model=None):
+    def setup_mcmc(self, data, joker_samples, model=None, use_cached=False):
         """
         Setup the model to run MCMC using pymc3.
 
@@ -330,10 +403,20 @@ class TheJoker:
             else:
                 mcmc_init[name] = joker_samples[name].to_value(unit)[0]
 
-        if 't_peri' in model.named_vars:
-            logger.info('pymc3 model has already been setup for running MCMC - '
-                        'using the previously setup model parameters.')
+        if 't_peri' in model.named_vars and use_cached:
+            logger.debug('pymc3 model has already been setup for running MCMC '
+                         '- using the previously setup model parameters.')
             return mcmc_init
+
+        # remove previously-added parameters:
+        names = ['t_peri', 'obs']
+        to_remove = []
+        for name in names:
+            for i, par in enumerate(model.vars):
+                if par.name == name:
+                    to_remove.append(par)
+                    del model.named_vars[name]
+        [model.vars.remove(p) for p in to_remove]
 
         p = self.prior.pars
         with model:
