@@ -393,10 +393,13 @@ class JokerSamples:
                                           "or .h5, or FITS files.")
 
         if ext == '.fits':
+            if append:
+                raise NotImplementedError()
+
             t = self.tbl.copy()
             if t.meta.get('t0', None) is not None:
                 t.meta['__t0_bmjd'] = t.meta.pop('t0').tcb.mjd
-            t.write(output)
+            t.write(output, overwrite=overwrite)
         else:
             write_table_hdf5(self.tbl, output, path=self._hdf5_path,
                              compression=False,
