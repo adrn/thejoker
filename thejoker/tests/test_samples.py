@@ -141,12 +141,10 @@ def test_apply_methods():
     new_samples = samples.std()
 
 
-@pytest.mark.parametrize("t0,poly_trend",
-                         [(None, 1),
-                          (None, 3),
-                          (Time('J2015.5'), 1),
-                          (Time('J2015.5'), 3)])
-def test_table(tmp_path, t0, poly_trend):
+@pytest.mark.parametrize("t0", [None, Time('J2015.5')])
+@pytest.mark.parametrize("poly_trend", [1, 3])
+@pytest.mark.parametrize("ext", ['.hdf5', '.fits'])
+def test_table(tmp_path, t0, poly_trend, ext):
     N = 16
     samples = JokerSamples(t0=t0, poly_trend=poly_trend)
     samples['P'] = np.random.uniform(800, 1000, size=N)*u.day
@@ -162,7 +160,7 @@ def test_table(tmp_path, t0, poly_trend):
 
     d = tmp_path / "table"
     d.mkdir()
-    path = str(d / "t_{t0}_{pt}.hdf5".format(t0=str(t0), pt=poly_trend))
+    path = str(d / f"t_{str(t0)}_{poly_trend}{ext}")
 
     samples.write(path)
     samples2 = JokerSamples.read(path)

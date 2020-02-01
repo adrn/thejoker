@@ -4,7 +4,9 @@ import copy
 import os
 
 # Third-party
+from astropy.io import fits
 import astropy.units as u
+from astropy.time import Time
 from astropy.table import Table, QTable, Row, meta, serialize
 import numpy as np
 from twobody import KeplerOrbit, PolynomialRVTrend
@@ -380,17 +382,27 @@ class JokerSamples:
             Append the samples to an existing table in the specified filename.
         """
         if isinstance(output, str):
-            ext = os.path.splitext(output)[1]
-            if ext not in ['.hdf5', '.h5']:
+            try:
+                ext = os.path.splitext(output)[1]
+            except Exception:
+                raise ValueError("Invalid file name to save samples to: "
+                                 f"{output}")
+            if ext not in ['.hdf5', '.h5', '.fits']:
                 raise NotImplementedError("We currently only support writing "
                                           "to HDF5 files, with extension .hdf5 "
-                                          "or .h5")
+                                          "or .h5, or FITS files.")
 
-        write_table_hdf5(self.tbl, output, path=self._hdf5_path,
-                         compression=False,
-                         append=append, overwrite=overwrite,
-                         serialize_meta=True, metadata_conflicts='error',
-                         maxshape=(None, ))
+        if ext == '.fits':
+            t = self.tbl.copy()
+            if t.meta.get('t0', None) is not None:
+                t.meta['__t0_bmjd'] = t.meta.pop('t0').tcb.mjd
+            t.write(output)
+        else:
+            write_table_hdf5(self.tbl, output, path=self._hdf5_path,
+                             compression=False,
+                             append=append, overwrite=overwrite,
+                             serialize_meta=True, metadata_conflicts='error',
+                             maxshape=(None, ))
 
     @classmethod
     def _read_tables(cls, group, path='samples'):
@@ -413,8 +425,8 @@ class JokerSamples:
         """
         Read the samples data to a file.
 
-        Currently, we only support writing to / reading from HDF5 files, so the
-        filename must end in a .hdf5 or .h5 extension.
+        Currently, we only support writing to / reading from HDF5 and FITS
+        files, so the filename must end in a .hdf5, .h5, or .fits extension.
 
         Parameters
         ----------
@@ -425,7 +437,20 @@ class JokerSamples:
         if isinstance(filename, tb.group.Group):
             return cls._read_tables(filename)
 
-        tbl = QTable.read(filename, path=cls._hdf5_path)
+        try:
+            ext = os.path.splitext(filename)[1]
+        except Exception:
+            raise ValueError(f"Invalid file name {filename}")
+
+        if ext in ['.hdf5', '.h5']:
+            tbl = QTable.read(filename, path=cls._hdf5_path)
+        else:
+            tbl = QTable.read(filename)
+
+            if '__t0_bmjd' in tbl.meta.keys():
+                tbl.meta['t0'] = Time(tbl.meta['__t0_bmjd'],
+                                      format='mjd', scale='tcb')
+
         return cls(samples=tbl, **tbl.meta)
 
     def copy(self):
