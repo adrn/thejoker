@@ -391,6 +391,8 @@ class JokerSamples:
                 raise NotImplementedError("We currently only support writing "
                                           "to HDF5 files, with extension .hdf5 "
                                           "or .h5, or FITS files.")
+        else:
+            ext = ''
 
         if ext == '.fits':
             if append:
