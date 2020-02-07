@@ -410,7 +410,10 @@ class JokerSamples:
                              maxshape=(None, ))
 
     @classmethod
-    def _read_tables(cls, group, path='samples'):
+    def _read_tables(cls, group, path=None):
+        if path is None:
+            path = cls._hdf5_path
+
         samples = group[f'{path}']
         metadata = group[f'{path}.__table_column_meta__']
 
@@ -426,7 +429,7 @@ class JokerSamples:
         return cls(table)
 
     @classmethod
-    def read(cls, filename):
+    def read(cls, filename, path=None):
         """
         Read the samples data to a file.
 
@@ -435,26 +438,33 @@ class JokerSamples:
 
         Parameters
         ----------
-        filename : str
-            The output filename.
+        filename : str, `h5py.File`, `h5py.Group`
+            The output filename or HDF5 group.
         """
         import tables as tb
         if isinstance(filename, tb.group.Group):
             return cls._read_tables(filename)
 
-        try:
-            ext = os.path.splitext(filename)[1]
-        except Exception:
-            raise ValueError(f"Invalid file name {filename}")
+        if path is None:
+            path = cls._hdf5_path
 
-        if ext in ['.hdf5', '.h5']:
-            tbl = QTable.read(filename, path=cls._hdf5_path)
+        if isinstance(filename, str):
+            try:
+                ext = os.path.splitext(filename)[1]
+            except Exception:
+                raise ValueError(f"Invalid file name {filename}")
+
+            if ext in ['.hdf5', '.h5']:
+                tbl = QTable.read(filename, path=path)
+            else:
+                tbl = QTable.read(filename)
+
+                if '__t0_bmjd' in tbl.meta.keys():
+                    tbl.meta['t0'] = Time(tbl.meta['__t0_bmjd'],
+                                          format='mjd', scale='tcb')
+
         else:
-            tbl = QTable.read(filename)
-
-            if '__t0_bmjd' in tbl.meta.keys():
-                tbl.meta['t0'] = Time(tbl.meta['__t0_bmjd'],
-                                      format='mjd', scale='tcb')
+            tbl = QTable.read(filename, path=path)
 
         return cls(samples=tbl, **tbl.meta)
 
