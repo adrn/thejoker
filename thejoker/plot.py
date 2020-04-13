@@ -284,7 +284,8 @@ def plot_phase_fold(sample, data=None, phase_grid=None, ax=None,
     if phase_grid is None:
         phase_grid = np.linspace(0, 1, 4096)  # MAGIC NUMBER
     if not residual:
-        ax.plot(phase_grid, orbit.radial_velocity(t0 + P * phase_grid),
+        ax.plot(phase_grid,
+                orbit.radial_velocity(t0 + P * phase_grid).to_value(rv_unit),
                 **orbit_style)
 
     if add_labels:
