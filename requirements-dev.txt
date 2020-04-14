@@ -1,6 +1,6 @@
 -r requirements.txt
 pytest
-sphinx
+sphinx=3.0
 sphinx-astropy
 pytest-astropy
 corner
