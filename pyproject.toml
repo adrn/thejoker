@@ -4,7 +4,9 @@ requires = ["setuptools",
             "setuptools_scm",
             "wheel",
             "extension-helpers",
+            "scipy",
             "oldest-supported-numpy",
-            "cython==0.29.14"]
+            "cython==0.29.14",
+            "twobody"]
 
 build-backend = 'setuptools.build_meta'

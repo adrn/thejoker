@@ -1,4 +1,5 @@
-get_ipython().magic('config InlineBackend.figure_format = "retina"')
+from IPython.display import set_matplotlib_formats
+set_matplotlib_formats('retina')
 
 import logging
 import warnings
