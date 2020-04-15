@@ -1,6 +1,6 @@
-from __future__ import absolute_import
 from distutils.core import Extension
-from astropy_helpers import setup_helpers
+from collections import defaultdict
+
 
 def get_extensions():
     exts = []
@@ -13,7 +13,7 @@ def get_extensions():
     except ImportError:
         twobody_path = None
 
-    cfg = setup_helpers.DistutilsExtensionArgs()
+    cfg = defaultdict(list)
     cfg['include_dirs'].append('numpy')
 
     if twobody_path is not None:
@@ -26,6 +26,7 @@ def get_extensions():
     exts.append(Extension('thejoker.src.fast_likelihood', **cfg))
 
     return exts
+
 
 def get_package_data():
     return {'thejoker.src': ['fast_likelihood.pyx']}
