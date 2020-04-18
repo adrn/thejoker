@@ -92,6 +92,20 @@ jobs:
             tox -e py38-test-cov
             coveralls --rcfile='thejoker/tests/coveragerc'
 
+  codestyle:
+    docker:
+      - image: circleci/python:3.8
+    steps:
+      - checkout
+      - run: *ci-skip-check
+      - run: *master-or-pr-check
+      - run: *apt-install
+      - run: *pip-install-dev
+      - run:
+          name: Run codestyle check
+          command: |
+            tox -e codestyle
+
   # docs build
   build-docs:
     docker:
