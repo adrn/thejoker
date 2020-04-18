@@ -45,8 +45,9 @@ jobs:
       - run: *apt-install
       - run: *pip-install-dev
       - run:
-          name: Run setup test
+          name: Run test
           command: |
+            . venv/bin/activate
             tox -e py36-test
 
   test-37:
@@ -59,8 +60,9 @@ jobs:
       - run: *apt-install
       - run: *pip-install-dev
       - run:
-          name: Run setup test
+          name: Run test
           command: |
+            . venv/bin/activate
             tox -e py37-test
 
   test-38:
@@ -73,8 +75,9 @@ jobs:
       - run: *apt-install
       - run: *pip-install-dev
       - run:
-          name: Run setup test
+          name: Run test
           command: |
+            . venv/bin/activate
             tox -e py38-test
 
   test-coverage:
@@ -89,6 +92,7 @@ jobs:
       - run:
           name: Run test coverage
           command: |
+            . venv/bin/activate
             tox -e py38-test-cov
             coveralls --rcfile='thejoker/tests/coveragerc'
 
@@ -104,6 +108,7 @@ jobs:
       - run:
           name: Run codestyle check
           command: |
+            . venv/bin/activate
             tox -e codestyle
 
   # docs build
