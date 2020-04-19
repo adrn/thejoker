@@ -136,7 +136,7 @@ jobs:
           name: Build documentation
           command: |
             . venv/bin/activate
-            python setup.py build_docs -w
+            tox -e build_docs
       - store_artifacts:
           path: docs/_build/html
       - run:
