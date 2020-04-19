@@ -4,7 +4,6 @@ import copy
 import os
 
 # Third-party
-from astropy.io import fits
 import astropy.units as u
 from astropy.time import Time
 from astropy.table import Table, QTable, Row, meta, serialize
@@ -12,8 +11,8 @@ import numpy as np
 from twobody import KeplerOrbit, PolynomialRVTrend
 
 # Project
-from .src.fast_likelihood import (_nonlinear_packed_order,
-                                  _nonlinear_internal_units)
+from thejoker.src.fast_likelihood import (_nonlinear_packed_order,
+                                          _nonlinear_internal_units)
 from .prior_helpers import (validate_poly_trend, validate_n_offsets,
                             get_nonlinear_equiv_units,
                             get_linear_equiv_units,

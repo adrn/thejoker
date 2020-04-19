@@ -3,7 +3,7 @@ cython
 theano
 pymc3>=3.7
 exoplanet>=0.2.2
-git+https://github.com/adrn/schwimmbad
+schwimmbad>=0.3.1
 twobody>=0.5
 h5py
 tables
