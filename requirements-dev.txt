@@ -9,3 +9,4 @@ nbconvert
 nbformat
 ipykernel
 astroML
+coveralls
