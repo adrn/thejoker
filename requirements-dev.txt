@@ -10,3 +10,4 @@ nbformat
 ipykernel
 astroML
 coveralls
+pyyaml
