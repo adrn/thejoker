@@ -271,7 +271,7 @@ def tempfile_decorator(func):
 def random_state_context(random_state):
     state = np.random.get_state()
     if random_state is not None:
-        np.random.seed(random_state.randint(2**32-1))  # HACK
+        np.random.seed(random_state.integers(2**32-1))  # HACK
     try:
         yield
     finally:
