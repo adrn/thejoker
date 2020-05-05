@@ -219,7 +219,7 @@ def rejection_sample(samples, prior, data, rnd=None):
     mu = np.zeros(n_linear)
 
     if rnd is None:
-        rnd = np.random.RandomState()
+        rnd = np.random.default_rng()
 
     ll = marginal_ln_likelihood(samples, prior, data)
     uu = rnd.uniform(size=len(ll))

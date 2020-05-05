@@ -10,7 +10,7 @@ from .utils import (batch_tasks, read_batch, table_contains_column,
 
 
 def run_worker(worker, pool, prior_samples_file, task_args=(), n_batches=None,
-               n_prior_samples=None, samples_idx=None):
+               n_prior_samples=None, samples_idx=None, random_state=None):
 
     with tb.open_file(prior_samples_file, mode='r') as f:
         n_samples = f.root[JokerSamples._hdf5_path].shape[0]
@@ -32,6 +32,12 @@ def run_worker(worker, pool, prior_samples_file, task_args=(), n_batches=None,
                             args=task_args)
     else:
         tasks = batch_tasks(n_samples, n_batches=n_batches, args=task_args)
+
+    if random_state is not None:
+        from numpy.random import Generator, PCG64
+        sg = random_state.bit_generator._seed_seq.spawn(len(tasks))
+        for i in range(len(tasks)):
+            tasks[i] = tuple(tasks[i]) + (Generator(PCG64(sg[i])), )
 
     results = []
     for res in pool.map(worker, tasks):
@@ -95,11 +101,7 @@ def make_full_samples_worker(task):
      prior_samples_file,
      joker_helper,
      n_linear_samples,
-     global_random_state) = task
-
-    random_state = np.random.RandomState()
-    random_state.set_state(global_random_state.get_state())
-    random_state.seed(task_id)  # TODO: is this safe?
+     random_state) = task
 
     # Read the batch of prior samples
     batch = read_batch(prior_samples_file,
@@ -121,11 +123,11 @@ def make_full_samples(joker_helper, prior_samples_file, pool, random_state,
 
     task_args = (prior_samples_file,
                  joker_helper,
-                 n_linear_samples,
-                 random_state)
+                 n_linear_samples)
     results = run_worker(make_full_samples_worker, pool, prior_samples_file,
                          task_args=task_args, n_batches=n_batches,
-                         samples_idx=samples_idx)
+                         samples_idx=samples_idx,
+                         random_state=random_state)
 
     # Concatenate all of the raw samples arrays
     raw_samples = np.concatenate(results)

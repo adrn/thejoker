@@ -41,7 +41,7 @@ def test_guess_time_format():
 
 def get_valid_input(rnd=None, size=32):
     if rnd is None:
-        rnd = np.random.RandomState(42)
+        rnd = np.random.default_rng(42)
 
     t_arr = rnd.uniform(55555., 56012., size=size)
     t_obj = Time(t_arr, format='mjd')
@@ -71,7 +71,7 @@ def get_valid_input(rnd=None, size=32):
 
 
 def test_rvdata_init():
-    rnd = np.random.RandomState(42)
+    rnd = np.random.default_rng(42)
 
     # Test valid initialization combos
     # These should succeed:
@@ -262,7 +262,7 @@ def test_multi_data():
     import exoplanet.units as xu
     import pymc3 as pm
 
-    rnd = np.random.RandomState(42)
+    rnd = np.random.default_rng(42)
 
     # Set up mulitple valid data objects:
     _, raw1 = get_valid_input(rnd=rnd)

@@ -182,11 +182,9 @@ intersphinx_mapping['twobody'] = ('https://twobody.readthedocs.io/en/latest/',
 intersphinx_mapping['scwhimmbad'] = (
     'https://schwimmbad.readthedocs.io/en/latest/', None)
 
-# see if we're running on travis
-if 'CI' in os.environ:
-    ON_CI = True
-else:
-    ON_CI = False
+# see if we're running on CI:
+ON_CI = os.environ.get("CI", False)
+PR = os.environ.get("CIRCLE_PULL_REQUEST", False)
 
 # Use astropy plot style
 plot_rcparams = dict()
@@ -213,6 +211,9 @@ mathjax_path = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?
 # ]
 
 nbsphinx_timeout = 600
+
+if PR:
+    nbsphinx_execute = 'never'
 
 if ON_CI:
     nbsphinx_kernel_name = 'python3'
