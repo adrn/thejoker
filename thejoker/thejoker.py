@@ -58,6 +58,9 @@ class TheJoker:
             warnings.warn("With thejoker>=v1.2, use numpy.random.Generator "
                           "objects instead of RandomState objects to control "
                           "random numbers.", DeprecationWarning)
+            tmp = np.random.Generator(np.random.MT19937())
+            tmp.bit_generator.state = random_state.get_state()
+            random_state = tmp
         elif not isinstance(random_state, np.random.Generator):
             raise TypeError("Random state object must be a "
                             "numpy.random.Generator instance, not "
