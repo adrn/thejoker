@@ -37,7 +37,7 @@ def run_worker(worker, pool, prior_samples_file, task_args=(), n_batches=None,
         from numpy.random import Generator, PCG64
         sg = random_state.bit_generator._seed_seq.spawn(len(tasks))
         for i in range(len(tasks)):
-            tasks[i] = tasks[i] + (Generator(PCG64(sg[i])), )
+            tasks[i] = tuple(tasks[i]) + (Generator(PCG64(sg[i])), )
 
     results = []
     for res in pool.map(worker, tasks):
