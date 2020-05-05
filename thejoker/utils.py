@@ -217,11 +217,11 @@ def read_random_batch(prior_samples_file, columns, size, units=None,
     """
 
     if random_state is None:
-        random_state = np.random.RandomState()
+        random_state = np.random.default_rng()
 
     path = JokerSamples._hdf5_path
     with tb.open_file(prior_samples_file, mode='r') as f:
-        idx = random_state.randint(0, f.root[path].shape[0], size=size)
+        idx = random_state.integers(0, f.root[path].shape[0], size=size)
 
     return read_batch_idx(prior_samples_file, columns, idx=idx, units=units)
 
