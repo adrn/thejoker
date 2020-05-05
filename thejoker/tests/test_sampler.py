@@ -18,7 +18,7 @@ from .test_prior import get_prior
 
 def make_data(n_times=8, random_state=None, v1=None, K=None):
     if random_state is None:
-        random_state = np.random.RandomState()
+        random_state = np.random.default_rng()
     rnd = random_state
 
     P = 51.8239 * u.day
@@ -62,12 +62,16 @@ def test_init(case):
         TheJoker(prior, pool='sdfks')
 
     # Random state:
-    rnd = np.random.RandomState(42)
+    rnd = np.random.default_rng(42)
     TheJoker(prior, random_state=rnd)
 
     # fail when random state is invalid:
     with pytest.raises(TypeError):
         TheJoker(prior, random_state='sdfks')
+
+    with pytest.warns(DeprecationWarning):
+        rnd = np.random.RandomState(42)
+        TheJoker(prior, random_state=rnd)
 
     # tempfile location:
     joker = TheJoker(prior, tempfile_path='/tmp/joker')
@@ -139,7 +143,7 @@ def test_rejection_sample(tmpdir, prior):
     all_Ps = []
     all_Ks = []
     for i in range(10):
-        joker = TheJoker(prior, random_state=np.random.RandomState(42))
+        joker = TheJoker(prior, random_state=np.random.default_rng(42))
         samples = joker.rejection_sample(flat_data, prior_samples)
         all_Ps.append(samples['P'])
         all_Ks.append(samples['K'])
@@ -163,7 +167,7 @@ def test_iterative_rejection_sample(tmpdir, prior):
     filename = str(tmpdir / f'samples.hdf5')
     prior_samples.write(filename, overwrite=True)
 
-    joker = TheJoker(prior, random_state=np.random.RandomState(42))
+    joker = TheJoker(prior, random_state=np.random.default_rng(42))
 
     for _samples in [prior_samples, filename]:
         # pass JokerSamples instance, process all samples:
@@ -180,7 +184,7 @@ def test_iterative_rejection_sample(tmpdir, prior):
     all_Ps = []
     all_Ks = []
     for i in range(10):
-        joker = TheJoker(prior, random_state=np.random.RandomState(42))
+        joker = TheJoker(prior, random_state=np.random.default_rng(42))
         samples = joker.iterative_rejection_sample(data, prior_samples,
                                                    n_requested_samples=4,
                                                    randomize_prior_order=True)
