@@ -1,5 +1,6 @@
 # Standard library
 import os
+import warnings
 
 # Third-party
 import numpy as np
@@ -12,7 +13,6 @@ from .likelihood_helpers import get_trend_design_matrix
 from .prior_helpers import validate_n_offsets, validate_poly_trend
 from .prior import JokerPrior, _validate_model
 from .src.fast_likelihood import CJokerHelper
-from .utils import tempfile_decorator
 from .samples import JokerSamples
 
 __all__ = ['TheJoker']
@@ -29,8 +29,8 @@ class TheJoker:
         parameters used in The Joker.
     pool : `schwimmbad.BasePool` (optional)
         A processing pool (default is a `schwimmbad.SerialPool` instance).
-    random_state : `numpy.random.RandomState` (optional)
-        A `numpy.random.RandomState` instance for controlling random number
+    random_state : `numpy.random.Generator` (optional)
+        A `numpy.random.Generator` instance for controlling random number
         generation.
     tempfile_path : str (optional)
         A location on disk where The Joker may store some temporary files. Any
@@ -53,10 +53,15 @@ class TheJoker:
         # Set the parent random state - child processes get different states
         # based on the parent
         if random_state is None:
-            random_state = np.random.RandomState()
-        elif not isinstance(random_state, np.random.RandomState):
-            raise TypeError("Random state object must be a numpy RandomState "
-                            "instance, not '{0}'".format(type(random_state)))
+            random_state = np.random.default_rng()
+        elif isinstance(random_state, np.random.RandomState):
+            warnings.warn("With thejoker>=v1.2, use numpy.random.Generator "
+                          "objects instead of RandomState objects to control "
+                          "random numbers.", DeprecationWarning)
+        elif not isinstance(random_state, np.random.Generator):
+            raise TypeError("Random state object must be a "
+                            "numpy.random.Generator instance, not "
+                            f"'{type(random_state)}'")
         self.random_state = random_state
 
         # check if a JokerParams instance was passed in to specify the state
