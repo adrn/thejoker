@@ -152,6 +152,13 @@ def iterative_rejection_inmem(joker_helper, prior_samples_batch, random_state,
             joker_helper, prior_samples_batch[start_idx:start_idx + n_process])
         all_marg_lls = np.concatenate((all_marg_lls, marg_lls))
 
+        if np.any(~np.isfinite(all_marg_lls)):
+            return RuntimeError("There are NaN or Inf likelihood values in "
+                                f"iteration step {i}!")
+        elif len(all_marg_lls) == 0:
+            return RuntimeError("No likelihood values returned in iteration "
+                                f"step {i}")
+
         # get indices of samples that pass rejection step
         uu = random_state.uniform(size=len(all_marg_lls))
         aa = np.exp(all_marg_lls - all_marg_lls.max())
