@@ -14,6 +14,7 @@ from .prior_helpers import validate_n_offsets, validate_poly_trend
 from .prior import JokerPrior, _validate_model
 from .src.fast_likelihood import CJokerHelper
 from .samples import JokerSamples
+from .utils import DEFAULT_RNG, NUMPY_LT_1_17
 
 __all__ = ['TheJoker']
 
@@ -53,17 +54,24 @@ class TheJoker:
         # Set the parent random state - child processes get different states
         # based on the parent
         if random_state is None:
-            random_state = np.random.default_rng()
-        elif isinstance(random_state, np.random.RandomState):
+            random_state = DEFAULT_RNG()
+        elif (isinstance(random_state, np.random.RandomState) and
+                not NUMPY_LT_1_17):
             warnings.warn("With thejoker>=v1.2, use numpy.random.Generator "
                           "objects instead of RandomState objects to control "
                           "random numbers.", DeprecationWarning)
             tmp = np.random.Generator(np.random.MT19937())
             tmp.bit_generator.state = random_state.get_state()
             random_state = tmp
-        elif not isinstance(random_state, np.random.Generator):
+        elif (not NUMPY_LT_1_17 and
+                not isinstance(random_state, np.random.Generator)):
             raise TypeError("Random state object must be a "
                             "numpy.random.Generator instance, not "
+                            f"'{type(random_state)}'")
+        elif (NUMPY_LT_1_17 and
+                not isinstance(random_state, np.random.RandomState)):
+            raise TypeError("Random state object must be a "
+                            "numpy.random.RandomState instance, not "
                             f"'{type(random_state)}'")
         self.random_state = random_state
 
