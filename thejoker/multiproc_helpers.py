@@ -6,7 +6,7 @@ import tables as tb
 from .logging import logger
 from .samples import JokerSamples
 from .utils import (batch_tasks, read_batch, table_contains_column,
-                    tempfile_decorator)
+                    tempfile_decorator, NUMPY_LT_1_17)
 
 
 def run_worker(worker, pool, prior_samples_file, task_args=(), n_batches=None,
@@ -34,10 +34,14 @@ def run_worker(worker, pool, prior_samples_file, task_args=(), n_batches=None,
         tasks = batch_tasks(n_samples, n_batches=n_batches, args=task_args)
 
     if random_state is not None:
-        from numpy.random import Generator, PCG64
-        sg = random_state.bit_generator._seed_seq.spawn(len(tasks))
-        for i in range(len(tasks)):
-            tasks[i] = tuple(tasks[i]) + (Generator(PCG64(sg[i])), )
+        if not NUMPY_LT_1_17:
+            from numpy.random import Generator, PCG64
+            sg = random_state.bit_generator._seed_seq.spawn(len(tasks))
+            for i in range(len(tasks)):
+                tasks[i] = tuple(tasks[i]) + (Generator(PCG64(sg[i])), )
+        else:  # TODO: remove when we drop numpy 1.16 support
+            for i in range(len(tasks)):
+                tasks[i] = tuple(tasks[i]) + (random_state, )
 
     results = []
     for res in pool.map(worker, tasks):
@@ -108,6 +112,13 @@ def make_full_samples_worker(task):
                        columns=joker_helper.packed_order,
                        slice_or_idx=slice_or_idx,
                        units=joker_helper.internal_units)
+
+    # TODO: remove this when we drop numpy 1.16 support
+    if isinstance(random_state, np.random.RandomState):
+        tmp = np.random.RandomState()
+        tmp.set_state(random_state.get_state())
+        tmp.seed(task_id)  # TODO: is this safe?
+        random_state = tmp
 
     if batch.dtype != np.float64:
         batch = batch.astype(np.float64)

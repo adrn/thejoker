@@ -3,6 +3,7 @@
 # Standard library
 import inspect
 import contextlib
+from distutils.version import LooseVersion
 from tempfile import NamedTemporaryFile
 
 # Third-party
@@ -15,6 +16,18 @@ import tables as tb
 
 # Package
 from .samples import JokerSamples
+
+# TODO: remove this when we drop support for numpy 1.16
+# Numpy version:
+NUMPY_LT_1_17 = LooseVersion(np.__version__) < '1.17'
+
+if NUMPY_LT_1_17:
+    DEFAULT_RNG = np.random.RandomState
+    integers = lambda obj, *args, **kwargs: obj.randint(*args, **kwargs)
+else:
+    DEFAULT_RNG = np.random.default_rng
+    integers = lambda obj, *args, **kwargs: obj.integers(*args, **kwargs)
+
 
 __all__ = ['batch_tasks', 'table_header_to_units', 'read_batch',
            'tempfile_decorator']
@@ -217,11 +230,11 @@ def read_random_batch(prior_samples_file, columns, size, units=None,
     """
 
     if random_state is None:
-        random_state = np.random.default_rng()
+        random_state = DEFAULT_RNG()
 
     path = JokerSamples._hdf5_path
     with tb.open_file(prior_samples_file, mode='r') as f:
-        idx = random_state.integers(0, f.root[path].shape[0], size=size)
+        idx = integers(random_state, 0, f.root[path].shape[0], size=size)
 
     return read_batch_idx(prior_samples_file, columns, idx=idx, units=units)
 
@@ -271,10 +284,7 @@ def tempfile_decorator(func):
 def random_state_context(random_state):
     state = np.random.get_state()
     if random_state is not None:
-        try:
-            np.random.seed(random_state.integers(2**32-1))  # HACK
-        except AttributeError:
-            np.random.seed(random_state.randint(2**32-1))  # HACK
+        np.random.seed(integers(random_state, 2**32-1))  # HACK
     try:
         yield
     finally:

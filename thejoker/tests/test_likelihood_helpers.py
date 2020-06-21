@@ -3,11 +3,12 @@ import numpy as np
 from ..data import RVData
 from ..data_helpers import validate_prepare_data
 from .test_data import get_valid_input
+from ..utils import DEFAULT_RNG
 
 
 def test_design_matrix():
     # implicitly tests get_constant_term_design_matrix
-    rnd = np.random.default_rng(42)
+    rnd = DEFAULT_RNG(42)
 
     # Set up mulitple valid data objects:
     ndata1 = 8

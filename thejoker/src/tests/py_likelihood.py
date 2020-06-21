@@ -12,6 +12,7 @@ from astroML.utils import log_multivariate_gaussian
 # Project
 from ...samples import JokerSamples
 from ...distributions import FixedCompanionMass
+from ...utils import DEFAULT_RNG
 
 __all__ = ['get_ivar', 'likelihood_worker', 'marginal_ln_likelihood']
 
@@ -219,7 +220,7 @@ def rejection_sample(samples, prior, data, rnd=None):
     mu = np.zeros(n_linear)
 
     if rnd is None:
-        rnd = np.random.default_rng()
+        rnd = DEFAULT_RNG()
 
     ll = marginal_ln_likelihood(samples, prior, data)
     uu = rnd.uniform(size=len(ll))
