@@ -108,7 +108,6 @@ jobs:
           name: Run test coverage
           command: |
             . venv/bin/activate
-            export TOXPOSARGS=$TOXPOSARGS" --cov-report=xml:"$CIRCLE_WORKING_DIRECTORY"/coverage.xml";
             tox -e py38-test-cov
             codecov
 
