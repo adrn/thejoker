@@ -108,7 +108,7 @@ jobs:
           name: Run test coverage
           command: |
             . venv/bin/activate
-            tox -e py38-test-cov --cov-report=xml:coverage.xml
+            TOXPOSARGS=" --cov-report=xml:coverage.xml" tox -e py38-test-cov
             coveralls --rcfile='thejoker/tests/coveragerc'
 
   codestyle:
