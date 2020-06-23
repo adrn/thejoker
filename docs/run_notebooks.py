@@ -47,4 +47,3 @@ if __name__ == '__main__':
 
     for filename in sorted(glob.glob(pattern)):
         process_notebook(filename, kernel_name=nbsphinx_kernel_name)
-        break
