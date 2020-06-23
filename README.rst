@@ -5,8 +5,8 @@ The Joker [YO-ker]
         :target: http://astrohackweek.org/
 .. image:: https://circleci.com/gh/adrn/thejoker.svg?style=svg
         :target: https://circleci.com/gh/adrn/thejoker
-.. image:: https://coveralls.io/repos/github/adrn/thejoker/badge.svg?branch=master
-        :target: https://coveralls.io/github/adrn/thejoker?branch=master
+.. image:: https://coveralls.io/repos/github/adrn/thejoker/badge.svg?branch=main
+        :target: https://coveralls.io/github/adrn/thejoker?branch=main
 
 A custom Monte Carlo sampler for the two-body problem.
 
@@ -55,4 +55,4 @@ License
 -------
 
 .. image:: http://img.shields.io/badge/license-MIT-blue.svg?style=flat
-        :target: https://github.com/adrn/thejoker/blob/master/LICENSE
+        :target: https://github.com/adrn/thejoker/blob/main/LICENSE

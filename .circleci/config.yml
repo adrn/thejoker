@@ -25,8 +25,8 @@ pip-install-dev: &pip-install-dev
     pip install --progress-bar off -r requirements-dev.txt
     pip install --progress-bar off tox
 
-master-or-pr-check: &master-or-pr-check
-  name: Only build branches that are "master", or a PR
+main-or-pr-check: &main-or-pr-check
+  name: Only build branches that are "main", or a PR
   command: bash .circleci/branch_name_check.sh
 
 ci-skip-check: &ci-skip-check
@@ -41,7 +41,7 @@ jobs:
     steps:
       - checkout
       - run: *ci-skip-check
-      - run: *master-or-pr-check
+      - run: *main-or-pr-check
       - run: *apt-install
       - run: *pip-install-dev
       - run:
@@ -56,7 +56,7 @@ jobs:
     steps:
       - checkout
       - run: *ci-skip-check
-      - run: *master-or-pr-check
+      - run: *main-or-pr-check
       - run: *apt-install
       - run: *pip-install-dev
       - run:
@@ -71,7 +71,7 @@ jobs:
     steps:
       - checkout
       - run: *ci-skip-check
-      - run: *master-or-pr-check
+      - run: *main-or-pr-check
       - run: *apt-install
       - run: *pip-install-dev
       - run:
@@ -86,7 +86,7 @@ jobs:
     steps:
       - checkout
       - run: *ci-skip-check
-      - run: *master-or-pr-check
+      - run: *main-or-pr-check
       - run: *apt-install
       - run: *pip-install-dev
       - run:
@@ -101,7 +101,7 @@ jobs:
     steps:
       - checkout
       - run: *ci-skip-check
-      - run: *master-or-pr-check
+      - run: *main-or-pr-check
       - run: *apt-install
       - run: *pip-install-dev
       - run:
@@ -117,7 +117,7 @@ jobs:
     steps:
       - checkout
       - run: *ci-skip-check
-      - run: *master-or-pr-check
+      - run: *main-or-pr-check
       - run: *apt-install
       - run: *pip-install-dev
       - run:
@@ -136,7 +136,7 @@ jobs:
           fingerprints:
             - 21:3a:31:0c:f7:f4:94:ed:1c:4f:16:cb:67:60:61:0a
       - run: *ci-skip-check
-      - run: *master-or-pr-check
+      - run: *main-or-pr-check
       - run: *apt-install
       - run: *pip-install-dev
       - run:

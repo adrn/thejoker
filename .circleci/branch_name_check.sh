@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ -z "${CIRCLE_PULL_REQUEST}" ] && [ "${CIRCLE_BRANCH}" != "master" ] && [[ ! "$CIRCLE_BRANCH" =~ ^v[0-9\.]+ ]];
+if [ -z "${CIRCLE_PULL_REQUEST}" ] && [ "${CIRCLE_BRANCH}" != "main" ] && [[ ! "$CIRCLE_BRANCH" =~ ^v[0-9\.]+ ]];
 then
     echo "HALTING"
     circleci step halt
