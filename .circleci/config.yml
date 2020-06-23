@@ -108,8 +108,9 @@ jobs:
           name: Run test coverage
           command: |
             . venv/bin/activate
-            TOXPOSARGS=" --cov-report=xml:coverage.xml" tox -e py38-test-cov
-            coveralls --rcfile='thejoker/tests/coveragerc'
+            export TOXPOSARGS=$TOXPOSARGS" --cov-report=xml:"$CIRCLE_WORKING_DIRECTORY"/coverage.xml";
+            tox -e py38-test-cov
+            codecov
 
   codestyle:
     docker:

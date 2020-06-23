@@ -9,5 +9,5 @@ nbconvert
 nbformat
 ipykernel
 astroML
-coveralls
+codecov
 pyyaml
