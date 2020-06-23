@@ -10,7 +10,7 @@ if [[ -z $CIRCLE_PULL_REQUEST ]]; then
 
     . venv/bin/activate
     cd docs
-    python run_notebooks.py $*
+    python run_notebooks.py
 
     git add examples/*.ipynb
     git -c user.name='circleci' -c user.email='circleci' commit -m "now with executed tutorials"
