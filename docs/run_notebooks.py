@@ -4,6 +4,7 @@
 import glob
 import os
 import sys
+import logging
 
 # Third-party
 import nbformat
@@ -21,8 +22,9 @@ def process_notebook(filename, kernel_name=None):
         notebook = nbformat.read(f, as_version=4)
 
     ep = ExecutePreprocessor(timeout=-1, kernel_name=kernel_name)
+    ep.log.setLevel(logging.DEBUG)
+    ep.log.addHandler(logging.StreamHandler())
 
-    print("running: {0}".format(filename))
     try:
         ep.preprocess(notebook, {"metadata": {"path": "examples/"}})
     except CellExecutionError as e:
@@ -43,5 +45,6 @@ if __name__ == '__main__':
 
     nbsphinx_kernel_name = os.environ.get('NBSPHINX_KERNEL', 'python3')
 
-    for filename in glob.glob(pattern):
+    for filename in sorted(glob.glob(pattern)):
         process_notebook(filename, kernel_name=nbsphinx_kernel_name)
+        break
