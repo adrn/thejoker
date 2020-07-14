@@ -263,11 +263,22 @@ def tempfile_decorator(func):
                                 "prior samples, or must be a JokerSamples "
                                 f"instance, not: {type(prior_samples)}")
 
-            with NamedTemporaryFile(mode='r+', suffix='.hdf5') as f:
+            # This is required (instead of a context) because the named file
+            # can't be opened a second time on Windows...see, e.g.,
+            # https://github.com/Kotaimen/awscfncli/issues/93
+            f = NamedTemporaryFile(mode='r+', suffix='.hdf5', delete=False)
+            f.close()
+
+            try:
                 # write samples to tempfile and recursively call this method
                 prior_samples.write(f.name, overwrite=True)
                 kwargs['prior_samples_file'] = f.name
                 func_return = func(*args, **kwargs)
+            except Exception as e:
+                raise e
+            finally:
+                os.unlink(f.name)
+
 
         else:
             # FIXME: it's a string, so it's probably a filename, but we should
