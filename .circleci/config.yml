@@ -162,15 +162,7 @@ jobs:
 workflows:
   thejoker:
     jobs:
-      - test-36
       - test-37
-      - test-38
-      - test-coverage:
-          requires:
-            - test-37
-      - test-37-numpy116:
-          requires:
-            - test-37
       - build-docs:
           requires:
             - test-37
