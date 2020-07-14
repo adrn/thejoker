@@ -1,4 +1,4 @@
-name: Test thejoker on Windows
+name: Windows tests
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.7, 3.8]
+        python-version: [3.7]  # Fails on 3.8 because no astropy wheel
         os: ["windows-latest"]
 
     steps:
@@ -26,15 +26,19 @@ jobs:
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
 
-      - name: Install dependencies
+      - name: Install build dependencies
         run: |
+          choco install pandoc --no-progress
           conda create -n thejoker python=${{ matrix.python-version }} -q
           conda activate thejoker
-          conda install numpy scipy mkl-service libpython m2w64-toolchain
-          python -m pip install -e .[test]
-          python -m pip install tox tox-gh-actions
+          conda install mkl-service libpython m2w64-toolchain -q -y
+
+      - name: Install thejoker and test dependencies
+        run: |
+          conda activate thejoker
+          python -m pip install tox
 
       - name: Run tests
         run: |
           conda activate thejoker
-          tox
+          tox -e py37

@@ -63,7 +63,7 @@ jobs:
           name: Run test
           command: |
             . venv/bin/activate
-            tox -e py37-test
+            tox -e py37
 
   test-37-numpy116:
     docker:
