@@ -6,12 +6,11 @@ import os
 import sys
 import logging
 
-# Third-party
-import nbformat
-from nbconvert.preprocessors import CellExecutionError, ExecutePreprocessor
-
 
 def process_notebook(filename, kernel_name=None):
+    import nbformat
+    from nbconvert.preprocessors import CellExecutionError, ExecutePreprocessor
+
     path = os.path.join(
         os.path.abspath("theano_cache"), "p{0}".format(os.getpid())
     )
