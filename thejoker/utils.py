@@ -3,6 +3,7 @@
 # Standard library
 import inspect
 import contextlib
+import os
 from distutils.version import LooseVersion
 from tempfile import NamedTemporaryFile
 
