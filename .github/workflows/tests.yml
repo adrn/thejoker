@@ -45,6 +45,7 @@ jobs:
         run: |
           tox -e py37-cov
           tox -e py37-numpy{116,117,118,119}
+          tox -e build_docs
 
       - name: Check coverage.yml existence
         id: check_files
