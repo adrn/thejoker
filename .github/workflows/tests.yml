@@ -44,7 +44,7 @@ jobs:
         if: runner.os == 'Linux' && matrix.python-version == 3.7
         run: |
           tox -e py37-cov
-          tox -e py37-numpy{116,117,118,119}
+          tox -e py37-numpy116,py37-numpy117,py37-numpy118,py37-numpy119
           tox -e build_docs
 
       - name: Check coverage.yml existence
@@ -63,4 +63,3 @@ jobs:
         if: ${{ failure() }}
         with:
           path: ./result_images
-
