@@ -35,21 +35,6 @@ ci-skip-check: &ci-skip-check
 
 jobs:
 
-  test-36:
-    docker:
-      - image: circleci/python:3.6
-    steps:
-      - checkout
-      - run: *ci-skip-check
-      - run: *main-or-pr-check
-      - run: *apt-install
-      - run: *pip-install-dev
-      - run:
-          name: Run test
-          command: |
-            . venv/bin/activate
-            tox -e py36-test
-
   test-37:
     docker:
       - image: circleci/python:3.7
@@ -63,68 +48,7 @@ jobs:
           name: Run test
           command: |
             . venv/bin/activate
-            tox -e py37-test
-
-  test-37-numpy116:
-    docker:
-      - image: circleci/python:3.7
-    steps:
-      - checkout
-      - run: *ci-skip-check
-      - run: *main-or-pr-check
-      - run: *apt-install
-      - run: *pip-install-dev
-      - run:
-          name: Run test
-          command: |
-            . venv/bin/activate
-            tox -e py37-test-numpy116
-
-  test-38:
-    docker:
-      - image: circleci/python:3.8
-    steps:
-      - checkout
-      - run: *ci-skip-check
-      - run: *main-or-pr-check
-      - run: *apt-install
-      - run: *pip-install-dev
-      - run:
-          name: Run test
-          command: |
-            . venv/bin/activate
-            tox -e py38-test
-
-  test-coverage:
-    docker:
-      - image: circleci/python:3.8
-    steps:
-      - checkout
-      - run: *ci-skip-check
-      - run: *main-or-pr-check
-      - run: *apt-install
-      - run: *pip-install-dev
-      - run:
-          name: Run test coverage
-          command: |
-            . venv/bin/activate
-            tox -e py38-test-cov
-            codecov
-
-  codestyle:
-    docker:
-      - image: circleci/python:3.8
-    steps:
-      - checkout
-      - run: *ci-skip-check
-      - run: *main-or-pr-check
-      - run: *apt-install
-      - run: *pip-install-dev
-      - run:
-          name: Run codestyle check
-          command: |
-            . venv/bin/activate
-            tox -e codestyle
+            tox -e py37
 
   # docs build
   build-docs:

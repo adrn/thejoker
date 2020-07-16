@@ -1,0 +1,44 @@
+name: Windows tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: "py${{ matrix.python-version }} on ${{ matrix.os }}"
+    if: "!contains(github.event.head_commit.message, 'skip ci')"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.7]  # Fails on 3.8 because no astropy wheel
+        os: ["windows-latest"]
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: goanpeca/setup-miniconda@v1
+        with:
+          auto-update-conda: true
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install build dependencies
+        run: |
+          choco install pandoc --no-progress
+          conda create -n thejoker python=${{ matrix.python-version }} -q
+          conda activate thejoker
+          conda install mkl-service libpython m2w64-toolchain -q -y
+
+      - name: Install thejoker and test dependencies
+        run: |
+          conda activate thejoker
+          python -m pip install tox
+
+      - name: Run tests
+        run: |
+          conda activate thejoker
+          tox -e py37
