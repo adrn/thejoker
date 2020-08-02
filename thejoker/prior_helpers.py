@@ -49,19 +49,19 @@ def validate_sigma_v(sigma_v, poly_trend, v_names):
     if hasattr(sigma_v, 'keys'):
         for name in v_names:
             if name not in sigma_v.keys():
-                raise ValueError("If specifying the standard-deviations of "
-                                 "the polynomial trend parameter prior, you "
-                                 "must pass in values for all parameter names."
-                                 "Expected keys: {}, received: {}"
-                                 .format(v_names, sigma_v.keys()))
+                raise ValueError(
+                    "If specifying the standard-deviations of the polynomial "
+                    "trend parameter prior, you must pass in values for all "
+                    f"parameter names. Expected keys: {v_names}, received: "
+                    f"{sigma_v.keys()}")
         return sigma_v
 
     try:
         if len(sigma_v) != poly_trend:
-            raise ValueError("You must pass in a single sigma value for "
-                             "each velocity trend parameter: You passed in "
-                             "{} values, but poly_trend={}"
-                             .format(len(sigma_v), poly_trend))
+            raise ValueError(
+                "You must pass in a single sigma value for each velocity trend "
+                f"parameter: You passed in {len(sigma_v)} values, but "
+                f"poly_trend={poly_trend}")
         sigma_v = {name: val for name, val in zip(v_names, sigma_v)}
 
     except TypeError:
