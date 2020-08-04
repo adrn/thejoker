@@ -131,7 +131,8 @@ def make_full_samples_worker(task):
 
 
 def make_full_samples(joker_helper, prior_samples_file, pool, random_state,
-                      samples_idx, n_linear_samples=1, n_batches=None):
+                      samples_idx, n_linear_samples=1, n_batches=None,
+                      SamplesCls=JokerSamples):
 
     task_args = (prior_samples_file,
                  joker_helper,
@@ -145,11 +146,11 @@ def make_full_samples(joker_helper, prior_samples_file, pool, random_state,
     raw_samples = np.concatenate(results)
 
     # unpack the raw samples
-    samples = JokerSamples.unpack(raw_samples,
-                                  joker_helper.internal_units,
-                                  t_ref=joker_helper.data.t_ref,
-                                  poly_trend=joker_helper.prior.poly_trend,
-                                  n_offsets=joker_helper.prior.n_offsets)
+    samples = SamplesCls.unpack(raw_samples,
+                                joker_helper.internal_units,
+                                t_ref=joker_helper.data.t_ref,
+                                poly_trend=joker_helper.prior.poly_trend,
+                                n_offsets=joker_helper.prior.n_offsets)
 
     return samples
 
@@ -163,7 +164,8 @@ def rejection_sample_helper(joker_helper, prior_samples_file, pool,
                             return_logprobs=False,
                             n_batches=None,
                             randomize_prior_order=False,
-                            return_all_logprobs=False):
+                            return_all_logprobs=False,
+                            SamplesCls=None):
 
     # Total number of samples in the cache:
     with tb.open_file(prior_samples_file, mode='r') as f:
@@ -231,7 +233,8 @@ def rejection_sample_helper(joker_helper, prior_samples_file, pool,
     samples = make_full_samples(joker_helper, prior_samples_file, pool,
                                 random_state, full_samples_idx,
                                 n_linear_samples=n_linear_samples,
-                                n_batches=n_batches)
+                                n_batches=n_batches,
+                                SamplesCls=SamplesCls)
 
     if return_logprobs:
         samples['ln_likelihood'] = lls[good_samples_idx]
@@ -256,7 +259,8 @@ def iterative_rejection_helper(joker_helper, prior_samples_file, pool,
                                n_linear_samples=1,
                                return_logprobs=False,
                                n_batches=None,
-                               randomize_prior_order=False):
+                               randomize_prior_order=False,
+                               SamplesCls=None):
 
     # Total number of samples in the cache:
     with tb.open_file(prior_samples_file, mode='r') as f:
@@ -358,7 +362,8 @@ def iterative_rejection_helper(joker_helper, prior_samples_file, pool,
     samples = make_full_samples(joker_helper, prior_samples_file, pool,
                                 random_state, full_samples_idx,
                                 n_linear_samples=n_linear_samples,
-                                n_batches=n_batches)
+                                n_batches=n_batches,
+                                SamplesCls=SamplesCls)
 
     # FIXME: copy-pasted from function above
     if return_logprobs:

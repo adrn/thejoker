@@ -322,9 +322,9 @@ def trace_to_samples(self, trace, data, names=None):
                                      self.prior.poly_trend,
                                      self.prior.n_offsets)
 
-    samples = JokerSamples(poly_trend=self.prior.poly_trend,
-                           n_offsets=self.prior.n_offsets,
-                           t_ref=data.t_ref)
+    samples = self._samples_cls(poly_trend=self.prior.poly_trend,
+                                n_offsets=self.prior.n_offsets,
+                                t_ref=data.t_ref)
 
     if names is None:
         names = self.prior.par_names

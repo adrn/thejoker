@@ -35,12 +35,14 @@ class RVData:
         (days). Set to ``False`` to disable subtracting the reference time.
     clean : bool (optional)
         Filter out any NaN or Inf data points.
+    sort : bool (optional)
+        Whether or not to sort on time.
 
     """
     @deprecated_renamed_argument('t0', 't_ref', since='v1.2',
                                  warning_type=TheJokerDeprecationWarning)
     @u.quantity_input(rv=u.km/u.s, rv_err=[u.km/u.s, (u.km/u.s)**2])
-    def __init__(self, t, rv, rv_err, t_ref=None, clean=True):
+    def __init__(self, t, rv, rv_err, t_ref=None, clean=True, sort=True):
 
         # For speed, time is saved internally as BMJD:
         if isinstance(t, Time):
@@ -94,15 +96,16 @@ class RVData:
             else:
                 self.rv_err = self.rv_err[idx]
 
-        # sort on times
-        idx = self._t_bmjd.argsort()
-        self._t_bmjd = self._t_bmjd[idx]
-        self.rv = self.rv[idx]
-        if self._has_cov:
-            self.rv_err = self.rv_err[idx]
-            self.rv_err = self.rv_err[:, idx]
-        else:
-            self.rv_err = self.rv_err[idx]
+        if sort:
+            # sort on times
+            idx = self._t_bmjd.argsort()
+            self._t_bmjd = self._t_bmjd[idx]
+            self.rv = self.rv[idx]
+            if self._has_cov:
+                self.rv_err = self.rv_err[idx]
+                self.rv_err = self.rv_err[:, idx]
+            else:
+                self.rv_err = self.rv_err[idx]
 
         if t_ref is False:
             self.t_ref = None

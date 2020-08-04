@@ -36,6 +36,7 @@ def _validate_model(model):
 
 
 class JokerPrior:
+    _sb2 = False
 
     def __init__(self, pars=None, poly_trend=1, v0_offsets=None, model=None):
         """
@@ -120,7 +121,10 @@ class JokerPrior:
         # are only used to validate that the units for each parameter are
         # equivalent to these
         self._nonlinear_equiv_units = get_nonlinear_equiv_units()
-        self._linear_equiv_units = get_linear_equiv_units(self.poly_trend)
+        self._linear_equiv_units = get_linear_equiv_units(
+            self.poly_trend,
+            sb2=self._sb2
+        )
         self._v0_offsets_equiv_units = get_v0_offsets_equiv_units(
             self.n_offsets)
         self._all_par_unit_equiv = {**self._nonlinear_equiv_units,
@@ -261,39 +265,10 @@ class JokerPrior:
     def __str__(self):
         return ", ".join(self.par_names)
 
-    def sample(self, size=1, generate_linear=False, return_logprobs=False,
-               random_state=None, dtype=None, **kwargs):
-        """
-        Generate random samples from the prior.
-
-        .. note::
-
-            Right now, generating samples with the prior values is slow (i.e.
-            with ``return_logprobs=True``) because of pymc3 issues (see
-            discussion here:
-            https://discourse.pymc.io/t/draw-values-speed-scaling-with-transformed-variables/4076).
-            This will hopefully be resolved in the future...
-
-        Parameters
-        ----------
-        size : int (optional)
-            The number of samples to generate.
-        generate_linear : bool (optional)
-            Also generate samples in the linear parameters.
-        return_logprobs : bool (optional)
-            Generate the log-prior probability at the position of each sample.
-        **kwargs
-            Additional keyword arguments are passed to the
-            `~thejoker.JokerSamples` initializer.
-
-        Returns
-        -------
-        samples : `thejoker.Jokersamples`
-            The random samples.
-
-        """
+    def _get_raw_samples(self, size=1, generate_linear=False,
+                         return_logprobs=False, random_state=None, dtype=None,
+                         **kwargs):
         from pymc3.distributions import draw_values
-        import exoplanet.units as xu
 
         if dtype is None:
             dtype = np.float64
@@ -304,10 +279,7 @@ class JokerPrior:
                          or k in self._v0_offsets_equiv_units)
                         and generate_linear)}
 
-        if generate_linear:
-            par_names = self.par_names
-        else:
-            par_names = list(self._nonlinear_equiv_units.keys())
+        pars_list = list(sub_pars.values())
 
         # MAJOR HACK RELATED TO UPSTREAM ISSUES WITH pymc3:
         init_shapes = dict()
@@ -345,11 +317,57 @@ class JokerPrior:
 
                 logp.append(_logp)
             log_prior = np.sum(logp, axis=0)
+        else:
+            log_prior = None
 
         # CONTINUED MAJOR HACK RELATED TO UPSTREAM ISSUES WITH pymc3:
         for name, par in sub_pars.items():
             if hasattr(par, 'distribution'):
                 par.distribution.shape = init_shapes[name]
+
+        return raw_samples, sub_pars, log_prior
+
+    def sample(self, size=1, generate_linear=False, return_logprobs=False,
+               random_state=None, dtype=None, **kwargs):
+        """
+        Generate random samples from the prior.
+
+        .. note::
+
+            Right now, generating samples with the prior values is slow (i.e.
+            with ``return_logprobs=True``) because of pymc3 issues (see
+            discussion here:
+            https://discourse.pymc.io/t/draw-values-speed-scaling-with-transformed-variables/4076).
+            This will hopefully be resolved in the future...
+
+        Parameters
+        ----------
+        size : int (optional)
+            The number of samples to generate.
+        generate_linear : bool (optional)
+            Also generate samples in the linear parameters.
+        return_logprobs : bool (optional)
+            Generate the log-prior probability at the position of each sample.
+        **kwargs
+            Additional keyword arguments are passed to the
+            `~thejoker.JokerSamples` initializer.
+
+        Returns
+        -------
+        samples : `thejoker.Jokersamples`
+            The random samples.
+
+        """
+        import exoplanet.units as xu
+
+        raw_samples, sub_pars, log_prior = self._get_raw_samples(
+            size, generate_linear, return_logprobs, random_state, dtype,
+            **kwargs)
+
+        if generate_linear:
+            par_names = self.par_names
+        else:
+            par_names = list(self._nonlinear_equiv_units.keys())
 
         # Apply units if they are specified:
         prior_samples = JokerSamples(poly_trend=self.poly_trend,
