@@ -9,6 +9,10 @@ if not _ASTROPY_SETUP_:  # noqa
     from .prior import JokerPrior
     from .plot import *
 
+    # SB2:
+    from .thejoker_sb2 import *
+    from .prior_sb2 import JokerSB2Prior
+
 
 __bibtex__ = __citation__ = """@ARTICLE{thejoker,
        author = {{Price-Whelan}, Adrian M. and {Hogg}, David W. and
@@ -40,5 +44,6 @@ __all__ = [
     'RVData',
     'JokerSamples',
     'JokerPrior',
-    'plot_rv_curves'
+    'plot_rv_curves',
+    'TheJokerSB2'
 ]
