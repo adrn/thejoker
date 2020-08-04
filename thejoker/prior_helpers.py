@@ -31,12 +31,19 @@ def validate_poly_trend(poly_trend):
     return poly_trend, vtrend_names
 
 
-def get_linear_equiv_units(poly_trend):
+def get_linear_equiv_units(poly_trend, sb2=False):
     poly_trend, v_names = validate_poly_trend(poly_trend)
-    return {
-        'K': u.m/u.s,
-        **{name: u.m/u.s/u.day**i for i, name in enumerate(v_names)}
-    }
+    if sb2:
+        return {
+            'K1': u.m/u.s,
+            'K2': u.m/u.s,
+            **{name: u.m/u.s/u.day**i for i, name in enumerate(v_names)}
+        }
+    else:
+        return {
+            'K': u.m/u.s,
+            **{name: u.m/u.s/u.day**i for i, name in enumerate(v_names)}
+        }
 
 
 def validate_sigma_v(sigma_v, poly_trend, v_names):

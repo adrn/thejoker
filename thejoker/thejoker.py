@@ -39,6 +39,7 @@ class TheJoker:
         this path persist, something must have gone wrong within The Joker.
         Default: ``~/.thejoker``
     """
+    _samples_cls = JokerSamples
 
     def __init__(self, prior, pool=None, random_state=None, tempfile_path=None):
 
@@ -236,7 +237,8 @@ class TheJoker:
                 random_state=self.random_state,
                 ln_prior=ln_prior,
                 max_posterior_samples=max_posterior_samples,
-                n_linear_samples=n_linear_samples)
+                n_linear_samples=n_linear_samples,
+                SamplesCls=self._samples_cls)
 
         else:
             samples = rejection_sample_helper(
@@ -249,7 +251,8 @@ class TheJoker:
                 n_linear_samples=n_linear_samples,
                 return_logprobs=return_logprobs,
                 n_batches=n_batches,
-                randomize_prior_order=randomize_prior_order)
+                randomize_prior_order=randomize_prior_order,
+                SamplesCls=self._samples_cls)
 
         return samples
 
@@ -342,7 +345,8 @@ class TheJoker:
                 ln_prior=ln_prior,
                 init_batch_size=init_batch_size,
                 growth_factor=growth_factor,
-                n_linear_samples=n_linear_samples)
+                n_linear_samples=n_linear_samples,
+                SamplesCls=self._samples_cls)
 
         else:
             samples = iterative_rejection_helper(
@@ -357,7 +361,8 @@ class TheJoker:
                 n_linear_samples=n_linear_samples,
                 return_logprobs=return_logprobs,
                 n_batches=n_batches,
-                randomize_prior_order=randomize_prior_order)
+                randomize_prior_order=randomize_prior_order,
+                SamplesCls=self._samples_cls)
 
         return samples
 
@@ -483,9 +488,9 @@ class TheJoker:
                                          self.prior.poly_trend,
                                          self.prior.n_offsets)
 
-        samples = JokerSamples(poly_trend=self.prior.poly_trend,
-                               n_offsets=self.prior.n_offsets,
-                               t0=data.t0)
+        samples = self._samples_cls(poly_trend=self.prior.poly_trend,
+                                    n_offsets=self.prior.n_offsets,
+                                    t0=data.t0)
 
         if names is None:
             names = self.prior.par_names
