@@ -580,3 +580,280 @@ cdef class CJokerHelper:
         ll = self.likelihood_worker(1)  # the 1 is "True"
 
         return ll
+
+
+cdef class CJokerSB2Helper(CJokerHelper):
+    cdef:
+        double sigma_K0_1  # TODO: total HACK
+        double P0_1  # TODO: total HACK
+        double max_K_1  # TODO: total HACK
+        double sigma_K0_2  # TODO: total HACK
+        double P0_2  # TODO: total HACK
+        double max_K_2  # TODO: total HACK
+
+    def __reduce__(self):
+        return (CJokerSB2Helper, (self.data, self.prior,
+                                  np.array(self.trend_M)))
+
+    def __init__(self, data, prior, double[:, ::1] trend_M):
+        cdef int i, j, n
+
+        self.prior = prior
+        self.data = data
+
+        # Internal units needed for calculations below.
+        # Note: order here matters! This is the order in which prior samples
+        # will be unpacked externally!
+        self.internal_units = {}
+        self.internal_units['P'] = _nonlinear_internal_units['P']
+        self.internal_units['e'] = _nonlinear_internal_units['e']
+        self.internal_units['omega'] = _nonlinear_internal_units['omega']
+        self.internal_units['M0'] = _nonlinear_internal_units['M0']
+        self.internal_units['s'] = self.data.rv.unit
+        self.internal_units['K1'] = self.data.rv.unit
+        self.internal_units['K2'] = self.data.rv.unit
+        self.internal_units['v0'] = self.data.rv.unit
+
+        # v0 offsets must be between v0 and v1, if v1 is present
+        for offset in prior.v0_offsets:
+            self.internal_units[offset.name] = self.data.rv.unit
+
+        for i, name in enumerate(prior._v_trend_names):
+            self.internal_units[name] = self.data.rv.unit / u.day ** i
+
+        # The assumed order of the nonlinear parameters used below to read from
+        # packed samples array
+        self.packed_order = _nonlinear_packed_order
+
+        import exoplanet.units as xu
+
+        # Counting:
+        self.n_times = len(data)  # number of data pints
+        self.n_poly = prior.poly_trend  # polynomial trend terms
+        self.n_offsets = 1 # DISABLED FOR SB2 - v0 offsets
+        self.n_linear = 2 + self.n_poly # K1, K2, trend
+        self.n_pars = len(prior.par_names)
+
+        # Data:
+        self.t0 = data._t_ref_bmjd
+        self.t = np.ascontiguousarray(data._t_bmjd, dtype='f8')
+        self.rv = np.ascontiguousarray(data.rv.value, dtype='f8')
+        self.ivar = np.ascontiguousarray(
+            data.ivar.to_value(1 / self.data.rv.unit**2), dtype='f8')
+        self.trend_M = trend_M
+
+        # ivar with jitter included
+        self.s_ivar = np.zeros(self.n_times, dtype='f8')
+
+        # Transpose of design matrix: Fill the columns for the linear part of M
+        # - trend shape: K1, K2, v0, poly_trend-1
+        if (trend_M.shape[0] != self.n_times
+                or trend_M.shape[1] != self.n_linear):
+            raise ValueError("Invalid design matrix shape: {}, expected: {}"
+                             .format(trend_M.shape,
+                                     (self.n_times, self.n_linear)))
+
+        self.M_T = np.zeros((self.n_linear, self.n_times))
+        for n in range(self.n_times):
+            for i in range(self.n_linear):
+                self.M_T[i, n] = trend_M[n, i]
+
+        # Needed for temporary storage in likelihood_worker:
+        self.Btmp = np.zeros((self.n_times, self.n_times), dtype=np.float64)
+        self.Atmp = np.zeros((self.n_linear, self.n_linear), dtype=np.float64)
+        self.npar_ipiv = np.zeros(self.n_linear, dtype=np.int32)
+        self.ntime_ipiv = np.zeros(self.n_times, dtype=np.int32)
+        self.npar_work = np.zeros(self.n_linear, dtype=np.float64)
+        self.ntime_work = np.zeros(self.n_times, dtype=np.float64)
+
+        # Needed for internal work / output from likelihood_worker:
+        self.B = np.zeros((self.n_times, self.n_times), dtype=np.float64)
+        self.Binv = np.zeros((self.n_times, self.n_times), dtype=np.float64)
+        self.b = np.zeros(self.n_times, dtype=np.float64)
+        self.Ainv = np.zeros((self.n_linear, self.n_linear), dtype=np.float64)
+        self.A = np.zeros((self.n_linear, self.n_linear), dtype=np.float64)
+        self.a = np.zeros(self.n_linear, dtype=np.float64)
+
+        # TODO: Lambda should be a matrix, but we currently only support
+        # diagonal variance on Lambda
+        self.mu = np.zeros(self.n_linear)
+        self.Lambda = np.zeros(self.n_linear)
+
+        # ---------------------------------------------------------------------
+        # TODO: This is a bit of a hack: assumes FixedCompanionMass prior
+        self.fixed_K_prior = 0
+
+        for i, name in enumerate(prior._linear_equiv_units.keys()):
+            dist = prior.model[name].distribution
+            _unit = getattr(prior.model[name], xu.UNIT_ATTR_NAME)
+            to_unit = self.internal_units[name]
+            mu = (dist.mean.eval() * _unit).to_value(to_unit)
+
+            if name == 'K1' and self.fixed_K_prior == 0:
+                # TODO: here's the major hack
+                self.sigma_K0_1 = dist._sigma_K0.to_value(to_unit)
+                self.P0_1 = dist._P0.to_value(getattr(prior.pars['P'],
+                                                      xu.UNIT_ATTR_NAME))
+                self.max_K_1 = dist._max_K.to_value(to_unit)
+                self.mu[i] = mu
+
+            elif name == 'K2' and self.fixed_K_prior == 0:
+                # TODO: here's the major hack
+                self.sigma_K0_2 = dist._sigma_K0.to_value(to_unit)
+                self.P0_2 = dist._P0.to_value(getattr(prior.pars['P'],
+                                                      xu.UNIT_ATTR_NAME))
+                self.max_K_2 = dist._max_K.to_value(to_unit)
+                self.mu[i] = mu
+
+            elif name == 'v0':
+                self.Lambda[i] = (dist.sd.eval() * _unit).to_value(to_unit) ** 2
+                self.mu[i] = mu
+
+        # ---------------------------------------------------------------------
+
+    # TODO: instead of copy-pasting these, I could modify c_rv_from_elements to
+    # multiple the input "rv" by the solved rv (instead of just replacing the
+    # value)
+    cpdef batch_marginal_ln_likelihood(self, double[:, ::1] chunk):
+        """Compute the marginal log-likelihood for a batch of prior samples.
+
+        Parameters
+        ----------
+        chunk : numpy.ndarray
+            A chunk of nonlinear parameter prior samples.
+            Expected order: P, e, omega, M0, s (jitter).
+        """
+        cdef:
+            int n, i, j
+            int n_samples = chunk.shape[0]
+            double P, e, om, M0
+
+            # the log-likelihood values
+            double[::1] ll = np.full(n_samples, np.nan)
+
+        for n in range(n_samples):
+            # NOTE: need to make sure the chunk is always in this order! If this
+            # is changed, change "packed_order" above
+            P = chunk[n, 0]
+            e = chunk[n, 1]
+            om = chunk[n, 2]
+            M0 = chunk[n, 3]
+
+            c_rv_from_elements(&self.t[0], &self.M_T[0, 0], self.n_times,
+                               P, 1., e, om, M0, self.t0,
+                               anomaly_tol, anomaly_maxiter)
+
+            # Copy the unscaled rv sequence from K1 to K2:
+            for j in range(self.n_times):
+                self.M_T[1, j] = self.M_T[0, j]
+
+            for j in range(self.n_times):
+                for i in range(2):
+                    self.M_T[i, j] = self.M_T[i, j] * self.trend_M[j, i]
+
+            # Note: jitter must be in same units as the data RV's / ivar
+            get_ivar(self.ivar, chunk[n, 4], self.s_ivar)
+
+            # TODO: this is a continuation of the massive hack introduced above.
+            if self.fixed_K_prior == 0:
+                self.Lambda[0] = (self.sigma_K0_1**2 / (1 - e**2)
+                                  * (P / self.P0_1)**(-2/3.))
+                self.Lambda[0] = min(self.max_K_1**2, self.Lambda[0])
+
+                self.Lambda[1] = (self.sigma_K0_2**2 / (1 - e**2)
+                                  * (P / self.P0_2)**(-2/3.))
+                self.Lambda[1] = min(self.max_K_2**2, self.Lambda[1])
+
+            # compute things needed for the ln(likelihood)
+            ll[n] = self.likelihood_worker(0)
+
+        return ll
+
+    cpdef batch_get_posterior_samples(self, double[:, ::1] chunk,
+                                      int n_linear_samples_per,
+                                      object random_state):
+        """TODO:
+
+        Parameters
+        ----------
+        chunk : numpy.ndarray
+            A chunk of nonlinear parameter prior samples.
+            Expected order: P, e, omega, M0, s (jitter).
+        """
+
+        cdef:
+            int n, i, j, k
+            int n_samples = chunk.shape[0]
+            double P, e, om, M0
+
+            # Transpose of design matrix
+            double[:, ::1] M_T = np.zeros((self.n_linear, self.n_times))
+
+            # the log-likelihood values
+            double[:, ::1] ll = np.full((n_samples, n_linear_samples_per),
+                                        np.nan)
+            double _ll
+
+            # The samples
+            double[:, :, ::1] samples = np.zeros((n_samples,
+                                                  n_linear_samples_per,
+                                                  self.n_pars))
+            double[:, ::1] linear_pars = np.zeros((n_linear_samples_per,
+                                                   self.n_linear))
+
+        for n in range(n_samples):
+            # NOTE: need to make sure the chunk is always in this order! If this
+            # is changed, change "packed_order" above
+            P = chunk[n, 0]
+            e = chunk[n, 1]
+            om = chunk[n, 2]
+            M0 = chunk[n, 3]
+
+            c_rv_from_elements(&self.t[0], &self.M_T[0, 0], self.n_times,
+                               P, 1., e, om, M0, self.t0,
+                               anomaly_tol, anomaly_maxiter)
+
+            # Copy the unscaled rv sequence from K1 to K2:
+            for j in range(self.n_times):
+                self.M_T[1, j] = self.M_T[0, j]
+
+            for j in range(self.n_times):
+                for i in range(2):
+                    self.M_T[i, j] = self.M_T[i, j] * self.trend_M[j, i]
+
+            # Note: jitter must be in same units as the data RV's / ivar
+            get_ivar(self.ivar, chunk[n, 4], self.s_ivar)
+
+            # TODO: this is a continuation of the massive hack introduced above.
+            if self.fixed_K_prior == 0:
+                self.Lambda[0] = (self.sigma_K0_1**2 / (1 - e**2)
+                                  * (P / self.P0_1)**(-2/3.))
+                self.Lambda[0] = min(self.max_K_1**2, self.Lambda[0])
+
+                self.Lambda[1] = (self.sigma_K0_2**2 / (1 - e**2)
+                                  * (P / self.P0_2)**(-2/3.))
+                self.Lambda[1] = min(self.max_K_2**2, self.Lambda[1])
+
+            # compute likelihood, but also generate a, Ainv
+            _ll = self.likelihood_worker(1)  # the 1 is "True"
+
+            # TODO: FIXME: this calls back to numpy at the Python layer
+            # - use https://github.com/bashtage/randomgen instead?
+            # a and Ainv are populated by the likelihood_worker()
+            linear_pars = random_state.multivariate_normal(
+                self.a, np.linalg.inv(self.Ainv), size=n_linear_samples_per)
+
+            for j in range(n_linear_samples_per):
+                ll[n, j] = _ll
+
+                samples[n, j, 0] = P
+                samples[n, j, 1] = e
+                samples[n, j, 2] = om
+                samples[n, j, 3] = M0
+                samples[n, j, 4] = chunk[n, 4] # s, jitter
+
+                for k in range(self.n_linear):
+                    samples[n, j, 5 + k] = linear_pars[j, k]
+
+        return (np.array(samples).reshape(n_samples * n_linear_samples_per, -1),
+                np.array(ll).reshape(n_samples * n_linear_samples_per))
