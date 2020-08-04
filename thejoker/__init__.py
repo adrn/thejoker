@@ -10,6 +10,10 @@ if not _ASTROPY_SETUP_:  # noqa
     from .plot import plot_rv_curves, plot_phase_fold  # noqa
     from .samples_analysis import *  # noqa
 
+    # SB2:
+    from .thejoker_sb2 import *
+    from .prior_sb2 import JokerSB2Prior
+
 
 __bibtex__ = __citation__ = """@ARTICLE{thejoker,
        author = {{Price-Whelan}, Adrian M. and {Hogg}, David W. and
@@ -34,3 +38,12 @@ archivePrefix = {arXiv},
       adsnote = {Provided by the SAO/NASA Astrophysics Data System}
 }
 """
+
+__all__ = [
+    'TheJoker',
+    'RVData',
+    'JokerSamples',
+    'JokerPrior',
+    'plot_rv_curves',
+    'TheJokerSB2'
+]
