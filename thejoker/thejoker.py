@@ -150,6 +150,7 @@ class TheJoker:
                          max_posterior_samples=None,
                          n_linear_samples=1,
                          return_logprobs=False,
+                         return_all_logprobs=False,
                          n_batches=None,
                          randomize_prior_order=False,
                          in_memory=False):
@@ -186,6 +187,9 @@ class TheJoker:
         return_logprobs : bool (optional)
             Also return the log-prior and (marginal) log-likelihood values
             evaluated at each sample.
+        return_all_logprobs : bool (optional)
+            This will return the marginal log-likelihood values at every prior
+            sample used in this sampling! Use at your own (memory) risk.
         n_batches : int (optional)
             The number of batches to split the prior samples into before
             distributing for computation. If using the (default) serial
@@ -236,7 +240,8 @@ class TheJoker:
                 random_state=self.random_state,
                 ln_prior=ln_prior,
                 max_posterior_samples=max_posterior_samples,
-                n_linear_samples=n_linear_samples)
+                n_linear_samples=n_linear_samples,
+                return_all_logprobs=return_all_logprobs)
 
         else:
             samples = rejection_sample_helper(
@@ -249,7 +254,8 @@ class TheJoker:
                 n_linear_samples=n_linear_samples,
                 return_logprobs=return_logprobs,
                 n_batches=n_batches,
-                randomize_prior_order=randomize_prior_order)
+                randomize_prior_order=randomize_prior_order,
+                return_all_logprobs=return_all_logprobs)
 
         return samples
 

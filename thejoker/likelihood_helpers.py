@@ -89,7 +89,8 @@ def make_full_samples_inmem(joker_helper, prior_samples_batch, random_state,
 def rejection_sample_inmem(joker_helper, prior_samples_batch, random_state,
                            ln_prior=None,
                            max_posterior_samples=None,
-                           n_linear_samples=1):
+                           n_linear_samples=1,
+                           return_all_logprobs=False):
 
     if max_posterior_samples is None:
         max_posterior_samples = len(prior_samples_batch)
@@ -112,7 +113,11 @@ def rejection_sample_inmem(joker_helper, prior_samples_batch, random_state,
         samples['ln_prior'] = ln_prior[good_samples_idx]
         samples['ln_likelihood'] = lls[good_samples_idx]
 
-    return samples
+    if return_all_logprobs:
+        return samples, lls
+
+    else:
+        return samples
 
 
 def iterative_rejection_inmem(joker_helper, prior_samples_batch, random_state,

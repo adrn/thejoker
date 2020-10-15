@@ -161,7 +161,8 @@ def rejection_sample_helper(joker_helper, prior_samples_file, pool,
                             n_linear_samples=1,
                             return_logprobs=False,
                             n_batches=None,
-                            randomize_prior_order=False):
+                            randomize_prior_order=False,
+                            return_all_logprobs=False):
 
     # Total number of samples in the cache:
     with tb.open_file(prior_samples_file, mode='r') as f:
@@ -227,7 +228,10 @@ def rejection_sample_helper(joker_helper, prior_samples_file, pool,
             data = f.root[JokerSamples._hdf5_path]
             samples['ln_prior'] = data.read_coordinates(full_samples_idx)
 
-    return samples
+    if return_all_logprobs:
+        return samples, lls
+    else:
+        return samples
 
 
 @tempfile_decorator
