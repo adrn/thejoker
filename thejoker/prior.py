@@ -247,7 +247,7 @@ class JokerPrior:
     @property
     def par_units(self):
         import exoplanet.units as xu
-        return {p.name: getattr(p, xu.UNIT_ATTR_NAME, u.one) for p in self.pars}
+        return {p.name: getattr(p, xu.UNIT_ATTR_NAME, u.one) for _, p in self.pars.items()}
 
     @property
     def n_offsets(self):
