@@ -399,7 +399,7 @@ class JokerSamples:
 
             t = self.tbl.copy()
             if t.meta.get('t0', None) is not None:
-                t.meta['__t0_bmjd'] = t.meta.pop('t0').tcb.mjd
+                t.meta['__t_ref_bmjd'] = t.meta.pop('t0').tcb.mjd
             t.write(output, overwrite=overwrite)
         else:
             write_table_hdf5(self.tbl, output, path=self._hdf5_path,
@@ -458,8 +458,8 @@ class JokerSamples:
             else:
                 tbl = QTable.read(filename)
 
-                if '__t0_bmjd' in tbl.meta.keys():
-                    tbl.meta['t0'] = Time(tbl.meta['__t0_bmjd'],
+                if '__t_ref_bmjd' in tbl.meta.keys():
+                    tbl.meta['t0'] = Time(tbl.meta['__t_ref_bmjd'],
                                           format='mjd', scale='tcb')
 
         else:

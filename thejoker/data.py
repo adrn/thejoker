@@ -36,9 +36,9 @@ class RVData:
         Filter out any NaN or Inf data points.
 
     """
-    @u.quantity_input(rv=u.km/u.s, rv_err=[u.km/u.s, (u.km/u.s)**2])
     @deprecated_renamed_argument('t0', 't_ref', since='v1.2',
                                  warning_type=DeprecationWarning)
+    @u.quantity_input(rv=u.km/u.s, rv_err=[u.km/u.s, (u.km/u.s)**2])
     def __init__(self, t, rv, rv_err, t_ref=None, clean=True):
 
         # For speed, time is saved internally as BMJD:
@@ -338,9 +338,9 @@ class RVData:
         return ts
 
     @classmethod
-    def from_timeseries(cls, f):
+    def from_timeseries(cls, f, path=None):
         from astropy.timeseries import TimeSeries
-        ts = TimeSeries.read(f)
+        ts = TimeSeries.read(f, path=path)
         t_ref = ts.meta.get('t_ref', None)
         return cls(t=ts['time'],
                    rv=ts['rv'],

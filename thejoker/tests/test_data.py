@@ -1,10 +1,13 @@
 """Tests for data.py and data_helpers.py"""
 
+import warnings
+
 # Third-party
 from astropy.table import Table
 from astropy.time import Time
 from astropy.timeseries import TimeSeries
 import astropy.units as u
+from erfa import ErfaWarning
 import numpy as np
 import pytest
 
@@ -28,16 +31,18 @@ from ..utils import DEFAULT_RNG
 
 
 def test_guess_time_format():
-    for yr in np.arange(1975, 2040, 5):
-        assert guess_time_format(Time(f'{yr}-05-23').jd) == 'jd'
-        assert guess_time_format(Time(f'{yr}-05-23').mjd) == 'mjd'
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', category=ErfaWarning)
+        for yr in np.arange(1975, 2040, 5):
+            assert guess_time_format(Time(f'{yr}-05-23').jd) == 'jd'
+            assert guess_time_format(Time(f'{yr}-05-23').mjd) == 'mjd'
 
-    with pytest.raises(NotImplementedError):
-        guess_time_format('asdfasdf')
+        with pytest.raises(NotImplementedError):
+            guess_time_format('asdfasdf')
 
-    for bad_val in np.array([0., 1450., 2500., 5000.]):
-        with pytest.raises(ValueError):
-            guess_time_format(bad_val)
+        for bad_val in np.array([0., 1450., 2500., 5000.]):
+            with pytest.raises(ValueError):
+                guess_time_format(bad_val)
 
 
 def get_valid_input(rnd=None, size=32):
@@ -105,12 +110,17 @@ def test_rvdata_init():
         data = RVData(*inputs, clean=False)
         assert len(data) == len(arr)
 
-    # With/without t0
-    data = RVData(t_arr, rv, err, t0=False)
-    assert data.t0 is None
+    # With/without t_ref
+    data = RVData(t_arr, rv, err, t_ref=False)
+    assert data.t_ref is None
 
-    data = RVData(t_arr, rv, err, t0=t_obj[3])
-    assert np.isclose(data.t0.mjd, t_obj[3].mjd)
+    data = RVData(t_arr, rv, err, t_ref=t_obj[3])
+    assert np.isclose(data.t_ref.mjd, t_obj[3].mjd)
+
+    #  deprecated:
+    with warnings.catch_warnings(record=True) as warns:
+        RVData(t_arr, rv, err, t0=t_obj[3])
+        assert len(warns) != 0
 
     # ------------------------------------------------------------------------
     # Test expected failures:
@@ -139,9 +149,9 @@ def test_rvdata_init():
     with pytest.raises(ValueError):
         RVData(t_obj, rv, bad_cov)
 
-    # t0 must be a Time instance
+    # t_ref must be a Time instance
     with pytest.raises(TypeError):
-        RVData(t_arr, rv, err, t0=t_arr[3])
+        RVData(t_arr, rv, err, t_ref=t_arr[3])
 
 
 @pytest.mark.parametrize("inputs",
@@ -175,12 +185,19 @@ def test_data_methods(tmpdir, inputs):
     assert isinstance(ts, TimeSeries)
 
     filename = str(tmpdir / 'test.hdf5')
-    ts.write(filename, serialize_meta=True)
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', category=UserWarning)
+        ts.write(filename, serialize_meta=True)
     data2 = RVData.from_timeseries(filename)
     assert u.allclose(data1.t.mjd, data2.t.mjd)
     assert u.allclose(data1.rv, data2.rv)
     assert u.allclose(data1.rv_err, data2.rv_err)
-    assert u.allclose(data1.t0.mjd, data2.t0.mjd)
+    assert u.allclose(data1.t_ref.mjd, data2.t_ref.mjd)
+
+    #  deprecated:
+    with warnings.catch_warnings(record=True) as warns:
+        data1.t0
+        assert len(warns) != 0
 
     # get phase from data object
     phase1 = data1.phase(P=15.*u.day)
@@ -211,13 +228,17 @@ def test_guess_from_table():
         assert np.allclose(data.t.utc.mjd, tbl['t'])
 
     if HAS_FUZZY:
-        for rv_name in ['VHELIO', 'VHELIO_AVG', 'vr', 'vlos']:
-            tbl = Table()
-            tbl['t'] = np.linspace(56423.234, 59324.342, 16) * u.day
-            tbl[rv_name] = np.random.normal(0, 1, len(tbl['t']))
-            tbl[f'{rv_name}_err'] = np.random.uniform(0.1, 0.2, len(tbl['t']))
-            data = RVData.guess_from_table(tbl, rv_unit=u.km/u.s, fuzzy=True)
-            assert np.allclose(data.t.utc.mjd, tbl['t'])
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', category=UserWarning)
+            for rv_name in ['VHELIO', 'VHELIO_AVG', 'vr', 'vlos']:
+                tbl = Table()
+                tbl['t'] = np.linspace(56423.234, 59324.342, 16) * u.day
+                tbl[rv_name] = np.random.normal(0, 1, len(tbl['t']))
+                tbl[f'{rv_name}_err'] = np.random.uniform(0.1, 0.2,
+                                                          len(tbl['t']))
+                data = RVData.guess_from_table(tbl, rv_unit=u.km/u.s,
+                                               fuzzy=True)
+                assert np.allclose(data.t.utc.mjd, tbl['t'])
 
     tbl = Table()
     tbl['t'] = np.linspace(2456423.234, 2459324.342, 16) * u.day

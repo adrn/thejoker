@@ -401,7 +401,7 @@ class TheJoker:
         data, ids, _ = validate_prepare_data(data,
                                              self.prior.poly_trend,
                                              self.prior.n_offsets)
-        x = data._t_bmjd - data._t0_bmjd
+        x = data._t_bmjd - data._t_ref_bmjd
         y = data.rv.value
         err = data.rv_err.to_value(data.rv.unit)
 
