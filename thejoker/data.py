@@ -1,3 +1,5 @@
+import warnings
+
 # Third-party
 from astropy.table import Table
 from astropy.time import Time
@@ -115,6 +117,13 @@ class RVData:
 
             self.t_ref = t_ref
             self._t_ref_bmjd = self.t_ref.tcb.mjd
+
+    @property
+    def t0(self):
+        warnings.warn('The argument and attribute "t0" has been renamed '
+                      'and should now be specified / accessed as "t_ref"',
+                      DeprecationWarning)
+        return self.t_ref
 
     # ------------------------------------------------------------------------
     # Computed or convenience properties
