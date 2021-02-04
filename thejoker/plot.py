@@ -4,6 +4,7 @@ import warnings
 # Third-party
 from astropy.time import Time
 import astropy.units as u
+from astropy.utils.decorators import deprecated_renamed_argument
 import numpy as np
 
 # Project
@@ -14,9 +15,11 @@ from .prior_helpers import get_v0_offsets_equiv_units
 __all__ = ['plot_rv_curves', 'plot_phase_fold']
 
 
+@deprecated_renamed_argument('relative_to_t0', 'relative_to_t_ref',
+                             since='v1.2', warning_type=DeprecationWarning)
 def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
                    ax=None, plot_kwargs=dict(), data_plot_kwargs=dict(),
-                   add_labels=True, relative_to_t0=False,
+                   add_labels=True, relative_to_t_ref=False,
                    apply_mean_v0_offset=True):
     """
     Plot radial velocity curves for the input set of orbital parameter
@@ -43,8 +46,8 @@ def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
         Passed to `thejoker.data.RVData.plot()`.
     add_labels : bool, optional
         Add labels to the axes or not.
-    relative_to_t0 : bool, optional
-        Plot the time axis relative to ``samples.t0``.
+    relative_to_t_ref : bool, optional
+        Plot the time axis relative to ``samples.t_ref``.
 
     Returns
     -------
@@ -109,10 +112,10 @@ def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
                   np.percentile(model_rv.max(axis=1), 95))
 
     bmjd = t_grid.tcb.mjd
-    if relative_to_t0:
-        if samples.t0 is None:
-            raise ValueError('Input samples object has no epoch .t0')
-        bmjd = bmjd - samples.t0.tcb.mjd
+    if relative_to_t_ref:
+        if samples.t_ref is None:
+            raise ValueError('Input samples object has no epoch .t_ref')
+        bmjd = bmjd - samples.t_ref.tcb.mjd
 
     ax.plot(bmjd, model_rv.T, **style)
 
@@ -140,7 +143,7 @@ def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
         if data_style['rv_unit'] != rv_unit:
             raise u.UnitsError("Data plot units don't match rv_unit!")
 
-        data.plot(ax=ax, relative_to_t0=relative_to_t0, add_labels=False,
+        data.plot(ax=ax, relative_to_t_ref=relative_to_t_ref, add_labels=False,
                   **data_style)
 
         _rv = data.rv.to(rv_unit).value
@@ -258,8 +261,8 @@ def plot_phase_fold(sample, data=None, phase_grid=None, ax=None,
             _tmp = sample[offset_name].item()
             rv[ids == i] -= _tmp
 
-        t0 = data.t0 + (P * M0/(2*np.pi*u.rad)).to(u.day,
-                                                   u.dimensionless_angles())
+        t0 = data.t_ref + (P * M0/(2*np.pi*u.rad)).to(
+            u.day, u.dimensionless_angles())
         phase = data.phase(P=P, t0=t0)
 
         if residual:

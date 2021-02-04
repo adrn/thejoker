@@ -2,11 +2,13 @@
 from collections import OrderedDict
 import copy
 import os
+import warnings
 
 # Third-party
 import astropy.units as u
 from astropy.time import Time
 from astropy.table import Table, QTable, Row, meta, serialize
+from astropy.utils.decorators import deprecated_renamed_argument
 import numpy as np
 from twobody import KeplerOrbit, PolynomialRVTrend
 
@@ -25,8 +27,10 @@ __all__ = ['JokerSamples']
 class JokerSamples:
     _hdf5_path = 'samples'
 
-    def __init__(self, samples=None, t0=None, n_offsets=None, poly_trend=None,
-                 **kwargs):
+    @deprecated_renamed_argument('t0', 't_ref', since='v1.2',
+                                 warning_type=DeprecationWarning)
+    def __init__(self, samples=None, t_ref=None, n_offsets=None,
+                 poly_trend=None, **kwargs):
         """
         A dictionary-like object for storing prior or posterior samples from
         The Joker, with some extra functionality.
@@ -37,13 +41,13 @@ class JokerSamples:
             The samples data as an Astropy table object, or something
             convertable to an Astropy table (e.g., a dictionary with
             `~astropy.units.Quantity` object values). This is optional because
-            the samples data can be added later by setting keys on the resulting
-            instance.
+            the samples data can be added later by setting keys on the
+            resulting instance.
         poly_trend : int (optional)
             Specifies the number of coefficients in an additional polynomial
             velocity trend, meant to capture long-term trends in the data. See
             the docstring for `thejoker.JokerPrior` for more details.
-        t0 : `astropy.time.Time`, numeric (optional)
+        t_ref : `astropy.time.Time`, numeric (optional)
             The reference time for the orbital parameters.
         **kwargs
             Additional keyword arguments are stored internally as metadata.
@@ -56,7 +60,7 @@ class JokerSamples:
             n_offsets = 0
 
         if isinstance(samples, Table) or isinstance(samples, Row):
-            t0 = samples.meta.pop('t0', t0)
+            t_ref = samples.meta.pop('t_ref', t_ref)
             poly_trend = samples.meta.pop('poly_trend', poly_trend)
             n_offsets = samples.meta.pop('n_offsets', n_offsets)
             kwargs.update(samples.meta)
@@ -84,7 +88,7 @@ class JokerSamples:
         valid_units['ln_likelihood'] = u.one
         self._valid_units = valid_units
 
-        self.tbl.meta['t0'] = t0
+        self.tbl.meta['t_ref'] = t_ref
         self.tbl.meta['poly_trend'] = poly_trend
         self.tbl.meta['n_offsets'] = n_offsets
         for k, v in kwargs.items():
@@ -125,8 +129,15 @@ class JokerSamples:
         self.tbl[key] = val
 
     @property
+    def t_ref(self):
+        return self.tbl.meta['t_ref']
+
+    @property
     def t0(self):
-        return self.tbl.meta['t0']
+        warnings.warn('The argument and attribute "t0" has been renamed '
+                      'and should now be specified / accessed as "t_ref"',
+                      DeprecationWarning)
+        return self.t_ref
 
     @property
     def poly_trend(self):
@@ -175,8 +186,8 @@ class JokerSamples:
             instance. If the samples object is scalar, no index is necessary.
         **kwargs
             Other keyword arguments are passed to the `twobody.KeplerOrbit`
-            initializer. For example, you can specify the inclination by passing
-            ``i=...`, or  longitude of the ascending node by passing
+            initializer. For example, you can specify the inclination by
+            passing ``i=...`, or  longitude of the ascending node by passing
             ``Omega=...``.
 
         Returns
@@ -188,7 +199,7 @@ class JokerSamples:
         if 'orbit' not in self._cache:
             self._cache['orbit'] = KeplerOrbit(P=1*u.yr, e=0., omega=0*u.deg,
                                                Omega=0*u.deg, i=90*u.deg,
-                                               a=1*u.au, t0=self.t0)
+                                               a=1*u.au, t0=self.t_ref)
 
         # all of this to avoid the __init__ of KeplerOrbit / KeplerElements
         orbit = copy.copy(self._cache['orbit'])
@@ -216,7 +227,7 @@ class JokerSamples:
             M0 = M0[index]
             trend_coeffs = [x[index] for x in trend_coeffs]
 
-        orbit.elements.t0 = self.t0
+        orbit.elements.t0 = self.t_ref
         orbit.elements._P = P
         orbit.elements._e = e * u.dimensionless_unscaled
         orbit.elements._a = a
@@ -224,7 +235,7 @@ class JokerSamples:
         orbit.elements._M0 = M0
         orbit.elements._Omega = kwargs.pop('Omega', 0*u.deg)
         orbit.elements._i = kwargs.pop('i', 90*u.deg)
-        orbit._vtrend = PolynomialRVTrend(trend_coeffs, t0=self.t0)
+        orbit._vtrend = PolynomialRVTrend(trend_coeffs, t0=self.t_ref)
         orbit._barycenter = kwargs.pop('barycenter', None)
 
         if kwargs:
@@ -347,7 +358,7 @@ class JokerSamples:
         **kwargs
             Additional keyword arguments are passed through to the initializer,
             so this supports any arguments accepted by the initializer (e.g.,
-            ``t0``, ``n_offsets``, ``poly_trend``)
+            ``t_ref``, ``n_offsets``, ``poly_trend``)
 
         Returns
         -------
@@ -398,8 +409,17 @@ class JokerSamples:
                 raise NotImplementedError()
 
             t = self.tbl.copy()
-            if t.meta.get('t0', None) is not None:
-                t.meta['__t_ref_bmjd'] = t.meta.pop('t0').tcb.mjd
+
+            if 't0' in t.meta:
+                warnings.warn('This data file was produced with a deprecated '
+                              'version of The Joker and uses old naming '
+                              'conventions for the reference time. This file '
+                              'may not work with future versions of thejoker.',
+                              DeprecationWarning)
+                t.meta['t_ref'] = t.meta['t0']
+
+            if t.meta.get('t_ref', None) is not None:
+                t.meta['__t_ref_bmjd'] = t.meta.pop('t_ref').tcb.mjd
             t.write(output, overwrite=overwrite)
         else:
             write_table_hdf5(self.tbl, output, path=self._hdf5_path,
@@ -459,8 +479,8 @@ class JokerSamples:
                 tbl = QTable.read(filename)
 
                 if '__t_ref_bmjd' in tbl.meta.keys():
-                    tbl.meta['t0'] = Time(tbl.meta['__t_ref_bmjd'],
-                                          format='mjd', scale='tcb')
+                    tbl.meta['t_ref'] = Time(tbl.meta['__t_ref_bmjd'],
+                                             format='mjd', scale='tcb')
 
         else:
             tbl = QTable.read(filename, path=path)
@@ -469,4 +489,4 @@ class JokerSamples:
 
     def copy(self):
         """Return a copy of this instance"""
-        return self.__class__(self.tbl.copy(), t0=self.t0)
+        return self.__class__(self.tbl.copy(), t_ref=self.t_ref)

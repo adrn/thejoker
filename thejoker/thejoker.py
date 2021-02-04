@@ -491,7 +491,7 @@ class TheJoker:
 
         samples = JokerSamples(poly_trend=self.prior.poly_trend,
                                n_offsets=self.prior.n_offsets,
-                               t0=data.t0)
+                               t_ref=data.t_ref)
 
         if names is None:
             names = self.prior.par_names

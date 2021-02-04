@@ -250,7 +250,7 @@ def rejection_sample(samples, prior, data, rnd=None):
             unpack_units[k] = samples[k].unit
 
     return JokerSamples.unpack(all_packed, unpack_units, prior.poly_trend,
-                               data.t0)
+                               data.t_ref)
 
 
 def get_aAbB(samples, prior, data):
