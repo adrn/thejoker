@@ -40,7 +40,8 @@ class TheJoker:
         Default: ``~/.thejoker``
     """
 
-    def __init__(self, prior, pool=None, random_state=None, tempfile_path=None):
+    def __init__(self, prior, pool=None, random_state=None,
+                 tempfile_path=None):
 
         # set the processing pool
         if pool is None:
@@ -100,7 +101,7 @@ class TheJoker:
 
     def marginal_ln_likelihood(self, data, prior_samples, n_batches=None,
                                in_memory=False):
-        f"""
+        """
         Compute the marginal log-likelihood at each of the input prior samples.
 
         Parameters
@@ -154,7 +155,7 @@ class TheJoker:
                          n_batches=None,
                          randomize_prior_order=False,
                          in_memory=False):
-        f"""
+        """
         Run The Joker's rejection sampling on prior samples to get posterior
         samples for the input data.
 

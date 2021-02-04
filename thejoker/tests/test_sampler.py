@@ -123,7 +123,7 @@ def test_rejection_sample(tmpdir, prior):
     flat_data, orbit = make_data(K=0.1*u.m/u.s)
 
     prior_samples = prior.sample(size=16384, return_logprobs=True)
-    filename = str(tmpdir / f'samples.hdf5')
+    filename = str(tmpdir / 'samples.hdf5')
     prior_samples.write(filename, overwrite=True)
 
     joker = TheJoker(prior)
@@ -170,7 +170,7 @@ def test_iterative_rejection_sample(tmpdir, prior):
     data, orbit = make_data(n_times=3)
 
     prior_samples = prior.sample(size=10_000, return_logprobs=True)
-    filename = str(tmpdir / f'samples.hdf5')
+    filename = str(tmpdir / 'samples.hdf5')
     prior_samples.write(filename, overwrite=True)
 
     joker = TheJoker(prior, random_state=DEFAULT_RNG(42))

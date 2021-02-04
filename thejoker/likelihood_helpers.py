@@ -79,7 +79,7 @@ def make_full_samples_inmem(joker_helper, prior_samples_batch, random_state,
     # unpack the raw samples
     samples = JokerSamples.unpack(raw_samples,
                                   joker_helper.internal_units,
-                                  t0=joker_helper.data.t0,
+                                  t_ref=joker_helper.data.t_ref,
                                   poly_trend=joker_helper.prior.poly_trend,
                                   n_offsets=joker_helper.prior.n_offsets)
 
