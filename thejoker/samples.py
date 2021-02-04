@@ -140,6 +140,42 @@ class JokerSamples:
                       TheJokerDeprecationWarning)
         return self.t_ref
 
+    @u.quantity_input(phase=u.rad)
+    def get_time_with_phase(self, phase=0*u.rad, t_ref=None):
+        """
+        Use the phase at reference time to convert to a time with given phase.
+
+        Parameters
+        ----------
+        phase : quantity_like [angle] (optional)
+            Get the time at which the phase is equal to this value.
+        t_ref : `~astropy.time.Time` (optional)
+            The reference time.
+
+        """
+        if t_ref is None:
+            if self.t_ref is None:
+                raise ValueError("This samples object has no reference time "
+                                 "t_ref, so you must pass in the reference "
+                                 "time via t_ref")
+            else:
+                t_ref = self.t_ref
+
+        elif self.t_ref is not None:
+            raise ValueError("You passed in a reference time t_ref, but this "
+                             "samples object already has a reference time.")
+
+        dt = (self['P'] * self['M0'] / (2*np.pi)).to(
+            u.day, u.dimensionless_angles())
+        t0 = t_ref + dt
+
+        return t0 + (self['P'] * phase / (2*np.pi)).to(
+            u.day, u.dimensionless_angles())
+
+    # TODO: make a property, after deprecation cycle, to replace .t0
+    def get_t0(self, t_ref=None):
+        return self.get_time_with_phase(phase=0*u.rad, t_ref=t_ref)
+
     @property
     def poly_trend(self):
         return self.tbl.meta['poly_trend']
