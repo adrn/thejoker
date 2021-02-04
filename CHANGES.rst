@@ -4,6 +4,11 @@
 - ``TheJoker`` now expects a ``numpy.random.Generator`` instance instead of a
   ``RandomState`` for controlling random number generation.
 
+- Renamed ``t0`` to ``t_ref`` in places where it actually represents a reference
+  time.
+
+- Added functionality to compute ``t0``, i.e. the time of phase=0, for samples.
+
 1.1 (2020-04-19)
 ================
 
