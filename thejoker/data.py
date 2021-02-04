@@ -1,6 +1,7 @@
 # Third-party
 from astropy.table import Table
 from astropy.time import Time
+from astropy.utils.decorators import deprecated_renamed_argument
 import astropy.units as u
 import numpy as np
 
@@ -26,7 +27,7 @@ class RVData:
         If 1D, assumed to be the standard deviation for each RV measurement. If
         this input is 2-dimensional, this is assumed to be a covariance matrix
         for all data points.
-    t0 : numeric (optional) [day]
+    t_ref : numeric (optional) [day]
         A reference time. Default is to use the minimum time in barycentric MJD
         (days). Set to ``False`` to disable subtracting the reference time.
     clean : bool (optional)
@@ -34,7 +35,9 @@ class RVData:
 
     """
     @u.quantity_input(rv=u.km/u.s, rv_err=[u.km/u.s, (u.km/u.s)**2])
-    def __init__(self, t, rv, rv_err, t0=None, clean=True):
+    @deprecated_renamed_argument('t0', 't_ref', since='v1.2',
+                                 warning_type=DeprecationWarning)
+    def __init__(self, t, rv, rv_err, t_ref=None, clean=True):
 
         # For speed, time is saved internally as BMJD:
         if isinstance(t, Time):
@@ -62,8 +65,8 @@ class RVData:
 
         # make sure shapes are consistent
         if self._t_bmjd.shape != self.rv.shape:
-            raise ValueError(f"Shape of input times and RVs must be consistent "
-                             f"({self._t_bmjd.shape} vs {self.rv.shape})")
+            raise ValueError(f"Shape of input times and RVs must be consistent"
+                             f" ({self._t_bmjd.shape} vs {self.rv.shape})")
 
         if clean:
             # filter out NAN or INF data points
@@ -98,21 +101,20 @@ class RVData:
         else:
             self.rv_err = self.rv_err[idx]
 
-        # if no offset is provided, subtract the minimum time
-        if t0 is False:
-            self.t0 = None
-            self._t0_bmjd = 0.
+        if t_ref is False:
+            self.t_ref = None
+            self._t_ref_bmjd = 0.
 
         else:
-            if t0 is None:
-                t0 = self.t.min()
+            if t_ref is None:
+                t_ref = self.t.min()
 
-            if not isinstance(t0, Time):
-                raise TypeError('If a reference time t0 is specified, it must '
-                                'be an astropy.time.Time object.')
+            if not isinstance(t_ref, Time):
+                raise TypeError('If a reference time t_ref is specified, it '
+                                'must be an astropy.time.Time object.')
 
-            self.t0 = t0
-            self._t0_bmjd = self.t0.tcb.mjd
+            self.t_ref = t_ref
+            self._t_ref_bmjd = self.t_ref.tcb.mjd
 
     # ------------------------------------------------------------------------
     # Computed or convenience properties
@@ -148,8 +150,10 @@ class RVData:
     # Other initialization methods:
 
     @classmethod
+    @deprecated_renamed_argument('t0', 't_ref', since='v1.2',
+                                 warning_type=DeprecationWarning)
     def guess_from_table(cls, tbl, time_kwargs=None, rv_unit=None,
-                         fuzzy=False, t0=None):
+                         fuzzy=False, t_ref=None):
         """
         Try to construct an ``RVData`` instance by guessing column names from
         the input table.
@@ -308,7 +312,7 @@ class RVData:
             if err_data is not None and err_data.unit is u.one:
                 err_data = err_data * rv_unit
 
-        return cls(time, rv_data, err_data, t0=t0)
+        return cls(time, rv_data, err_data, t_ref=t_ref)
 
     # ------------------------------------------------------------------------
     # To other classes
@@ -321,18 +325,18 @@ class RVData:
 
         ts = TimeSeries(time=self.t, data={'rv': self.rv,
                                            'rv_err': self.rv_err})
-        ts.meta['t0'] = self.t0
+        ts.meta['t_ref'] = self.t_ref
         return ts
 
     @classmethod
     def from_timeseries(cls, f):
         from astropy.timeseries import TimeSeries
         ts = TimeSeries.read(f)
-        t0 = ts.meta.get('t0', None)
+        t_ref = ts.meta.get('t_ref', None)
         return cls(t=ts['time'],
                    rv=ts['rv'],
                    rv_err=ts['rv_err'],
-                   t0=t0)
+                   t_ref=t_ref)
 
     # ------------------------------------------------------------------------
     # Other methods
@@ -342,7 +346,7 @@ class RVData:
         Convert time to a phase.
 
         By default, the phase is relative to the internal reference epoch,
-        ``t0``, but a new epoch can also be specified to this method.
+        ``t_ref``, but a new epoch can also be specified to this method.
 
         Parameters
         ----------
@@ -359,11 +363,14 @@ class RVData:
 
         """
         if t0 is None:
-            t0 = self.t0
+            t0 = self.t_ref
         return ((self.t - t0) / P) % 1.
 
+    @deprecated_renamed_argument('relative_to_t0', 'relative_to_t_ref',
+                                 since='v1.2', warning_type=DeprecationWarning)
     def plot(self, ax=None, rv_unit=None, time_format='mjd', phase_fold=None,
-             relative_to_t0=False, add_labels=True, color_by=None, **kwargs):
+             relative_to_t_ref=False, add_labels=True, color_by=None,
+             **kwargs):
         """
         Plot the data points.
 
@@ -384,8 +391,8 @@ class RVData:
         phase_fold : quantity_like (optional)
             Plot the phase instead of the time by folding on a period value
             passed in to this argument as an Astropy `~astropy.units.Quantity`.
-        relative_to_t0 : bool (optional)
-            Plot the time relative to the reference epoch, ``t0``.
+        relative_to_t_ref : bool (optional)
+            Plot the time relative to the reference epoch, ``t_ref``.
         add_labels : bool (optional)
             Add labels to the figure.
         **kwargs
@@ -414,12 +421,12 @@ class RVData:
 
         if callable(time_format):
             t = time_format(self.t)
-            t0 = time_format(self.t0)
+            t0 = time_format(self.t_ref)
         else:
             t = getattr(self.t, time_format)
-            t0 = getattr(self.t0, time_format)
+            t0 = getattr(self.t_ref, time_format)
 
-        if relative_to_t0:
+        if relative_to_t_ref:
             t = t - t0
 
         if phase_fold:
