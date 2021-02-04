@@ -10,6 +10,7 @@ import numpy as np
 # Project
 from .logging import logger
 from .data_helpers import guess_time_format
+from .exceptions import TheJokerDeprecationWarning
 
 __all__ = ['RVData']
 
@@ -37,7 +38,7 @@ class RVData:
 
     """
     @deprecated_renamed_argument('t0', 't_ref', since='v1.2',
-                                 warning_type=DeprecationWarning)
+                                 warning_type=TheJokerDeprecationWarning)
     @u.quantity_input(rv=u.km/u.s, rv_err=[u.km/u.s, (u.km/u.s)**2])
     def __init__(self, t, rv, rv_err, t_ref=None, clean=True):
 
@@ -122,7 +123,7 @@ class RVData:
     def t0(self):
         warnings.warn('The argument and attribute "t0" has been renamed '
                       'and should now be specified / accessed as "t_ref"',
-                      DeprecationWarning)
+                      TheJokerDeprecationWarning)
         return self.t_ref
 
     # ------------------------------------------------------------------------
@@ -160,7 +161,7 @@ class RVData:
 
     @classmethod
     @deprecated_renamed_argument('t0', 't_ref', since='v1.2',
-                                 warning_type=DeprecationWarning)
+                                 warning_type=TheJokerDeprecationWarning)
     def guess_from_table(cls, tbl, time_kwargs=None, rv_unit=None,
                          fuzzy=False, t_ref=None):
         """
@@ -376,7 +377,8 @@ class RVData:
         return ((self.t - t0) / P) % 1.
 
     @deprecated_renamed_argument('relative_to_t0', 'relative_to_t_ref',
-                                 since='v1.2', warning_type=DeprecationWarning)
+                                 since='v1.2',
+                                 warning_type=TheJokerDeprecationWarning)
     def plot(self, ax=None, rv_unit=None, time_format='mjd', phase_fold=None,
              relative_to_t_ref=False, add_labels=True, color_by=None,
              **kwargs):

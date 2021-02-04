@@ -20,6 +20,7 @@ from .prior_helpers import (validate_poly_trend, validate_n_offsets,
                             get_linear_equiv_units,
                             get_v0_offsets_equiv_units)
 from .samples_helpers import write_table_hdf5
+from .exceptions import TheJokerDeprecationWarning
 
 __all__ = ['JokerSamples']
 
@@ -28,7 +29,7 @@ class JokerSamples:
     _hdf5_path = 'samples'
 
     @deprecated_renamed_argument('t0', 't_ref', since='v1.2',
-                                 warning_type=DeprecationWarning)
+                                 warning_type=TheJokerDeprecationWarning)
     def __init__(self, samples=None, t_ref=None, n_offsets=None,
                  poly_trend=None, **kwargs):
         """
@@ -136,7 +137,7 @@ class JokerSamples:
     def t0(self):
         warnings.warn('The argument and attribute "t0" has been renamed '
                       'and should now be specified / accessed as "t_ref"',
-                      DeprecationWarning)
+                      TheJokerDeprecationWarning)
         return self.t_ref
 
     @property
@@ -415,7 +416,7 @@ class JokerSamples:
                               'version of The Joker and uses old naming '
                               'conventions for the reference time. This file '
                               'may not work with future versions of thejoker.',
-                              DeprecationWarning)
+                              TheJokerDeprecationWarning)
                 t.meta['t_ref'] = t.meta['t0']
 
             if t.meta.get('t_ref', None) is not None:
