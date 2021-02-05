@@ -1,4 +1,5 @@
 # Third-party
+import h5py
 import numpy as np
 import tables as tb
 
@@ -168,13 +169,24 @@ def rejection_sample_helper(joker_helper, prior_samples_file, pool,
     with tb.open_file(prior_samples_file, mode='r') as f:
         n_total_samples = f.root[JokerSamples._hdf5_path].shape[0]
 
+        # TODO: pytables doesn't support variable length strings
+        # if return_logprobs:
+        #     if not table_contains_column(f.root, 'ln_prior'):
+        #         raise RuntimeError(
+        #             "return_logprobs=True but ln_prior values not found in "
+        #             "prior cache: make sure you generate prior samples with "
+        #             "prior.sample (..., return_logprobs=True) before saving "
+        #             "the prior samples.")
+
+    # TODO: pytables doesn't support variable length strings
+    with h5py.File(prior_samples_file, mode='r') as f:
         if return_logprobs:
-            if not table_contains_column(f.root, 'ln_prior'):
-                raise RuntimeError("return_logprobs=True but ln_prior values "
-                                   "not found in prior cache: make sure you "
-                                   "generate prior samples with prior.sample "
-                                   "(..., return_logprobs=True) before saving "
-                                   "the prior samples.")
+            if not table_contains_column(f, 'ln_prior'):
+                raise RuntimeError(
+                    "return_logprobs=True but ln_prior values not found in "
+                    "prior cache: make sure you generate prior samples with "
+                    "prior.sample (..., return_logprobs=True) before saving "
+                    "the prior samples.")
 
     if n_prior_samples is None:
         n_prior_samples = n_total_samples
