@@ -1,7 +1,10 @@
 # Third-party
 import astropy.units as u
 import numpy as np
-from theano.gof import MissingInputError
+try:
+    from theano.gof.fg import MissingInputError
+except ImportError:
+    from theano.graph.fg import MissingInputError
 
 # Project
 from .logging import logger
@@ -30,7 +33,7 @@ def _validate_model(model):
 
     if not isinstance(model, pm.Model):
         raise TypeError("Input model must be a pymc3.Model instance, not "
-                        "a {}".format(type(model)))
+                        f"a {type(model)}")
 
     return model
 
@@ -247,7 +250,8 @@ class JokerPrior:
     @property
     def par_units(self):
         import exoplanet.units as xu
-        return {p.name: getattr(p, xu.UNIT_ATTR_NAME, u.one) for _, p in self.pars.items()}
+        return {p.name: getattr(p, xu.UNIT_ATTR_NAME, u.one)
+                for _, p in self.pars.items()}
 
     @property
     def n_offsets(self):
@@ -290,7 +294,6 @@ class JokerPrior:
             The random samples.
 
         """
-        from theano.gof.fg import MissingInputError
         from pymc3.distributions import draw_values
         import exoplanet.units as xu
 
