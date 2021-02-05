@@ -2,6 +2,7 @@
 from astropy.table import QTable
 import astropy.units as u
 from astropy.io.misc.hdf5 import meta_path
+import h5py
 import numpy as np
 import tables as tb
 
@@ -36,8 +37,11 @@ def test_table_header_to_units(tmpdir):
     tbl['c'] = np.arange(10) * u.day
     tbl.write(filename, path='test', serialize_meta=True)
 
-    with tb.open_file(filename, mode='r') as f:
-        units = table_header_to_units(f.root[meta_path('test')])
+    # TODO: pytables doesn't support variable length strings
+    # with tb.open_file(filename, mode='r') as f:
+    #     units = table_header_to_units(f.root[meta_path('test')])
+    with h5py.File(filename, mode='r') as f:
+        units = table_header_to_units(f[meta_path('test')])
 
     for col in tbl.colnames:
         assert tbl[col].unit == units[col]
@@ -52,11 +56,13 @@ def test_table_contains_column(tmpdir):
     tbl['c'] = np.arange(10) * u.day
     tbl.write(filename, path=JokerSamples._hdf5_path, serialize_meta=True)
 
-    with tb.open_file(filename, mode='r') as f:
-        assert table_contains_column(f.root, 'a')
-        assert table_contains_column(f.root, 'b')
-        assert table_contains_column(f.root, 'c')
-        assert not table_contains_column(f.root, 'd')
+    # TODO: pytables doesn't support variable length strings
+    # with tb.open_file(filename, mode='r') as f:
+    with h5py.File(filename, mode='r') as f:
+        assert table_contains_column(f, 'a')
+        assert table_contains_column(f, 'b')
+        assert table_contains_column(f, 'c')
+        assert not table_contains_column(f, 'd')
 
 
 def test_read_batch_slice(tmpdir):
