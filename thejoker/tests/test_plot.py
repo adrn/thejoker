@@ -27,7 +27,7 @@ from .test_sampler import make_data
 def test_plot_rv_curves(prior):
 
     data, _ = make_data()
-    samples = prior.sample(100, generate_linear=True, t0=Time('J2000'))
+    samples = prior.sample(100, generate_linear=True, t_ref=Time('J2000'))
 
     t_grid = np.random.uniform(56000, 56500, 1024)
     t_grid.sort()
@@ -50,7 +50,7 @@ def test_plot_rv_curves(prior):
 def test_plot_phase_fold(prior):
 
     data, _ = make_data()
-    samples = prior.sample(100, generate_linear=True, t0=Time('J2000'))
+    samples = prior.sample(100, generate_linear=True, t_ref=Time('J2000'))
 
     plot_phase_fold(samples.median(), data)
     plot_phase_fold(samples[0:1], data)
