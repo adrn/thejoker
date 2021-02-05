@@ -7,7 +7,10 @@ from astropy.table import Table
 from astropy.time import Time
 from astropy.timeseries import TimeSeries
 import astropy.units as u
-from erfa import ErfaWarning
+try:
+    from erfa import ErfaWarning
+except ImportError:  # lts version of Astropy
+    ErfaWarning = Warning
 import numpy as np
 import pytest
 
