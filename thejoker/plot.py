@@ -4,6 +4,7 @@ import warnings
 # Third-party
 from astropy.time import Time
 import astropy.units as u
+from astropy.utils.decorators import deprecated_renamed_argument
 import numpy as np
 
 # Project
@@ -14,9 +15,11 @@ from .prior_helpers import get_v0_offsets_equiv_units
 __all__ = ['plot_rv_curves', 'plot_phase_fold']
 
 
+@deprecated_renamed_argument('relative_to_t0', 'relative_to_t_ref',
+                             since='v1.2', warning_type=DeprecationWarning)
 def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
                    ax=None, plot_kwargs=dict(), data_plot_kwargs=dict(),
-                   add_labels=True, relative_to_t0=False,
+                   add_labels=True, relative_to_t_ref=False,
                    apply_mean_v0_offset=True):
     """
     Plot radial velocity curves for the input set of orbital parameter
@@ -43,8 +46,8 @@ def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
         Passed to `thejoker.data.RVData.plot()`.
     add_labels : bool, optional
         Add labels to the axes or not.
-    relative_to_t0 : bool, optional
-        Plot the time axis relative to ``samples.t0``.
+    relative_to_t_ref : bool, optional
+        Plot the time axis relative to ``samples.t_ref``.
 
     Returns
     -------
@@ -109,10 +112,10 @@ def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
                   np.percentile(model_rv.max(axis=1), 95))
 
     bmjd = t_grid.tcb.mjd
-    if relative_to_t0:
-        if samples.t0 is None:
-            raise ValueError('Input samples object has no epoch .t0')
-        bmjd = bmjd - samples.t0.tcb.mjd
+    if relative_to_t_ref:
+        if samples.t_ref is None:
+            raise ValueError('Input samples object has no epoch .t_ref')
+        bmjd = bmjd - samples.t_ref.tcb.mjd
 
     ax.plot(bmjd, model_rv.T, **style)
 
@@ -140,7 +143,7 @@ def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
         if data_style['rv_unit'] != rv_unit:
             raise u.UnitsError("Data plot units don't match rv_unit!")
 
-        data.plot(ax=ax, relative_to_t0=relative_to_t0, add_labels=False,
+        data.plot(ax=ax, relative_to_t_ref=relative_to_t_ref, add_labels=False,
                   **data_style)
 
         _rv = data.rv.to(rv_unit).value
@@ -167,7 +170,8 @@ def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
     return fig
 
 
-def plot_phase_fold(sample, data=None, phase_grid=None, ax=None,
+def plot_phase_fold(sample, data=None, ax=None,
+                    with_time_unit=False, n_phase_samples=4096,
                     add_labels=True, show_s_errorbar=True, residual=False,
                     remove_trend=True, plot_kwargs=None, data_plot_kwargs=None):
     """
@@ -183,6 +187,10 @@ def plot_phase_fold(sample, data=None, phase_grid=None, ax=None,
     ax : `~matplotlib.Axes`, optional
         A matplotlib axes object to plot on to. If not specified, will
         create a new figure and plot on that.
+    with_time_unit : bool, `astropy.units.Unit` (optional)
+        Plot the phase in time units, not on 0–1 scale (i.e., mod P not mod 1).
+    n_phase_samples : int (optional)
+        Number of grid points in phase grid.
     add_labels : bool, optional
         Add labels to the axes or not.
     show_s_errorbar : bool, optional
@@ -241,7 +249,6 @@ def plot_phase_fold(sample, data=None, phase_grid=None, ax=None,
     # Get orbit from input sample
     orbit = sample.get_orbit()
     P = sample['P'].item()
-    M0 = sample['M0'].item()
 
     if data is not None:
         rv = data.rv
@@ -258,9 +265,16 @@ def plot_phase_fold(sample, data=None, phase_grid=None, ax=None,
             _tmp = sample[offset_name].item()
             rv[ids == i] -= _tmp
 
-        t0 = data.t0 + (P * M0/(2*np.pi*u.rad)).to(u.day,
-                                                   u.dimensionless_angles())
-        phase = data.phase(P=P, t0=t0)
+        t0 = sample.get_t0()
+
+        time_unit = u.day
+        dt_jd = (data.t - t0).tcb.jd * u.day
+        if with_time_unit is False:
+            phase = (dt_jd / P) % 1
+        else:
+            if with_time_unit is not True:
+                time_unit = u.Unit(with_time_unit)
+            phase = (dt_jd % P).to_value(time_unit)
 
         if residual:
             rv = rv - orbit.radial_velocity(data.t)
@@ -281,15 +295,25 @@ def plot_phase_fold(sample, data=None, phase_grid=None, ax=None,
     elif data is None and residual:
         raise ValueError("TODO: not allowed")
 
-    if phase_grid is None:
-        phase_grid = np.linspace(0, 1, 4096)  # MAGIC NUMBER
+    # Set up the phase grid:
+    unit_phase_grid = np.linspace(0, 1, n_phase_samples)
+    if with_time_unit is not False:
+        phase_grid = unit_phase_grid * P.to_value(time_unit)
+    else:
+        phase_grid = unit_phase_grid
+
     if not residual:
         ax.plot(phase_grid,
-                orbit.radial_velocity(t0 + P * phase_grid).to_value(rv_unit),
+                orbit.radial_velocity(t0 +
+                                      P * unit_phase_grid).to_value(rv_unit),
                 **orbit_style)
 
     if add_labels:
-        ax.set_xlabel(r'phase, $\frac{M-M_0}{2\pi}$')
+        if with_time_unit is not False:
+            ax.set_xlabel(r'phase, $(t-t_0)~{\rm mod}~P$ ' +
+                          f'[{time_unit:latex_inline}]')
+        else:
+            ax.set_xlabel(r'phase, $\frac{t-t_0}{P}$')
         ax.set_ylabel(f'RV [{data.rv.unit:latex_inline}]')
 
     return fig

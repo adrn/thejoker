@@ -12,6 +12,7 @@ import astropy.units as u
 from astropy.table.meta import get_header_from_yaml
 from astropy.io.misc.hdf5 import meta_path
 from astropy.utils.decorators import wraps
+import h5py
 import numpy as np
 import tables as tb
 
@@ -183,6 +184,12 @@ def read_batch_slice(prior_samples_file, columns, slice, units=None):
 
     path = JokerSamples._hdf5_path
 
+    # We have to do this with h5py because current (2021-02-05) versions of
+    # pytables don't support variable length strings, which h5py is using to
+    # serialize units in the astropy table metadata
+    with h5py.File(prior_samples_file, mode='r') as f:
+        table_units = table_header_to_units(f[meta_path(path)])
+
     batch = None
     with tb.open_file(prior_samples_file, mode='r') as f:
 
@@ -194,7 +201,8 @@ def read_batch_slice(prior_samples_file, columns, slice, units=None):
             batch[:, i] = arr
 
         if units is not None:
-            table_units = table_header_to_units(f.root[meta_path(path)])
+            # See comment above
+            # table_units = table_header_to_units(f.root[meta_path(path)])
             for i, name in enumerate(columns):
                 if name in units:
                     batch[:, i] *= table_units[name].to(units[name])
@@ -209,13 +217,20 @@ def read_batch_idx(prior_samples_file, columns, idx, units=None):
     """
     path = JokerSamples._hdf5_path
 
+    # We have to do this with h5py because current (2021-02-05) versions of
+    # pytables don't support variable length strings, which h5py is using to
+    # serialize units in the astropy table metadata
+    with h5py.File(prior_samples_file, mode='r') as f:
+        table_units = table_header_to_units(f[meta_path(path)])
+
     batch = np.zeros((len(idx), len(columns)))
     with tb.open_file(prior_samples_file, mode='r') as f:
         for i, name in enumerate(columns):
             batch[:, i] = f.root[path].read_coordinates(idx, field=name)
 
         if units is not None:
-            table_units = table_header_to_units(f.root[meta_path(path)])
+            # See comment above
+            # table_units = table_header_to_units(f.root[meta_path(path)])
             for i, name in enumerate(columns):
                 if name in units:
                     batch[:, i] *= table_units[name].to(units[name])

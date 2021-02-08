@@ -1,4 +1,5 @@
 # Third-party
+import h5py
 import numpy as np
 import tables as tb
 
@@ -146,7 +147,7 @@ def make_full_samples(joker_helper, prior_samples_file, pool, random_state,
     # unpack the raw samples
     samples = JokerSamples.unpack(raw_samples,
                                   joker_helper.internal_units,
-                                  t0=joker_helper.data.t0,
+                                  t_ref=joker_helper.data.t_ref,
                                   poly_trend=joker_helper.prior.poly_trend,
                                   n_offsets=joker_helper.prior.n_offsets)
 
@@ -168,13 +169,24 @@ def rejection_sample_helper(joker_helper, prior_samples_file, pool,
     with tb.open_file(prior_samples_file, mode='r') as f:
         n_total_samples = f.root[JokerSamples._hdf5_path].shape[0]
 
+        # TODO: pytables doesn't support variable length strings
+        # if return_logprobs:
+        #     if not table_contains_column(f.root, 'ln_prior'):
+        #         raise RuntimeError(
+        #             "return_logprobs=True but ln_prior values not found in "
+        #             "prior cache: make sure you generate prior samples with "
+        #             "prior.sample (..., return_logprobs=True) before saving "
+        #             "the prior samples.")
+
+    # TODO: pytables doesn't support variable length strings
+    with h5py.File(prior_samples_file, mode='r') as f:
         if return_logprobs:
-            if not table_contains_column(f.root, 'ln_prior'):
-                raise RuntimeError("return_logprobs=True but ln_prior values "
-                                   "not found in prior cache: make sure you "
-                                   "generate prior samples with prior.sample "
-                                   "(..., return_logprobs=True) before saving "
-                                   "the prior samples.")
+            if not table_contains_column(f, 'ln_prior'):
+                raise RuntimeError(
+                    "return_logprobs=True but ln_prior values not found in "
+                    "prior cache: make sure you generate prior samples with "
+                    "prior.sample (..., return_logprobs=True) before saving "
+                    "the prior samples.")
 
     if n_prior_samples is None:
         n_prior_samples = n_total_samples
@@ -250,13 +262,24 @@ def iterative_rejection_helper(joker_helper, prior_samples_file, pool,
     with tb.open_file(prior_samples_file, mode='r') as f:
         n_total_samples = f.root[JokerSamples._hdf5_path].shape[0]
 
+        # TODO: pytables doesn't support variable length strings
+        # if return_logprobs:
+        #     if not table_contains_column(f.root, 'ln_prior'):
+        #         raise RuntimeError(
+        #             "return_logprobs=True but ln_prior values not found in "
+        #             "prior cache: make sure you generate prior samples with "
+        #             "prior.sample (..., return_logprobs=True) before saving "
+        #             "the prior samples.")
+
+    # TODO: pytables doesn't support variable length strings
+    with h5py.File(prior_samples_file, mode='r') as f:
         if return_logprobs:
-            if not table_contains_column(f.root, 'ln_prior'):
-                raise RuntimeError("return_logprobs=True but ln_prior values "
-                                   "not found in prior cache: make sure you "
-                                   "generate prior samples with prior.sample "
-                                   "(..., return_logprobs=True) before saving "
-                                   "the prior samples.")
+            if not table_contains_column(f, 'ln_prior'):
+                raise RuntimeError(
+                    "return_logprobs=True but ln_prior values not found in "
+                    "prior cache: make sure you generate prior samples with "
+                    "prior.sample (..., return_logprobs=True) before saving "
+                    "the prior samples.")
 
     if max_prior_samples is None:
         max_prior_samples = n_total_samples

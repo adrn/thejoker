@@ -125,7 +125,7 @@ def design_matrix(nonlinear_p, data, prior):
     P, ecc, omega, M0 = nonlinear_p[:4]  # we don't need the jitter here
 
     t = data._t_bmjd
-    t0 = data._t0_bmjd
+    t0 = data._t_ref_bmjd
     zdot = cy_rv_from_elements(t, P, 1., ecc, omega, M0, t0, 1e-8, 128)
 
     M1 = np.vander(t - t0, N=prior.poly_trend, increasing=True)
@@ -250,7 +250,7 @@ def rejection_sample(samples, prior, data, rnd=None):
             unpack_units[k] = samples[k].unit
 
     return JokerSamples.unpack(all_packed, unpack_units, prior.poly_trend,
-                               data.t0)
+                               data.t_ref)
 
 
 def get_aAbB(samples, prior, data):

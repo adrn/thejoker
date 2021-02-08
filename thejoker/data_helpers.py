@@ -66,7 +66,8 @@ def validate_prepare_data(data, poly_trend, n_offsets):
             raise ValueError("If sampling over velocity offsets between data "
                              "sources, you must pass in multiple data sources."
                              " To do this, pass in a list of RVData instances "
-                             "or a dictionary with RVData instances as values.")
+                             "or a dictionary with RVData instances as values."
+                             )
 
         trend_M = get_trend_design_matrix(data, None, poly_trend)
         return data, np.zeros(len(data), dtype=int), trend_M

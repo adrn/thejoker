@@ -1,7 +1,10 @@
 # Third-party
 import astropy.units as u
 import numpy as np
-from theano.gof import MissingInputError
+try:
+    from theano.gof.fg import MissingInputError
+except ImportError:
+    from theano.graph.fg import MissingInputError
 
 # Project
 from .logging import logger
@@ -30,7 +33,7 @@ def _validate_model(model):
 
     if not isinstance(model, pm.Model):
         raise TypeError("Input model must be a pymc3.Model instance, not "
-                        "a {}".format(type(model)))
+                        f"a {type(model)}")
 
     return model
 
@@ -81,8 +84,8 @@ class JokerPrior:
             pars.update(model.named_vars)
 
         elif isinstance(pars, tt.TensorVariable):  # a single variable
-            # Note: this has to go before the next clause because TensorVariable
-            # instances are iterable...
+            # Note: this has to go before the next clause because
+            # TensorVariable instances are iterable...
             pars = {pars.name: pars}
 
         else:
@@ -121,7 +124,8 @@ class JokerPrior:
         # equivalent to these
         self._nonlinear_equiv_units = get_nonlinear_equiv_units()
         self._linear_equiv_units = get_linear_equiv_units(self.poly_trend)
-        self._v0_offsets_equiv_units = get_v0_offsets_equiv_units(self.n_offsets)
+        self._v0_offsets_equiv_units = get_v0_offsets_equiv_units(
+            self.n_offsets)
         self._all_par_unit_equiv = {**self._nonlinear_equiv_units,
                                     **self._linear_equiv_units,
                                     **self._v0_offsets_equiv_units}
@@ -247,7 +251,8 @@ class JokerPrior:
     @property
     def par_units(self):
         import exoplanet.units as xu
-        return {p.name: getattr(p, xu.UNIT_ATTR_NAME, u.one) for _, p in self.pars.items()}
+        return {p.name: getattr(p, xu.UNIT_ATTR_NAME, u.one)
+                for _, p in self.pars.items()}
 
     @property
     def n_offsets(self):
@@ -290,7 +295,6 @@ class JokerPrior:
             The random samples.
 
         """
-        from theano.gof.fg import MissingInputError
         from pymc3.distributions import draw_values
         import exoplanet.units as xu
 
@@ -308,23 +312,26 @@ class JokerPrior:
         else:
             par_names = list(self._nonlinear_equiv_units.keys())
 
-        pars_list = list(sub_pars.values())
-
         # MAJOR HACK RELATED TO UPSTREAM ISSUES WITH pymc3:
         init_shapes = dict()
-        for par in pars_list:
+        for name, par in sub_pars.items():
             if hasattr(par, 'distribution'):
-                init_shapes[par.name] = par.distribution.shape
+                init_shapes[name] = par.distribution.shape
                 par.distribution.shape = (size, )
 
+        par_names = list(sub_pars.keys())
+        par_list = [sub_pars[k] for k in par_names]
         with random_state_context(random_state):
-            samples_values = draw_values(pars_list)
-        raw_samples = {p.name: samples.astype(dtype)
-                       for p, samples in zip(pars_list, samples_values)}
+            samples_values = draw_values(par_list)
+
+        raw_samples = {name: samples.astype(dtype)
+                       for name, p, samples in zip(par_names,
+                                                   par_list,
+                                                   samples_values)}
 
         if return_logprobs:
             logp = []
-            for par in pars_list:
+            for name, par in sub_pars.items():
                 try:
                     _logp = par.distribution.logp(raw_samples[par.name]).eval()
                 except AttributeError:
@@ -343,9 +350,9 @@ class JokerPrior:
             log_prior = np.sum(logp, axis=0)
 
         # CONTINUED MAJOR HACK RELATED TO UPSTREAM ISSUES WITH pymc3:
-        for par in pars_list:
+        for name, par in sub_pars.items():
             if hasattr(par, 'distribution'):
-                par.distribution.shape = init_shapes[par.name]
+                par.distribution.shape = init_shapes[name]
 
         # Apply units if they are specified:
         prior_samples = JokerSamples(poly_trend=self.poly_trend,
@@ -355,10 +362,10 @@ class JokerPrior:
             p = sub_pars[name]
             unit = getattr(p, xu.UNIT_ATTR_NAME, u.one)
 
-            if p.name not in prior_samples._valid_units.keys():
+            if name not in prior_samples._valid_units.keys():
                 continue
 
-            prior_samples[p.name] = np.atleast_1d(raw_samples[p.name]) * unit
+            prior_samples[name] = np.atleast_1d(raw_samples[name]) * unit
 
         if return_logprobs:
             prior_samples['ln_prior'] = log_prior

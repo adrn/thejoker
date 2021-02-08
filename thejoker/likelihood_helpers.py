@@ -32,7 +32,7 @@ def get_trend_design_matrix(data, ids, poly_trend):
     # Combine design matrix for constant term, which may contain columns for
     # sampling over v0 offsets, with the rest of the long-term trend columns
     const_M = get_constant_term_design_matrix(data, ids)
-    dt = data._t_bmjd - data._t0_bmjd
+    dt = data._t_bmjd - data._t_ref_bmjd
     trend_M = np.vander(dt, N=poly_trend, increasing=True)[:, 1:]
     return np.hstack((const_M, trend_M))
 
@@ -79,7 +79,7 @@ def make_full_samples_inmem(joker_helper, prior_samples_batch, random_state,
     # unpack the raw samples
     samples = JokerSamples.unpack(raw_samples,
                                   joker_helper.internal_units,
-                                  t0=joker_helper.data.t0,
+                                  t_ref=joker_helper.data.t_ref,
                                   poly_trend=joker_helper.prior.poly_trend,
                                   n_offsets=joker_helper.prior.n_offsets)
 

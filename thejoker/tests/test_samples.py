@@ -58,8 +58,8 @@ def test_joker_samples(tmpdir):
     assert quantity_allclose(new_samples['P'],
                              samples['P'][samples['P'].argmin()])
 
-    # Check that t0 writes / gets loaded
-    samples = JokerSamples(t0=Time('J2000'))
+    # Check that t_ref writes / gets loaded
+    samples = JokerSamples(t_ref=Time('J2000'))
     samples['P'] = np.random.uniform(800, 1000, size=N)*u.day
     samples['M0'] = 2*np.pi*np.random.random(size=N)*u.radian
     samples['e'] = np.random.random(size=N)
@@ -70,11 +70,11 @@ def test_joker_samples(tmpdir):
     samples.write(fn, overwrite=True)
     samples2 = JokerSamples.read(fn)
 
-    assert samples2.t0 is not None
-    assert np.isclose(samples2.t0.mjd, Time('J2000').mjd)
+    assert samples2.t_ref is not None
+    assert np.isclose(samples2.t_ref.mjd, Time('J2000').mjd)
 
     # Check that scalar samples are supported:
-    samples = JokerSamples(t0=Time('J2000'))
+    samples = JokerSamples(t_ref=Time('J2000'))
     samples['P'] = np.random.uniform(800, 1000, size=N)*u.day
     samples['M0'] = 2*np.pi*np.random.random(size=N)*u.radian
     samples['e'] = np.random.random(size=N)
@@ -83,7 +83,7 @@ def test_joker_samples(tmpdir):
     assert len(new_samples) == 1
 
     # Check that polynomial trends work
-    samples = JokerSamples(t0=Time('J2015.5'),
+    samples = JokerSamples(t_ref=Time('J2015.5'),
                            poly_trend=3)
     samples['P'] = np.random.uniform(800, 1000, size=N)*u.day
     samples['M0'] = 2*np.pi*np.random.random(size=N)*u.radian
@@ -104,7 +104,7 @@ def test_joker_samples(tmpdir):
 
 def test_append_write(tmpdir):
     N = 64
-    samples = JokerSamples(t0=Time('J2000'))
+    samples = JokerSamples(t_ref=Time('J2000'))
     samples['P'] = np.random.uniform(800, 1000, size=N)*u.day
     samples['M0'] = 2*np.pi*np.random.random(size=N)*u.radian
     samples['e'] = np.random.random(size=N)
@@ -127,7 +127,7 @@ def test_apply_methods():
     N = 100
 
     # Test that samples objects reduce properly
-    samples = JokerSamples(t0=Time('J2000'))
+    samples = JokerSamples(t_ref=Time('J2000'))
     samples['P'] = np.random.uniform(800, 1000, size=N)*u.day
     samples['M0'] = 2*np.pi*np.random.random(size=N)*u.radian
     samples['e'] = np.random.random(size=N)
@@ -141,12 +141,12 @@ def test_apply_methods():
     new_samples = samples.std()
 
 
-@pytest.mark.parametrize("t0", [None, Time('J2015.5')])
+@pytest.mark.parametrize("t_ref", [None, Time('J2015.5')])
 @pytest.mark.parametrize("poly_trend", [1, 3])
 @pytest.mark.parametrize("ext", ['.hdf5', '.fits'])
-def test_table(tmp_path, t0, poly_trend, ext):
+def test_table(tmp_path, t_ref, poly_trend, ext):
     N = 16
-    samples = JokerSamples(t0=t0, poly_trend=poly_trend)
+    samples = JokerSamples(t_ref=t_ref, poly_trend=poly_trend)
     samples['P'] = np.random.uniform(800, 1000, size=N)*u.day
     samples['M0'] = 2*np.pi*np.random.random(size=N)*u.radian
     samples['e'] = np.random.random(size=N)
@@ -160,13 +160,13 @@ def test_table(tmp_path, t0, poly_trend, ext):
 
     d = tmp_path / "table"
     d.mkdir()
-    path = str(d / f"t_{str(t0)}_{poly_trend}{ext}")
+    path = str(d / f"t_{str(t_ref)}_{poly_trend}{ext}")
 
     samples.write(path)
     samples2 = JokerSamples.read(path)
     assert samples2.poly_trend == samples.poly_trend
-    if t0 is not None:
-        assert np.allclose(samples2.t0.mjd, samples.t0.mjd)
+    if t_ref is not None:
+        assert np.allclose(samples2.t_ref.mjd, samples.t_ref.mjd)
 
     for k in samples.par_names:
         assert u.allclose(samples2[k], samples[k])

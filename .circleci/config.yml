@@ -14,7 +14,6 @@ pip-install: &pip-install
     python3 -m venv venv
     . venv/bin/activate
     pip install -U pip
-    pip install --progress-bar off -r requirements.txt
 
 pip-install-dev: &pip-install-dev
   name: Install Python development dependencies
@@ -22,7 +21,6 @@ pip-install-dev: &pip-install-dev
     python3 -m venv venv
     . venv/bin/activate
     pip install -U pip
-    pip install --progress-bar off -r requirements-dev.txt
     pip install --progress-bar off tox
 
 main-or-pr-check: &main-or-pr-check
