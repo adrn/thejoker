@@ -3,11 +3,12 @@ from ._astropy_init import *  # noqa
 
 # For egg_info test builds to pass, put package imports here.
 if not _ASTROPY_SETUP_:  # noqa
-    from .thejoker import TheJoker
-    from .data import RVData
-    from .samples import JokerSamples
-    from .prior import JokerPrior
-    from .plot import *
+    from .thejoker import TheJoker  # noqa
+    from .data import RVData  # noqa
+    from .samples import JokerSamples  # noqa
+    from .prior import JokerPrior  # noqa
+    from .plot import plot_rv_curves, plot_phase_fold  # noqa
+    from .samples_analysis import *  # noqa
 
 
 __bibtex__ = __citation__ = """@ARTICLE{thejoker,
@@ -33,12 +34,3 @@ archivePrefix = {arXiv},
       adsnote = {Provided by the SAO/NASA Astrophysics Data System}
 }
 """
-
-
-__all__ = [
-    'TheJoker',
-    'RVData',
-    'JokerSamples',
-    'JokerPrior',
-    'plot_rv_curves'
-]

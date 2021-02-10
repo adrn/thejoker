@@ -4,6 +4,10 @@
 import astropy.units as u
 import numpy as np
 
+__all__ = ['MAP_sample', 'is_P_unimodal', 'is_P_Kmodal',
+           'max_phase_gap', 'phase_coverage', 'periods_spanned',
+           'phase_coverage_per_period']
+
 
 def MAP_sample(samples, return_index=False):
     """Return the maximum a posteriori sample.
