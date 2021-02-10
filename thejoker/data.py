@@ -479,3 +479,6 @@ class RVData:
 
     def __len__(self):
         return len(self.rv.value)
+
+    def __repr__(self):
+        return f"<RVData: {len(self)} epochs>"
