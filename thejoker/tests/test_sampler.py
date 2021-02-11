@@ -141,6 +141,11 @@ def test_rejection_sample(tmpdir, prior):
         samples = joker.rejection_sample(flat_data, _samples)
         assert len(samples) > 10  # HACK: this should generally be true...
 
+        # Probably the wrong place to do this, but check that computing the log
+        # unmarginalized likelihood works:
+        lls = samples.ln_unmarginalized_likelihood(flat_data)
+        assert np.isfinite(lls).all()
+
     samples, lls = joker.rejection_sample(flat_data, prior_samples,
                                           return_all_logprobs=True)
     assert len(lls) == len(prior_samples)

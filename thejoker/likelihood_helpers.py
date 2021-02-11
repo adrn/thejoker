@@ -210,3 +210,7 @@ def iterative_rejection_inmem(joker_helper, prior_samples_batch, random_state,
         samples['ln_likelihood'] = all_marg_lls[good_samples_idx]
 
     return samples
+
+
+def ln_normal(x, mu, var):
+    return -0.5 * (np.log(2*np.pi * var) + (x - mu)**2 / var)

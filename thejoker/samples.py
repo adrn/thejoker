@@ -21,6 +21,7 @@ from .prior_helpers import (validate_poly_trend, validate_n_offsets,
                             get_v0_offsets_equiv_units)
 from .samples_helpers import write_table_hdf5
 from .exceptions import TheJokerDeprecationWarning
+from .likelihood_helpers import ln_normal
 
 __all__ = ['JokerSamples']
 
@@ -527,3 +528,26 @@ class JokerSamples:
     def copy(self):
         """Return a copy of this instance"""
         return self.__class__(self.tbl.copy(), t_ref=self.t_ref)
+
+    def ln_unmarginalized_likelihood(self, data):
+        """
+        Compute the log (unmarginalized) likelihood of the data for each sample
+        """
+
+        data_rv = data.rv.value
+        data_unit = data.rv.unit
+        data_var = (data.rv_err.to_value(data_unit)) ** 2
+
+        if 's' in self.tbl.colnames:
+            s_vars = self['s'].to_value(data_unit) ** 2
+        else:
+            s_vars = np.zeros(len(self))
+
+        lls = np.full(len(self), np.nan)
+        for i, (orbit, s) in enumerate(zip(self.orbits, s_vars)):
+            model_rv = orbit.radial_velocity(data.t)
+            lls[i] = ln_normal(model_rv.to_value(data_unit),
+                               data_rv,
+                               data_var + s).sum()
+
+        return lls
