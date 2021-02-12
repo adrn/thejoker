@@ -9,6 +9,9 @@
 
 - Added functionality to compute ``t0``, i.e. the time of phase=0, for samples.
 
+- Added functions to compute time-sampling statistics for the samples returned
+  from The Joker (see: ``thejoker.samples_analysis``).
+
 1.1 (2020-04-19)
 ================
 
