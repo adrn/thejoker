@@ -21,7 +21,7 @@ method and applications.
     :maxdepth: 1
 
     install
-    whats-new
+    changes
 
 
 Tutorials

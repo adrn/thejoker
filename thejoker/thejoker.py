@@ -8,7 +8,7 @@ import numpy as np
 # Project
 from .logging import logger
 from .data_helpers import validate_prepare_data
-from .samples_helpers import is_P_unimodal
+from .samples_analysis import is_P_unimodal
 from .likelihood_helpers import get_trend_design_matrix
 from .prior_helpers import validate_n_offsets, validate_poly_trend
 from .prior import JokerPrior, _validate_model

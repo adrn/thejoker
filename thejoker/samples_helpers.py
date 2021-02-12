@@ -7,30 +7,6 @@ from astropy.table.meta import get_header_from_yaml, get_yaml_from_table
 from astropy.io.misc.hdf5 import _encode_mixins, meta_path
 from astropy.utils.exceptions import AstropyUserWarning
 from astropy.utils import metadata
-import astropy.units as u
-import numpy as np
-
-
-def is_P_unimodal(samples, data):
-    """
-    Check whether the samples returned are within one period mode.
-
-    Parameters
-    ----------
-    samples : `~thejoker.JokerSamples`
-    data : `~thejoker.RVData`
-
-    Returns
-    -------
-    is_unimodal : bool
-    """
-
-    P_samples = samples['P'].to(u.day).value
-    P_min = np.min(P_samples)
-    T = np.ptp(data.t.tcb.mjd)
-    delta = 4*P_min**2 / (2*np.pi*T)
-
-    return np.ptp(P_samples) < delta
 
 
 def _custom_tbl_dtype_compare(dtype1, dtype2):
