@@ -98,4 +98,4 @@ def test_periods_spanned():
     data = RVData(t=t, rv=rv, rv_err=rv_err)
 
     span = periods_spanned(samples[0], data)
-    assert np.isclose(span, phase[1], atol=1e-5)
+    assert np.isclose(span, phase[-1], atol=1e-5)
