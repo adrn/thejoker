@@ -99,4 +99,3 @@ def test_periods_spanned():
 
     span = periods_spanned(samples[0], data)
     assert np.isclose(span, phase[1], atol=1e-5)
-
