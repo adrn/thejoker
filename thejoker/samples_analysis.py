@@ -87,10 +87,10 @@ def is_P_Kmodal(samples, data, n_clusters=2):
             means.append(sub_samples)
         else:
             unimodals.append(is_P_unimodal(sub_samples, data))
-            means.append(MAP_sample(sub_samples))
+            means.append(MAP_sample(sub_samples)['P'])
         n_per_mode.append((y == j).sum())
 
-    return all(unimodals), np.array(means), np.array(n_per_mode)
+    return all(unimodals), u.Quantity(means), np.array(n_per_mode)
 
 
 def max_phase_gap(sample, data):
