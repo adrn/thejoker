@@ -34,6 +34,7 @@ def test_plot_rv_curves(prior):
 
     plot_rv_curves(samples, t_grid)
     plot_rv_curves(samples, data=data)
+    plot_rv_curves(samples[0], data=data)
 
     fig, ax = plt.subplots(1, 1, figsize=(12, 5))
     plot_rv_curves(samples, t_grid, ax=ax)

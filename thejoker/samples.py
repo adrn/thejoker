@@ -252,7 +252,7 @@ class JokerSamples:
         names = list(get_linear_equiv_units(self.poly_trend).keys())
         trend_coeffs = [self[x] for x in names[1:]]  # skip K
 
-        if index is None:
+        if index is None or self.isscalar:
             if len(self) > 1:
                 raise ValueError("You must specify an index when the number "
                                  f"of samples is >1 (here, it's {len(self)})")
