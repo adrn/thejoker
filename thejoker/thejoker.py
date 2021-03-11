@@ -467,6 +467,7 @@ class TheJoker:
             trend = tt.dot(M, v_trend_vec)
 
             rv_model = orbit.get_radial_velocity(x, K=p['K']) + trend
+            pm.Deterministic("model_rv", rv_model)
 
             err = tt.sqrt(err**2 + p['s']**2)
             pm.Normal("obs", mu=rv_model, sd=err, observed=y)
