@@ -12,6 +12,8 @@
 - Added functions to compute time-sampling statistics for the samples returned
   from The Joker (see: ``thejoker.samples_analysis``).
 
+- Fixed a bug in the ``UniformLog`` distribution that affected running MCMC.
+
 1.1 (2020-04-19)
 ----------------
 

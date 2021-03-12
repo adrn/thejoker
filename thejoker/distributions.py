@@ -42,7 +42,7 @@ class UniformLog(pm.Continuous):
         )
 
     def logp(self, value):
-        return -tt.as_tensor_variable(value) * -np.log(self._fac)
+        return -tt.as_tensor_variable(value) - np.log(self._fac)
 
 
 class FixedCompanionMass(pm.Normal):
@@ -54,7 +54,8 @@ class FixedCompanionMass(pm.Normal):
     .. math::
 
         p(K) \propto \mathcal{N}(K \,|\, \mu_K, \sigma_K)
-        \sigma_K = \sigma_{K, 0} \, \left(\frac{P}{P_0}\right)^{-1/3} \, \left(1 - e^2\right)^{-1}
+        \sigma_K = \sigma_{K, 0} \, \left(\frac{P}{P_0}\right)^{-1/3} \,
+            \left(1 - e^2\right)^{-1}
 
     where :math:`P` and :math:`e` are period and eccentricity, and
     ``sigma_K0`` and ``P0`` are parameters of this distribution that must
