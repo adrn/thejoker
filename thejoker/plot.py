@@ -15,12 +15,38 @@ from .prior_helpers import get_v0_offsets_equiv_units
 __all__ = ['plot_rv_curves', 'plot_phase_fold']
 
 
+def get_t_grid(data, P, span_factor=0.1, max_t_grid=None):
+    w = np.ptp(data.t.mjd)
+    dt = P.to_value(u.day) / 64  # MAGIC NUMBER
+
+    if P.shape != ():
+        raise ValueError("Period must be a scalar quantity")
+
+    n_grid = w / dt
+    if max_t_grid is not None and n_grid > max_t_grid:
+        dt = w / max_t_grid
+        n_grid = w / dt
+
+    if n_grid > 1e4:
+        warnings.warn(
+            "Time grid has more than 10,000 grid points, so plotting orbits "
+            "could be very slow! Set 't_grid' manually, or set 'max_t_grid' to "
+            "decrease the number of time grid points.",
+            ResourceWarning)
+
+    t_grid = np.arange(data.t.mjd.min() - w*span_factor/2,
+                       data.t.mjd.max() + w*span_factor/2 + dt,
+                       dt)
+
+    return t_grid
+
+
 @deprecated_renamed_argument('relative_to_t0', 'relative_to_t_ref',
                              since='v1.2', warning_type=DeprecationWarning)
 def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
                    ax=None, plot_kwargs=dict(), data_plot_kwargs=dict(),
                    add_labels=True, relative_to_t_ref=False,
-                   apply_mean_v0_offset=True):
+                   apply_mean_v0_offset=True, max_t_grid=None):
     """
     Plot radial velocity curves for the input set of orbital parameter
     samples over the input grid of times.
@@ -48,6 +74,8 @@ def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
         Add labels to the axes or not.
     relative_to_t_ref : bool, optional
         Plot the time axis relative to ``samples.t_ref``.
+    max_t_grid : int, optional
+        The maximum number of grid points to use when
 
     Returns
     -------
@@ -69,17 +97,7 @@ def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
             raise ValueError('If data is not passed in, you must specify '
                              'the time grid.')
 
-        w = np.ptp(data.t.mjd)
-        dt = samples['P'].to(u.day).value.min() / 64
-        t_grid = np.arange(data.t.mjd.min() - w*0.05,
-                           data.t.mjd.max() + w*0.05 + dt,
-                           dt)
-
-        if len(t_grid) > 1e5:
-            warnings.warn("Time grid has more than 100,000 grid points, so "
-                          "plotting orbits could be very slow! Set 't_grid' "
-                          "manually to decrease the number of grid points.",
-                          ResourceWarning)
+        t_grid = get_t_grid(data, samples['P'].min(), max_t_grid=max_t_grid)
 
     if not isinstance(t_grid, Time):  # Assume BMJD
         t_grid = Time(t_grid, format='mjd', scale='tcb')
@@ -106,6 +124,10 @@ def plot_rv_curves(samples, t_grid=None, rv_unit=None, data=None,
     model_rv = np.zeros((n_plot, len(t_grid)))
     for i in range(n_plot):
         orbit = samples.get_orbit(i)
+
+        if t_grid is None:
+            t_grid = get_t_grid(data, samples['P'][i], max_t_grid=max_t_grid)
+
         model_rv[i] = orbit.radial_velocity(t_grid).to(rv_unit).value
 
     model_ylim = (np.percentile(model_rv.min(axis=1), 5),
