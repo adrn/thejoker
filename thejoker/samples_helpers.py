@@ -9,7 +9,6 @@ from astropy.utils.exceptions import AstropyUserWarning
 from astropy.utils import metadata
 
 from thejoker.thejoker import validate_prepare_data
-from thejoker.samples import JokerSamples
 
 
 def _custom_tbl_dtype_compare(dtype1, dtype2):
@@ -252,10 +251,13 @@ def inferencedata_to_samples(joker_prior, inferencedata, data, names=None):
     ----------
     trace : `arviz.InferenceData`
     """
-
+    from thejoker.samples import JokerSamples
     import exoplanet.units as xu
 
-    df = inferencedata.posterior.to_dataframe()
+    if hasattr(inferencedata, 'posterior'):
+        df = inferencedata.posterior.to_dataframe()
+    else:
+        df = inferencedata.to_dataframe()
 
     data, *_ = validate_prepare_data(data,
                                      joker_prior.poly_trend,
@@ -286,6 +288,7 @@ def trace_to_samples(self, trace, data, names=None):
     """
     import pymc3 as pm
     import exoplanet.units as xu
+    from thejoker.samples import JokerSamples
 
     df = pm.trace_to_dataframe(trace)
 
