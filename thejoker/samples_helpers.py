@@ -8,6 +8,9 @@ from astropy.io.misc.hdf5 import _encode_mixins, meta_path
 from astropy.utils.exceptions import AstropyUserWarning
 from astropy.utils import metadata
 
+from thejoker.thejoker import validate_prepare_data
+from thejoker.samples import JokerSamples
+
 
 def _custom_tbl_dtype_compare(dtype1, dtype2):
     """This is a custom equality operator for comparing table data types that
@@ -239,3 +242,67 @@ def write_table_hdf5(table, output, path=None, compression=False,
         current_size = len(output_group[name])
         output_group[name].resize((current_size + len(table), ))
         output_group[name][current_size:] = table.as_array()
+
+
+def inferencedata_to_samples(joker_prior, inferencedata, data, names=None):
+    """
+    Create a ``JokerSamples`` instance from an arviz object.
+
+    Parameters
+    ----------
+    trace : `arviz.InferenceData`
+    """
+
+    import exoplanet.units as xu
+
+    df = inferencedata.posterior.to_dataframe()
+
+    data, *_ = validate_prepare_data(data,
+                                     joker_prior.poly_trend,
+                                     joker_prior.n_offsets)
+
+    samples = JokerSamples(poly_trend=joker_prior.poly_trend,
+                           n_offsets=joker_prior.n_offsets,
+                           t_ref=data.t_ref)
+
+    if names is None:
+        names = joker_prior.par_names
+
+    for name in names:
+        par = joker_prior.pars[name]
+        unit = getattr(par, xu.UNIT_ATTR_NAME)
+        samples[name] = df[name].values * unit
+
+    return samples
+
+
+def trace_to_samples(self, trace, data, names=None):
+    """
+    Create a ``JokerSamples`` instance from a pymc3 trace object.
+
+    Parameters
+    ----------
+    trace : `~pymc3.backends.base.MultiTrace`
+    """
+    import pymc3 as pm
+    import exoplanet.units as xu
+
+    df = pm.trace_to_dataframe(trace)
+
+    data, *_ = validate_prepare_data(data,
+                                     self.prior.poly_trend,
+                                     self.prior.n_offsets)
+
+    samples = JokerSamples(poly_trend=self.prior.poly_trend,
+                           n_offsets=self.prior.n_offsets,
+                           t_ref=data.t_ref)
+
+    if names is None:
+        names = self.prior.par_names
+
+    for name in names:
+        par = self.prior.pars[name]
+        unit = getattr(par, xu.UNIT_ATTR_NAME)
+        samples[name] = df[name].values * unit
+
+    return samples

@@ -482,25 +482,11 @@ class TheJoker:
         ----------
         trace : `~pymc3.backends.base.MultiTrace`
         """
-        import pymc3 as pm
-        import exoplanet.units as xu
+        warnings.warn(
+            'This method is deprecated: Use '
+            'thejoker.samples_helpers.trace_to_samples() instead',
+            UserWarning
+        )
 
-        df = pm.trace_to_dataframe(trace)
-
-        data, *_ = validate_prepare_data(data,
-                                         self.prior.poly_trend,
-                                         self.prior.n_offsets)
-
-        samples = JokerSamples(poly_trend=self.prior.poly_trend,
-                               n_offsets=self.prior.n_offsets,
-                               t_ref=data.t_ref)
-
-        if names is None:
-            names = self.prior.par_names
-
-        for name in names:
-            par = self.prior.pars[name]
-            unit = getattr(par, xu.UNIT_ATTR_NAME)
-            samples[name] = df[name].values * unit
-
-        return samples
+        from thejoker.samples_helpers import trace_to_samples
+        return trace_to_samples(self, trace, data, names)
