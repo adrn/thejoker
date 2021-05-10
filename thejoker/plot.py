@@ -25,7 +25,7 @@ def get_t_grid(data, P, span_factor=0.1, max_t_grid=None):
     n_grid = w / dt
     if max_t_grid is not None and n_grid > max_t_grid:
         dt = w / max_t_grid
-        n_grid = w / dt
+        n_grid = max_t_grid
 
     if n_grid > 1e4:
         warnings.warn(
