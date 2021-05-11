@@ -243,13 +243,18 @@ def write_table_hdf5(table, output, path=None, compression=False,
         output_group[name][current_size:] = table.as_array()
 
 
-def inferencedata_to_samples(joker_prior, inferencedata, data, names=None):
+def inferencedata_to_samples(joker_prior, inferencedata, data,
+                             extra_names=None):
     """
     Create a ``JokerSamples`` instance from an arviz object.
 
     Parameters
     ----------
-    trace : `arviz.InferenceData`
+    joker_prior : `thejoker.JokerPrior`
+    inferencedata : `arviz.InferenceData`
+    data : `thejoker.RVData`
+    extra_names : iterable (optional)
+
     """
     from thejoker.samples import JokerSamples
     import exoplanet.units as xu
@@ -267,8 +272,9 @@ def inferencedata_to_samples(joker_prior, inferencedata, data, names=None):
                            n_offsets=joker_prior.n_offsets,
                            t_ref=data.t_ref)
 
-    if names is None:
-        names = joker_prior.par_names
+    names = joker_prior.par_names
+    if extra_names is not None:
+        names = names + list(extra_names)
 
     for name in names:
         par = joker_prior.pars[name]
