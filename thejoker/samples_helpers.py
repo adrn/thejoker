@@ -244,7 +244,7 @@ def write_table_hdf5(table, output, path=None, compression=False,
 
 
 def inferencedata_to_samples(joker_prior, inferencedata, data,
-                             extra_names=None):
+                             prune_divergences=True):
     """
     Create a ``JokerSamples`` instance from an arviz object.
 
@@ -253,16 +253,18 @@ def inferencedata_to_samples(joker_prior, inferencedata, data,
     joker_prior : `thejoker.JokerPrior`
     inferencedata : `arviz.InferenceData`
     data : `thejoker.RVData`
-    extra_names : iterable (optional)
+    prune_divergences : bool (optional)
 
     """
     from thejoker.samples import JokerSamples
     import exoplanet.units as xu
 
     if hasattr(inferencedata, 'posterior'):
-        df = inferencedata.posterior.to_dataframe()
+        posterior = inferencedata.posterior
+
     else:
-        df = inferencedata.to_dataframe()
+        posterior = inferencedata
+        inferencedata = None
 
     data, *_ = validate_prepare_data(data,
                                      joker_prior.poly_trend,
@@ -273,13 +275,27 @@ def inferencedata_to_samples(joker_prior, inferencedata, data,
                            t_ref=data.t_ref)
 
     names = joker_prior.par_names
-    if extra_names is not None:
-        names = names + list(extra_names)
 
     for name in names:
-        par = joker_prior.pars[name]
-        unit = getattr(par, xu.UNIT_ATTR_NAME)
-        samples[name] = df[name].values * unit
+        if name in joker_prior.pars:
+            par = joker_prior.pars[name]
+            unit = getattr(par, xu.UNIT_ATTR_NAME)
+            samples[name] = posterior[name].values.ravel() * unit
+        else:
+            samples[name] = posterior[name].values.ravel()
+
+    if hasattr(posterior, 'logp'):
+        samples['ln_posterior'] = posterior.logp.values.ravel()
+
+    if prune_divergences:
+        if inferencedata is None:
+            raise ValueError(
+                "If you want to remove divergences, you must pass in the root "
+                "level inferencedata object (instead of, e.g., inferencedata. "
+                "posterior")
+
+        divergences = inferencedata.sample_stats.diverging.values.ravel()
+        samples = samples[~divergences]
 
     return samples
 
