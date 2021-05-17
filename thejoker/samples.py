@@ -88,6 +88,7 @@ class JokerSamples:
         # log-prior and log-likelihood values are also valid:
         valid_units['ln_prior'] = u.one
         valid_units['ln_likelihood'] = u.one
+        valid_units['ln_posterior'] = u.one
         self._valid_units = valid_units
 
         self.tbl.meta['t_ref'] = t_ref
