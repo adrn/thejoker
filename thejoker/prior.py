@@ -411,7 +411,10 @@ def default_nonlinear_prior(P_min=None, P_max=None, s=None,
     """
     import theano.tensor as tt
     import pymc3 as pm
-    from exoplanet.distributions import Angle
+    try:
+        from pymc3_ext.distributions import Angle
+    except ImportError:
+        from exoplanet.distributions import Angle
     import exoplanet.units as xu
     from .distributions import UniformLog, Kipping13Global
 
