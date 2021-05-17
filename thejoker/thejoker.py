@@ -368,7 +368,7 @@ class TheJoker:
 
         return samples
 
-    def setup_mcmc(self, data, joker_samples, model=None, use_cached=False):
+    def setup_mcmc(self, data, joker_samples, model=None, custom_func=None):
         """
         Setup the model to run MCMC using pymc3.
 
@@ -385,6 +385,7 @@ class TheJoker:
         model : `pymc3.Model`
             This is either required, or this function must be called within a
             pymc3 model context.
+        custom_func : callable (optional)
 
         Returns
         -------
@@ -416,41 +417,37 @@ class TheJoker:
             if not is_P_unimodal(joker_samples, data):
                 logger.warn("TODO: samples ain't unimodal")
 
-            joker_samples = joker_samples.median()
+            MAP_sample = joker_samples.median()
+
+        else:
+            MAP_sample = joker_samples
 
         mcmc_init = dict()
         for name in self.prior.par_names:
             unit = getattr(self.prior.pars[name], xu.UNIT_ATTR_NAME)
-            if joker_samples[name].shape == ():
-                mcmc_init[name] = joker_samples[name].to_value(unit)
-            else:
-                mcmc_init[name] = joker_samples[name].to_value(unit)[0]
-
-        if 't_peri' in model.named_vars and use_cached:
-            logger.debug('pymc3 model has already been setup for running MCMC '
-                         '- using the previously setup model parameters.')
-            return mcmc_init
-
-        # remove previously-added parameters:
-        names = ['t_peri', 'obs']
-        to_remove = []
-        for name in names:
-            for i, par in enumerate(model.vars):
-                if par.name == name:
-                    to_remove.append(par)
-                    del model.named_vars[name]
-        [model.vars.remove(p) for p in to_remove]
+            mcmc_init[name] = MAP_sample[name].to_value(unit)
+        mcmc_init = custom_func(mcmc_init, MAP_sample, model)
+        mcmc_init = {k: np.squeeze(v) for k, v in mcmc_init.items()}
 
         p = self.prior.pars
-        with model:
-            t_peri = pm.Deterministic('t_peri',
-                                      p['P'] * p['M0'] / (2*np.pi))
 
+        if 't_peri' not in model.named_vars:
+            with model:
+                t_peri = pm.Deterministic('t_peri',
+                                          p['P'] * p['M0'] / (2*np.pi))
+
+
+        if 'obs' in model.named_vars:
+            return mcmc_init
+
+        with model:
             # Set up the orbit model
-            orbit = xo.orbits.KeplerianOrbit(period=p['P'],
-                                             ecc=p['e'],
-                                             omega=p['omega'],
-                                             t_periastron=t_peri)
+            orbit = xo.orbits.KeplerianOrbit(
+                period=p['P'],
+                ecc=p['e'],
+                omega=p['omega'],
+                t_periastron=model.named_vars['t_peri']
+            )
 
         # design matrix
         M = get_trend_design_matrix(data, ids, self.prior.poly_trend)
@@ -471,6 +468,8 @@ class TheJoker:
 
             err = tt.sqrt(err**2 + p['s']**2)
             pm.Normal("obs", mu=rv_model, sd=err, observed=y)
+
+            pm.Deterministic('logp', model.logpt)
 
         return mcmc_init
 
