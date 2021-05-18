@@ -433,9 +433,7 @@ class TheJoker:
 
         if 't_peri' not in model.named_vars:
             with model:
-                t_peri = pm.Deterministic('t_peri',
-                                          p['P'] * p['M0'] / (2*np.pi))
-
+                pm.Deterministic('t_peri', p['P'] * p['M0'] / (2*np.pi))
 
         if 'obs' in model.named_vars:
             return mcmc_init
@@ -470,6 +468,15 @@ class TheJoker:
             pm.Normal("obs", mu=rv_model, sd=err, observed=y)
 
             pm.Deterministic('logp', model.logpt)
+
+            dist = pm.Normal.dist(model.model_rv, data.rv_err.value)
+            lnlike = pm.Deterministic(
+                'ln_likelihood',
+                dist.logp(data.rv.value).sum(axis=-1))
+
+            pm.Deterministic(
+                'ln_prior',
+                model.logpt - lnlike)
 
         return mcmc_init
 

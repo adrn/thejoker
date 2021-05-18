@@ -287,6 +287,10 @@ def inferencedata_to_samples(joker_prior, inferencedata, data,
     if hasattr(posterior, 'logp'):
         samples['ln_posterior'] = posterior.logp.values.ravel()
 
+    for name in ['ln_likelihood', 'ln_prior']:
+        if hasattr(posterior, name):
+            samples[name] = getattr(posterior, name).values.ravel()
+
     if prune_divergences:
         if inferencedata is None:
             raise ValueError(
