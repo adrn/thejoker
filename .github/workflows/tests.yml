@@ -33,11 +33,6 @@ jobs:
             python: 3.9
             toxenv: py39-test
 
-          - name: Python 3.9 standard tests (Windows)
-            os: windows-latest
-            python: 3.9
-            toxenv: py39-test
-
           # Older Python versions:
           - name: Python 3.8
             os: ubuntu-latest
@@ -65,30 +60,6 @@ jobs:
         if: startsWith(matrix.os, 'mac')
         run: |
           brew install hdf5
-
-      # Windows:
-      - uses: conda-incubator/setup-miniconda@v2
-        if: startsWith(matrix.os, 'windows')
-        with:
-          auto-update-conda: true
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install build dependencies - Windows
-        if: startsWith(matrix.os, 'windows')
-        shell: bash -l {0}
-        run: |
-          choco install pandoc --no-progress
-          conda create -n thejoker python=${{ matrix.python-version }} -q
-          conda activate thejoker
-          conda install mkl-service libpython m2w64-toolchain -q -y
-          python -m pip install tox
-
-      - name: Run tests - Windows
-        if: startsWith(matrix.os, 'windows')
-        shell: bash -l {0}
-        run: |
-          conda activate thejoker
-          tox ${{ matrix.toxargs }} -e ${{ matrix.toxenv }} ${{ matrix.toxposargs }}
 
       # Any *nix:
       - name: Install Python dependencies - nix
