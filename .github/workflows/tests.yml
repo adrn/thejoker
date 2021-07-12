@@ -60,6 +60,12 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
+      # Mac:
+      - name: Setup Mac - hdf5
+        if: startsWith(matrix.os, 'mac')
+        run: |
+          brew install hdf5
+
       # Windows:
       - uses: conda-incubator/setup-miniconda@v2
         if: startsWith(matrix.os, 'windows')
