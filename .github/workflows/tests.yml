@@ -98,9 +98,8 @@ jobs:
           files: "coverage.xml"
 
       - name: Upload coverage report to codecov
-        if: "endsWith(matrix.name, 'coverage')"
         uses: codecov/codecov-action@v1
-        if: steps.check_files.outputs.files_exists == 'true'
+        if: steps.check_files.outputs.files_exists == 'true' && endsWith(matrix.name, 'coverage')
         with:
           file: ./coverage.xml # optional
 
