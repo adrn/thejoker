@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.7]  # Fails on 3.8 because no astropy wheel
+        python-version: [3.7, 3.8, 3.9]
         os: ["windows-latest"]
 
     steps:
