@@ -67,18 +67,21 @@ jobs:
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
 
-      - name: Install Python dependencies - Windows
+      - name: Install build dependencies - Windows
         if: startsWith(matrix.os, 'windows')
         shell: bash -l {0}
         run: |
-          conda install -c conda-forge -q libpython
-          python -m pip install -e .[test]
+          choco install pandoc --no-progress
+          conda create -n thejoker python=${{ matrix.python-version }} -q
+          conda activate thejoker
+          conda install mkl-service libpython m2w64-toolchain -q -y
           python -m pip install tox
 
       - name: Run tests - Windows
         if: startsWith(matrix.os, 'windows')
         shell: bash -l {0}
         run: |
+          conda activate thejoker
           tox ${{ matrix.toxargs }} -e ${{ matrix.toxenv }} ${{ matrix.toxposargs }}
 
       # Any *nix:
