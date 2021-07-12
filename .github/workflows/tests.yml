@@ -60,6 +60,8 @@ jobs:
         if: startsWith(matrix.os, 'mac')
         run: |
           brew install hdf5
+          brew install c-blosc  # See: https://github.com/PyTables/PyTables/issues/828
+          brew link c-blosc
 
       # Any *nix:
       - name: Install Python dependencies - nix
