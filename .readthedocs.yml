@@ -10,4 +10,12 @@ sphinx:
 
 # Have to use conda because of weird lazylinker error
 conda:
-  environment: environment.yml
+  environment: .rtd-environment.yml
+
+python:
+  version: 3.8
+  install:
+    - method: pip
+      path: .
+      extra_requirements:
+        - docs
