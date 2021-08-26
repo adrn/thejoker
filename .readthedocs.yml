@@ -10,7 +10,7 @@ sphinx:
 
 # Have to use conda because of weird lazylinker error
 conda:
-  environment: .rtd-environment.yml
+  environment: environment.yml
 
 python:
   version: 3.8
