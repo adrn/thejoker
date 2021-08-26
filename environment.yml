@@ -1,12 +1,6 @@
-name: thejoker
-
-channels:
-  - astropy
-  - conda-forge
-
 dependencies:
-  - python=3
-  - sphinx==3.0.1
+  - python=3.8
+  - mkl
+  - pip
   - pip:
-    - -r requirements-dev.txt
-    - -e .
+    - -e .[docs]
