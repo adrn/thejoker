@@ -426,7 +426,8 @@ class TheJoker:
         for name in self.prior.par_names:
             unit = getattr(self.prior.pars[name], xu.UNIT_ATTR_NAME)
             mcmc_init[name] = MAP_sample[name].to_value(unit)
-        mcmc_init = custom_func(mcmc_init, MAP_sample, model)
+        if custom_func is not None:
+            mcmc_init = custom_func(mcmc_init, MAP_sample, model)
         mcmc_init = {k: np.squeeze(v) for k, v in mcmc_init.items()}
 
         p = self.prior.pars
