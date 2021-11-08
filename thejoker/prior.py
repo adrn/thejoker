@@ -1,7 +1,7 @@
 # Third-party
 import astropy.units as u
 import numpy as np
-from aesara_theano_fallback.graph import MissingInputError
+from aesara_theano_fallback.graph import fg
 
 # Project
 from .logging import logger
@@ -337,7 +337,7 @@ class JokerPrior:
                                    "as a transformation from another "
                                    "variable.")
                     continue
-                except MissingInputError:
+                except fg.MissingInputError:
                     logger.warning("Cannot auto-compute log-prior value for "
                                    f"parameter {par} because it depends on "
                                    "other variables.")
