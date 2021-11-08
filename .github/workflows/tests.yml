@@ -21,7 +21,7 @@ jobs:
             python: 3.9
             toxenv: py39-test-cov
 
-          - name: Python 3.9 dev dependencies
+          - name: Python 3.9 dev dependencies (allowed failure! check logs)
             os: ubuntu-latest
             python: 3.9
             toxenv: py39-test-devdeps
