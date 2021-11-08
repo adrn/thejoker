@@ -3,7 +3,7 @@ import astropy.units as u
 import numpy as np
 import pymc3 as pm
 from pymc3.distributions import generate_samples
-import theano.tensor as tt
+import aesara_theano_fallback.tensor as tt
 import exoplanet.units as xu
 
 __all__ = ['UniformLog', 'FixedCompanionMass']

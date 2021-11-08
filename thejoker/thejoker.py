@@ -395,7 +395,7 @@ class TheJoker:
         import pymc3 as pm
         import exoplanet as xo
         import exoplanet.units as xu
-        import theano.tensor as tt
+        import aesara_theano_fallback.tensor as tt
 
         model = _validate_model(model)
 

@@ -4,6 +4,7 @@ if [[ -z $CIRCLE_PULL_REQUEST ]]; then
     CACHEDIR=`pwd`/theano_cache
     rm -rf $CACHEDIR
     export THEANO_FLAGS=base_compiledir=$CACHEDIR
+    export AESARA_FLAGS=base_compiledir=$CACHEDIR
 
     git branch -D executed-notebooks || true
     git checkout -b executed-notebooks

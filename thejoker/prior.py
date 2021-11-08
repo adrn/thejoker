@@ -1,10 +1,7 @@
 # Third-party
 import astropy.units as u
 import numpy as np
-try:
-    from theano.gof.fg import MissingInputError
-except ImportError:
-    from theano.graph.fg import MissingInputError
+from aesara_theano_fallback.graph import MissingInputError
 
 # Project
 from .logging import logger
@@ -72,7 +69,7 @@ class JokerPrior:
             pymc3 model context.
 
         """
-        import theano.tensor as tt
+        import aesara_theano_fallback.tensor as tt
         import pymc3 as pm
         import exoplanet.units as xu
 
@@ -409,7 +406,7 @@ def default_nonlinear_prior(P_min=None, P_max=None, s=None,
         This is either required, or this function must be called within a pymc3
         model context.
     """
-    import theano.tensor as tt
+    import aesara_theano_fallback.tensor as tt
     import pymc3 as pm
     try:
         from pymc3_ext.distributions import Angle
