@@ -30,7 +30,7 @@ jobs:
         name: Install Python
         with:
           # Note: cibuildwheel builds for many Python versions beyond this one
-          python-version: "3.7"
+          python-version: "3.9"
 
       - name: Install MSVC / Visual C++
         if: runner.os == 'Windows'
@@ -55,11 +55,11 @@ jobs:
       - uses: actions/setup-python@v2
         name: Install Python
         with:
-          python-version: "3.7"
+          python-version: "3.9"
 
       - name: Build sdist
         run: |
-          pip install build
+          python -m pip install build
           python -m build -s .
 
       - uses: actions/upload-artifact@v2
