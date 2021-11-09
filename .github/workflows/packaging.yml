@@ -32,10 +32,9 @@ jobs:
           # Note: cibuildwheel builds for many Python versions beyond this one
           python-version: "3.7"
 
-      - name: Install Visual C++ for Python 2.7
+      - name: Install MSVC / Visual C++
         if: runner.os == 'Windows'
-        run: |
-          choco install vcpython27 -f -y
+        uses: ilammy/msvc-dev-cmd@v1
 
       - name: Build wheels
         run: |

@@ -23,6 +23,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install MSVC / Visual C++
+        uses: ilammy/msvc-dev-cmd@v1
+
       - uses: conda-incubator/setup-miniconda@v2
         with:
           auto-update-conda: true
@@ -43,4 +46,4 @@ jobs:
       - name: Run tests
         run: |
           conda activate thejoker
-          tox -e py39
+          tox -e py37
