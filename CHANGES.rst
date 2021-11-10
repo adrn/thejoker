@@ -1,4 +1,4 @@
-1.2 (unreleased)
+1.2 (2021-11-09)
 ----------------
 
 - ``TheJoker`` now expects a ``numpy.random.Generator`` instance instead of a
