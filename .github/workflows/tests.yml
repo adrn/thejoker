@@ -21,13 +21,13 @@ jobs:
             python: 3.9
             toxenv: py39-test-cov
 
-          - name: Python 3.9 dev dependencies
+          - name: Python 3.9 dev dependencies (allowed failure! check logs)
             os: ubuntu-latest
             python: 3.9
             toxenv: py39-test-devdeps
-            toxposargs: --durations=50
+            toxposargs: --durations=50 || true  # override exit code
 
-          # Mac and Windows:
+          # Mac:
           - name: Python 3.9 standard tests (macOS)
             os: macos-latest
             python: 3.9

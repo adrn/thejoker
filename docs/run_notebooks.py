@@ -16,6 +16,7 @@ def process_notebook(filename, kernel_name=None):
     )
     os.makedirs(path, exist_ok=True)
     os.environ["THEANO_FLAGS"] = "base_compiledir={0}".format(path)
+    os.environ["AESARA_FLAGS"] = os.environ["THEANO_FLAGS"]
 
     with open(filename) as f:
         notebook = nbformat.read(f, as_version=4)
