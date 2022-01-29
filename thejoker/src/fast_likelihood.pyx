@@ -622,7 +622,7 @@ cdef class CJokerSB2Helper(CJokerHelper):
         self.n_pars = len(prior.par_names)
 
         # Data:
-        self.t0 = data._t0_bmjd
+        self.t0 = data._t_ref_bmjd
         self.t = np.ascontiguousarray(data._t_bmjd, dtype='f8')
         self.rv = np.ascontiguousarray(data.rv.value, dtype='f8')
         self.ivar = np.ascontiguousarray(

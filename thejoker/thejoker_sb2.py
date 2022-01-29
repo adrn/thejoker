@@ -10,12 +10,12 @@ from .thejoker import TheJoker
 __all__ = ['TheJokerSB2', 'JokerSB2Samples']
 
 
-def validate_prepare_data_sb2(data, poly_trend, t0=None):
+def validate_prepare_data_sb2(data, poly_trend, t_ref=None):
     """Internal function.
 
     Used to take an input ``RVData`` instance, or a list/dict of ``RVData``
     instances, and produce concatenated time, RV, and error arrays, along
-    with a consistent t0.
+    with a consistent t_ref.
     """
     from .data import RVData
 
@@ -54,7 +54,7 @@ def validate_prepare_data_sb2(data, poly_trend, t0=None):
 
     all_data = RVData(t=Time(t, format='mjd', scale='tcb'),
                       rv=rv, rv_err=err,
-                      t0=t0, sort=False)
+                      t_ref=t_ref, sort=False)
     K_M = np.zeros((len(all_data), 2))
     K_M[ids == '1', 0] = 1.
     K_M[ids == '2', 1] = -1.
@@ -65,7 +65,7 @@ def validate_prepare_data_sb2(data, poly_trend, t0=None):
 
 class JokerSB2Samples(JokerSamples):
 
-    def __init__(self, samples=None, t0=None, poly_trend=None,
+    def __init__(self, samples=None, t_ref=None, poly_trend=None,
                  **kwargs):
         """
         A dictionary-like object for storing prior or posterior samples from
@@ -83,12 +83,12 @@ class JokerSB2Samples(JokerSamples):
             Specifies the number of coefficients in an additional polynomial
             velocity trend, meant to capture long-term trends in the data. See
             the docstring for `thejoker.JokerPrior` for more details.
-        t0 : `astropy.time.Time`, numeric (optional)
+        t_ref : `astropy.time.Time`, numeric (optional)
             The reference time for the orbital parameters.
         **kwargs
             Additional keyword arguments are stored internally as metadata.
         """
-        super().__init__(t0=t0, poly_trend=poly_trend, **kwargs)
+        super().__init__(t_ref=t_ref, poly_trend=poly_trend, **kwargs)
 
         self._valid_units['K1'] = self._valid_units.pop('K')
         self._valid_units['K2'] = self._valid_units.get('K1')
@@ -103,7 +103,7 @@ class JokerSB2Samples(JokerSamples):
 
     @property
     def primary(self):
-        new_samples = JokerSamples(t0=self.t0, poly_trend=self.poly_trend)
+        new_samples = JokerSamples(t_ref=self.t_ref, poly_trend=self.poly_trend)
         new_samples['K'] = self['K1']
         for name in new_samples._valid_units.keys():
             if name == 'K' or name not in self.tbl.colnames:
@@ -115,7 +115,7 @@ class JokerSB2Samples(JokerSamples):
 
     @property
     def secondary(self):
-        new_samples = JokerSamples(t0=self.t0, poly_trend=self.poly_trend)
+        new_samples = JokerSamples(t_ref=self.t_ref, poly_trend=self.poly_trend)
         new_samples['K'] = self['K2']
         for name in new_samples._valid_units.keys():
             if name == 'K' or name not in self.tbl.colnames:
@@ -139,7 +139,7 @@ class TheJokerSB2(TheJoker):
         assert len(data) == 2
         assert '1' in data.keys() and '2' in data.keys()
         all_data, ids, M = validate_prepare_data_sb2(
-            data, self.prior.poly_trend, t0=data['1'].t0)
+            data, self.prior.poly_trend, t_ref=data['1'].t_ref)
 
         joker_helper = CJokerSB2Helper(all_data, self.prior, M)
         return joker_helper
