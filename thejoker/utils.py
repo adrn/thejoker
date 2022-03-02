@@ -3,6 +3,7 @@
 # Standard library
 import inspect
 import contextlib
+from functools import wraps
 import os
 from distutils.version import LooseVersion
 from tempfile import NamedTemporaryFile
@@ -11,10 +12,6 @@ from tempfile import NamedTemporaryFile
 import astropy.units as u
 from astropy.table.meta import get_header_from_yaml
 from astropy.io.misc.hdf5 import meta_path
-try:
-    from astropy.utils import wraps
-except ImportError:
-    from astropy.utils.decorators import wraps
 import h5py
 import numpy as np
 import tables as tb
