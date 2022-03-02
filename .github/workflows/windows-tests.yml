@@ -36,7 +36,7 @@ jobs:
           choco install pandoc --no-progress
           conda create -n thejoker python=3.9 -q
           conda activate thejoker
-          conda install mkl-service libpython m2w64-toolchain -q -y
+          conda install mkl-service libpython m2w64-toolchain hdf5 -q -y
 
       - name: Install thejoker and test dependencies
         run: |
