@@ -46,4 +46,4 @@ jobs:
       - name: Run tests
         run: |
           conda activate thejoker
-          tox -e py39
+          tox -e py39-test-pintables
