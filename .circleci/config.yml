@@ -33,9 +33,9 @@ ci-skip-check: &ci-skip-check
 
 jobs:
 
-  test-37:
+  test-39:
     docker:
-      - image: circleci/python:3.7
+      - image: circleci/python:3.9
     steps:
       - checkout
       - run: *ci-skip-check
@@ -46,12 +46,12 @@ jobs:
           name: Run test
           command: |
             . venv/bin/activate
-            tox -e py37
+            tox -e py39
 
   # docs build
   build-docs:
     docker:
-      - image: circleci/python:3.7
+      - image: circleci/python:3.9
     steps:
       - checkout
       - add_ssh_keys: # add GitHub SSH keys
@@ -85,10 +85,10 @@ jobs:
 workflows:
   thejoker:
     jobs:
-      - test-37
+      - test-39
       - build-docs:
           requires:
-            - test-37
+            - test-39
 
 notify:
   webhooks:
