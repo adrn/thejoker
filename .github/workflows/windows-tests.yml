@@ -41,7 +41,7 @@ jobs:
       - name: Install thejoker and test dependencies
         run: |
           conda activate thejoker
-          conda install -c conda-forge tables==3.6.1
+          conda install -c conda-forge pytables==3.6.1
           python -m pip install -e ".[test]"
 
       - name: Run tests
