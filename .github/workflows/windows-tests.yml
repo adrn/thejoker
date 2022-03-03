@@ -41,9 +41,10 @@ jobs:
       - name: Install thejoker and test dependencies
         run: |
           conda activate thejoker
-          python -m pip install tox
+          conda install -c conda-forge tables==3.6.1
+          python -m pip install -e ".[test]"
 
       - name: Run tests
         run: |
           conda activate thejoker
-          tox -e py39-test-pintables
+          pytest thejoker
