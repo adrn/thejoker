@@ -1,5 +1,7 @@
-1.3 (unreleased)
-----------------
+1.2.1 (2022-03-03)
+------------------
+
+- Compatibility with astropy v5.0 and python 3.10.
 
 
 1.2 (2021-11-09)
