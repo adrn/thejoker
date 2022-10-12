@@ -271,6 +271,7 @@ def plot_phase_fold(sample, data=None, ax=None,
     # Get orbit from input sample
     orbit = sample.get_orbit()
     P = sample['P'].item()
+    t0 = sample.get_t0()
 
     if data is not None:
         rv = data.rv
@@ -286,8 +287,6 @@ def plot_phase_fold(sample, data=None, ax=None,
                                   v0_offset_names):
             _tmp = sample[offset_name].item()
             rv[ids == i] -= _tmp
-
-        t0 = sample.get_t0()
 
         time_unit = u.day
         dt_jd = (data.t - t0).tcb.jd * u.day
@@ -314,8 +313,13 @@ def plot_phase_fold(sample, data=None, ax=None,
                         color='#aaaaaa', alpha=0.9, capsize=0,
                         zorder=9)
 
+        rv_unit = data.rv.unit
+
     elif data is None and residual:
         raise ValueError("TODO: not allowed")
+
+    else:
+        rv_unit = sample['K'].unit
 
     # Set up the phase grid:
     unit_phase_grid = np.linspace(0, 1, n_phase_samples)
@@ -336,6 +340,6 @@ def plot_phase_fold(sample, data=None, ax=None,
                           f'[{time_unit:latex_inline}]')
         else:
             ax.set_xlabel(r'phase, $\frac{t-t_0}{P}$')
-        ax.set_ylabel(f'RV [{data.rv.unit:latex_inline}]')
+        ax.set_ylabel(f'RV [{rv_unit:latex_inline}]')
 
     return fig

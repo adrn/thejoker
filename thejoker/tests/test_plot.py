@@ -56,6 +56,7 @@ def test_plot_phase_fold(prior):
 
     plot_phase_fold(samples.median(), data)
     plot_phase_fold(samples[0:1], data)
+    plot_phase_fold(samples[0:1], data=None)
 
 
 def test_big_grid_warning():

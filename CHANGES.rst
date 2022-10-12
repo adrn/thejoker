@@ -1,3 +1,9 @@
+1.3 (unreleased)
+----------------
+
+- Fix bug with ``plot_phase_fold()`` that would cause it to fail if ``data=None``.
+
+
 1.2.2 (2022-03-03)
 ------------------
 
