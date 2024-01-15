@@ -1,12 +1,115 @@
 [build-system]
-
-requires = ["setuptools",
-            "setuptools_scm",
-            "wheel",
-            "extension-helpers",
-            "scipy",
-            "numpy",
-            "cython",
-            "twobody"]
-
+requires = [
+    "setuptools>=64",
+    "setuptools_scm>=8",
+    "wheel",
+    "numpy<1.22",
+    "cython",
+    "twobody"
+]
 build-backend = 'setuptools.build_meta'
+
+[project]
+name = "thejoker"
+authors = [{name = "Adrian Price-Whelan", email = "adrianmpw@gmail.com"}]
+description = "A custom Monte Carlo sampler for the two-body problem."
+readme = "README.rst"
+requires-python = ">=3.9"
+license.file = "LICENSE"
+dynamic = ["version"]
+dependencies = [
+    "astropy",
+    "numpy<1.22",
+    "twobody>=0.9",
+    "scipy",
+    "h5py",
+    "schwimmbad>=0.3.1",
+    "pymc3",
+    "pymc_ext",
+    "exoplanet>=0.2.2",
+    "tables"
+]
+
+[project.urls]
+Homepage = "https://github.com/adrn/thejoker"
+"Bug Tracker" = "https://github.com/adrn/thejoker/issues"
+Discussions = "https://github.com/adrn/thejoker/discussions"
+Changelog = "https://github.com/adrn/thejoker/releases"
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-astropy",
+    "ipython",
+    "jupyter_client",
+    "corner",
+    "astroML",
+    "pyyaml"
+]
+docs = [
+    "sphinx-astropy",
+    "nbsphinx",
+    "nbconvert",
+    "nbformat",
+    "ipykernel"
+]
+
+[tool.setuptools_scm]
+version_file = "thejoker/_version.py"
+
+[tool.pytest.ini_options]
+testpaths = ["thejoker", "docs"]
+doctest_plus = "enabled"
+text_file_format = "rst"
+addopts = [
+    "--doctest-rst", "-ra", "--showlocals", "--strict-markers", "--strict-config"
+]
+xfail_strict = true
+filterwarnings = [
+  "error",
+  "ignore:unclosed file:ResourceWarning",
+  "ignore:unclosed <socket:ResourceWarning",
+  "ignore:unclosed <ssl.SSLSocket:ResourceWarning",
+]
+log_cli_level = "INFO"
+
+[tool.coverage]
+run.source = ["thejoker"]
+port.exclude_lines = [
+  'pragma: no cover',
+  '\.\.\.',
+  'if typing.TYPE_CHECKING:',
+]
+
+[tool.ruff]
+src = ["src"]
+
+[tool.ruff.lint]
+extend-select = [
+  "B",        # flake8-bugbear
+  "I",        # isort
+  "ARG",      # flake8-unused-arguments
+  "C4",       # flake8-comprehensions
+  "EM",       # flake8-errmsg
+  "ICN",      # flake8-import-conventions
+  "G",        # flake8-logging-format
+  "PGH",      # pygrep-hooks
+  "PIE",      # flake8-pie
+  "PL",       # pylint
+  "PT",       # flake8-pytest-style
+  "PTH",      # flake8-use-pathlib
+  "RET",      # flake8-return
+  "RUF",      # Ruff-specific
+  "SIM",      # flake8-simplify
+  "T20",      # flake8-print
+  "UP",       # pyupgrade
+  "YTT",      # flake8-2020
+  "EXE",      # flake8-executable
+  "NPY",      # NumPy specific rules
+  "PD",       # pandas-vet
+]
+ignore = [
+  "PLR09",    # Too many <...>
+  "PLR2004",  # Magic value used in comparison
+  "ISC001",   # Conflicts with formatter
+]
