@@ -14,7 +14,7 @@ name = "thejoker"
 authors = [{name = "Adrian Price-Whelan", email = "adrianmpw@gmail.com"}]
 description = "A custom Monte Carlo sampler for the two-body problem."
 readme = "README.rst"
-requires-python = ">=3.9"
+requires-python = ">=3.7,<3.11"
 license.file = "LICENSE"
 dynamic = ["version"]
 dependencies = [
