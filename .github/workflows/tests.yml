@@ -16,15 +16,15 @@ jobs:
       matrix:
         include:
 
-          - name: Python 3.10 with minimal dependencies and coverage
+          - name: Python 3.9 with minimal dependencies and coverage
             os: ubuntu-latest
-            python: "3.10"
-            toxenv: py310-test-cov
+            python: "3.9"
+            toxenv: py39-test-cov
 
-          - name: Python 3.10
+          - name: Python 3.9
             os: ubuntu-latest
-            python: '3.10'
-            toxenv: py310-test
+            python: '3.9'
+            toxenv: py39-test
 
           - name: Python 3.9 dev dependencies (allowed failure! check logs)
             os: ubuntu-latest
@@ -33,10 +33,10 @@ jobs:
             toxposargs: --durations=50 || true  # override exit code
 
           # Mac:
-          - name: Python 3.10 standard tests (macOS)
+          - name: Python 3.9 standard tests (macOS)
             os: macos-latest
-            python: "3.10"
-            toxenv: py310-test
+            python: "3.9"
+            toxenv: py39-test
 
           # Older Python versions:
           - name: Python 3.9 with oldest supported version of all dependencies
