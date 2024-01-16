@@ -3,7 +3,9 @@ requires = [
     "setuptools>=64",
     "setuptools_scm>=8",
     "wheel",
-    "numpy<1.22",
+    "extension-helpers==1.*",
+    "numpy",
+    "scipy",
     "cython",
     "twobody"
 ]
@@ -14,12 +16,12 @@ name = "thejoker"
 authors = [{name = "Adrian Price-Whelan", email = "adrianmpw@gmail.com"}]
 description = "A custom Monte Carlo sampler for the two-body problem."
 readme = "README.rst"
-requires-python = ">=3.7,<3.11"
+requires-python = ">=3.7,<3.10"
 license.file = "LICENSE"
 dynamic = ["version"]
 dependencies = [
-    "astropy",
-    "numpy<1.22",
+    "astropy<6.0",
+    "numpy",
     "twobody>=0.9",
     "scipy",
     "h5py",
@@ -27,7 +29,7 @@ dependencies = [
     "pymc3",
     "pymc_ext",
     "exoplanet>=0.2.2",
-    "tables"
+    "tables",
 ]
 
 [project.urls]
@@ -57,6 +59,9 @@ docs = [
 [tool.setuptools_scm]
 version_file = "thejoker/_version.py"
 
+[tool.extension-helpers]
+use_extension_helpers = true
+
 [tool.pytest.ini_options]
 testpaths = ["thejoker", "docs"]
 doctest_plus = "enabled"
@@ -70,6 +75,10 @@ filterwarnings = [
   "ignore:unclosed file:ResourceWarning",
   "ignore:unclosed <socket:ResourceWarning",
   "ignore:unclosed <ssl.SSLSocket:ResourceWarning",
+  "ignore:`np.bool` is a deprecated alias:DeprecationWarning",
+  "ignore:pkg_resources is deprecated as an API:DeprecationWarning",
+  "ignore:The register_cmap function",
+  "ignore:Call to deprecated Parameter testval:DeprecationWarning",
 ]
 log_cli_level = "INFO"
 

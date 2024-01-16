@@ -5,7 +5,6 @@ from aesara_theano_fallback.graph import fg
 
 # Project
 from .logging import logger
-from .samples import JokerSamples
 from .prior_helpers import (get_nonlinear_equiv_units,
                             get_linear_equiv_units,
                             validate_poly_trend,
@@ -292,6 +291,7 @@ class JokerPrior:
             The random samples.
 
         """
+        from .samples import JokerSamples
         from pymc3.distributions import draw_values
         import exoplanet.units as xu
 
