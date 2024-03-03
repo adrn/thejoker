@@ -1,35 +1,39 @@
 # Third-party
+import time
+
 import astropy.units as u
 import numpy as np
-import time
-import pymc3 as pm
-import exoplanet.units as xu
+import pymc as pm
+
+import thejoker.units as xu
 
 # Package
 from ...data import RVData
+from ...likelihood_helpers import get_constant_term_design_matrix
 from ...prior import JokerPrior
 from ..fast_likelihood import CJokerHelper
-from ...likelihood_helpers import get_constant_term_design_matrix
-from .py_likelihood import marginal_ln_likelihood, get_aAbB
+from .py_likelihood import get_aAbB, marginal_ln_likelihood
 
 # TODO: horrible copy-pasta test code below
 
 
 def test_against_py():
     with pm.Model():
-        K = xu.with_unit(pm.Normal('K', 0, 10.),
-                         u.km/u.s)
+        K = xu.with_unit(pm.Normal("K", 0, 10.0), u.km / u.s)
 
-        prior = JokerPrior.default(P_min=8*u.day, P_max=32768*u.day,
-                                   s=0*u.m/u.s,
-                                   sigma_v=100*u.km/u.s,
-                                   pars={'K': K})
+        prior = JokerPrior.default(
+            P_min=8 * u.day,
+            P_max=32768 * u.day,
+            s=0 * u.m / u.s,
+            sigma_v=100 * u.km / u.s,
+            pars={"K": K},
+        )
 
     # t = np.random.uniform(0, 250, 16) + 56831.324
     t = np.sort(np.random.uniform(0, 250, 3)) + 56831.324
     rv = np.cos(t)
     rv_err = np.random.uniform(0.1, 0.2, t.size)
-    data = RVData(t=t, rv=rv*u.km/u.s, rv_err=rv_err*u.km/u.s)
+    data = RVData(t=t, rv=rv * u.km / u.s, rv_err=rv_err * u.km / u.s)
     trend_M = get_constant_term_design_matrix(data)
 
     samples = prior.sample(size=8192)
@@ -50,16 +54,19 @@ def test_against_py():
 
 
 def test_scale_varK_against_py():
-    prior = JokerPrior.default(P_min=8*u.day, P_max=32768*u.day,
-                               s=0*u.m/u.s,
-                               sigma_K0=25*u.km/u.s,
-                               sigma_v=100*u.km/u.s)
+    prior = JokerPrior.default(
+        P_min=8 * u.day,
+        P_max=32768 * u.day,
+        s=0 * u.m / u.s,
+        sigma_K0=25 * u.km / u.s,
+        sigma_v=100 * u.km / u.s,
+    )
 
     # t = np.random.uniform(0, 250, 16) + 56831.324
     t = np.sort(np.random.uniform(0, 250, 3)) + 56831.324
     rv = np.cos(t)
     rv_err = np.random.uniform(0.1, 0.2, t.size)
-    data = RVData(t=t, rv=rv*u.km/u.s, rv_err=rv_err*u.km/u.s)
+    data = RVData(t=t, rv=rv * u.km / u.s, rv_err=rv_err * u.km / u.s)
     trend_M = get_constant_term_design_matrix(data)
 
     samples = prior.sample(size=8192)
@@ -81,19 +88,21 @@ def test_scale_varK_against_py():
 
 def test_likelihood_helpers():
     with pm.Model():
-        K = xu.with_unit(pm.Normal('K', 0, 1.),
-                         u.km/u.s)
+        K = xu.with_unit(pm.Normal("K", 0, 1.0), u.km / u.s)
 
-        prior = JokerPrior.default(P_min=8*u.day, P_max=32768*u.day,
-                                   s=0*u.m/u.s,
-                                   sigma_v=1*u.km/u.s,
-                                   pars={'K': K})
+        prior = JokerPrior.default(
+            P_min=8 * u.day,
+            P_max=32768 * u.day,
+            s=0 * u.m / u.s,
+            sigma_v=1 * u.km / u.s,
+            pars={"K": K},
+        )
 
     # t = np.random.uniform(0, 250, 16) + 56831.324
     t = np.sort(np.random.uniform(0, 250, 3)) + 56831.324
     rv = np.cos(t)
     rv_err = np.random.uniform(0.1, 0.2, t.size)
-    data = RVData(t=t, rv=rv*u.km/u.s, rv_err=rv_err*u.km/u.s)
+    data = RVData(t=t, rv=rv * u.km / u.s, rv_err=rv_err * u.km / u.s)
     trend_M = get_constant_term_design_matrix(data)
 
     samples = prior.sample(size=16)  # HACK: MAGIC NUMBER 16!

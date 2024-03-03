@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 #
 # Astropy documentation build configuration file.
@@ -25,31 +24,34 @@
 # Thus, any C-extensions that are needed to build the documentation will *not*
 # be accessible, and the documentation will not build correctly.
 
+import datetime
 import os
 import sys
-import datetime
 from importlib import import_module
 
 try:
     from sphinx_astropy.conf.v1 import *  # noqa
 except ImportError:
-    print('ERROR: the documentation requires the sphinx-astropy package to be installed')
+    print(
+        "ERROR: the documentation requires the sphinx-astropy package to be installed"
+    )
     sys.exit(1)
 
 # Get configuration information from setup.cfg
 from configparser import ConfigParser
+
 conf = ConfigParser()
 
-conf.read([os.path.join(os.path.dirname(__file__), '..', 'setup.cfg')])
-setup_cfg = dict(conf.items('metadata'))
+conf.read([os.path.join(os.path.dirname(__file__), "..", "setup.cfg")])
+setup_cfg = dict(conf.items("metadata"))
 
 # -- General configuration ----------------------------------------------------
 
 # By default, highlight as Python 3.
-highlight_language = 'python3'
+highlight_language = "python3"
 
 # If your documentation needs a minimal Sphinx version, state it here.
-#needs_sphinx = '1.2'
+# needs_sphinx = '1.2'
 
 # To perform a Sphinx version check that needs to be more specific than
 # major.minor, call `check_sphinx_version("x.y.z")` here.
@@ -57,8 +59,8 @@ highlight_language = 'python3'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns.append('_templates')
-exclude_patterns.append('**.ipynb_checkpoints')
+exclude_patterns.append("_templates")
+exclude_patterns.append("**.ipynb_checkpoints")
 
 # This is added to the end of RST files - a good place to put substitutions to
 # be used globally.
@@ -69,20 +71,19 @@ rst_epilog += """
 # -- Project information ------------------------------------------------------
 
 # This does not *have* to match the package name, but typically does
-project = setup_cfg['name']
-author = setup_cfg['author']
-copyright = '{0}, {1}'.format(
-    datetime.datetime.now().year, setup_cfg['author'])
+project = setup_cfg["name"]
+author = setup_cfg["author"]
+copyright = "{0}, {1}".format(datetime.datetime.now().year, setup_cfg["author"])
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 
-import_module(setup_cfg['name'])
-package = sys.modules[setup_cfg['name']]
+import_module(setup_cfg["name"])
+package = sys.modules[setup_cfg["name"]]
 
 # The short X.Y version.
-version = package.__version__.split('-', 1)[0]
+version = package.__version__.split("-", 1)[0]
 # The full version, including alpha/beta/rc tags.
 release = package.__version__
 
@@ -99,71 +100,71 @@ release = package.__version__
 
 # Add any paths that contain custom themes here, relative to this directory.
 # To use a different custom theme, add the directory containing the theme.
-#html_theme_path = []
+# html_theme_path = []
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes. To override the custom theme, set this to the
 # name of a builtin theme or the name of a custom theme in html_theme_path.
-#html_theme = None
+# html_theme = None
 
 
 # Please update these texts to match the name of your package.
 html_theme_options = {
-    'logotext1': 'The',  # white,  semi-bold
-    'logotext2': 'Joker',  # orange, light
-    'logotext3': ':docs'   # white,  light
+    "logotext1": "The",  # white,  semi-bold
+    "logotext2": "Joker",  # orange, light
+    "logotext3": ":docs",  # white,  light
 }
 
 # Custom sidebar templates, maps document names to template names.
-#html_sidebars = {}
+# html_sidebars = {}
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-#html_logo = ''
+# html_logo = ''
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
 # pixels large.
-path = os.path.abspath(os.path.join(os.path.dirname(__file__), '_static'))
-html_favicon = os.path.join(path, 'icon.ico')
+path = os.path.abspath(os.path.join(os.path.dirname(__file__), "_static"))
+html_favicon = os.path.join(path, "icon.ico")
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
-#html_last_updated_fmt = ''
+# html_last_updated_fmt = ''
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
-html_title = '{0} v{1}'.format(project, release)
+html_title = f"{project} v{release}"
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = project + 'doc'
+htmlhelp_basename = project + "doc"
 
-html_static_path = ['_static']
-html_style = 'thejoker.css'
+html_static_path = ["_static"]
+html_style = "thejoker.css"
 
 # -- Options for LaTeX output -------------------------------------------------
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
-latex_documents = [('index', project + '.tex', project + u' Documentation',
-                    author, 'manual')]
+latex_documents = [
+    ("index", project + ".tex", project + " Documentation", author, "manual")
+]
 
 
 # -- Options for manual page output -------------------------------------------
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [('index', project.lower(), project + u' Documentation',
-              [author], 1)]
+man_pages = [("index", project.lower(), project + " Documentation", [author], 1)]
 
 
 # -- Options for the edit_on_github extension ---------------------------------
 
-if eval(setup_cfg.get('edit_on_github')):
-    extensions += ['sphinx_astropy.ext.edit_on_github']
+if eval(setup_cfg.get("edit_on_github")):
+    extensions += ["sphinx_astropy.ext.edit_on_github"]
 
-    versionmod = __import__(setup_cfg['package_name'] + '.version')
-    edit_on_github_project = setup_cfg['github_project']
+    versionmod = __import__(setup_cfg["package_name"] + ".version")
+    edit_on_github_project = setup_cfg["github_project"]
     if versionmod.version.release:
         edit_on_github_branch = "v" + versionmod.version.version
     else:
@@ -173,14 +174,15 @@ if eval(setup_cfg.get('edit_on_github')):
     edit_on_github_doc_root = "docs"
 
 # -- Resolving issue number to links in changelog -----------------------------
-github_issues_url = 'https://github.com/{0}/issues/'.format(setup_cfg['github_project'])
+github_issues_url = "https://github.com/{0}/issues/".format(setup_cfg["github_project"])
 
-intersphinx_mapping['h5py'] = ('http://docs.h5py.org/en/latest/', None)
-intersphinx_mapping['pymc3'] = ('https://docs.pymc.io/', None)
-intersphinx_mapping['twobody'] = ('https://twobody.readthedocs.io/en/latest/',
-                                  None)
-intersphinx_mapping['scwhimmbad'] = (
-    'https://schwimmbad.readthedocs.io/en/latest/', None)
+intersphinx_mapping["h5py"] = ("http://docs.h5py.org/en/latest/", None)
+intersphinx_mapping["pymc"] = ("https://docs.pymc.io/", None)
+intersphinx_mapping["twobody"] = ("https://twobody.readthedocs.io/en/latest/", None)
+intersphinx_mapping["scwhimmbad"] = (
+    "https://schwimmbad.readthedocs.io/en/latest/",
+    None,
+)
 
 # see if we're running on CI:
 ON_CI = os.environ.get("CI", False)
@@ -189,21 +191,21 @@ PR = os.environ.get("CIRCLE_PULL_REQUEST", False)
 # Use astropy plot style
 plot_rcparams = dict()
 if not ON_CI:
-    plot_rcparams['text.usetex'] = True
-plot_rcparams['savefig.facecolor'] = 'none'
-plot_rcparams['savefig.bbox'] = 'tight'
+    plot_rcparams["text.usetex"] = True
+plot_rcparams["savefig.facecolor"] = "none"
+plot_rcparams["savefig.bbox"] = "tight"
 plot_apply_rcparams = True
-plot_formats = [('png', 512)]
+plot_formats = [("png", 512)]
 
 
 # nbsphinx config:
-exclude_patterns.append('make-data.*')
-exclude_patterns.append('*/make-data.*')
+exclude_patterns.append("make-data.*")
+exclude_patterns.append("*/make-data.*")
 
-extensions += ['nbsphinx']
-extensions += ['IPython.sphinxext.ipython_console_highlighting']
+extensions += ["nbsphinx"]
+extensions += ["IPython.sphinxext.ipython_console_highlighting"]
 
-extensions += ['sphinx.ext.mathjax']
+extensions += ["sphinx.ext.mathjax"]
 mathjax_path = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
 
 # nbsphinx_execute_arguments = [
@@ -213,10 +215,10 @@ mathjax_path = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?
 nbsphinx_timeout = 600
 
 if PR:
-    nbsphinx_execute = 'never'
+    nbsphinx_execute = "never"
 
 if ON_CI:
-    nbsphinx_kernel_name = 'python3'
+    nbsphinx_kernel_name = "python3"
 
 else:
-    nbsphinx_kernel_name = os.environ.get('NBSPHINX_KERNEL', 'python3')
+    nbsphinx_kernel_name = os.environ.get("NBSPHINX_KERNEL", "python3")

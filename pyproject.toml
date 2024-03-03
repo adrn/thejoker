@@ -27,7 +27,7 @@ dependencies = [
     "schwimmbad>=0.3.1",
     "pymc>=5",
     "pymc_ext @ git+https://github.com/exoplanet-dev/pymc-ext",
-    "exoplanet-core[pymc]",
+    "exoplanet-core[pymc] @ git+https://github.com/exoplanet-dev/exoplanet-core",
     "tables",
 ]
 
