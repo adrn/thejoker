@@ -25,7 +25,7 @@ dependencies = [
     "scipy",
     "h5py",
     "schwimmbad>=0.3.1",
-    "pymc",
+    "pymc>=5",
     "pymc_ext @ git+https://github.com/exoplanet-dev/pymc-ext",
     "exoplanet-core[pymc]",
     "tables",
