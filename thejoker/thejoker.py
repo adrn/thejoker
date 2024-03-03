@@ -2,21 +2,23 @@
 import os
 import warnings
 
-# Third-party
 import numpy as np
+
+# Third-party
+from astropy.utils.decorators import deprecated_renamed_argument
+
+from .data_helpers import validate_prepare_data
+from .likelihood_helpers import get_trend_design_matrix
 
 # Project
 from .logging import logger
-from .data_helpers import validate_prepare_data
-from .samples_analysis import MAP_sample, is_P_unimodal
-from .likelihood_helpers import get_trend_design_matrix
-from .prior_helpers import validate_n_offsets, validate_poly_trend
 from .prior import JokerPrior, _validate_model
-from .src.fast_likelihood import CJokerHelper
+from .prior_helpers import validate_n_offsets, validate_poly_trend
 from .samples import JokerSamples
-from .utils import DEFAULT_RNG, NUMPY_LT_1_17
+from .samples_analysis import is_P_unimodal
+from .src.fast_likelihood import CJokerHelper
 
-__all__ = ['TheJoker']
+__all__ = ["TheJoker"]
 
 
 class TheJoker:
@@ -30,7 +32,7 @@ class TheJoker:
         parameters used in The Joker.
     pool : `schwimmbad.BasePool` (optional)
         A processing pool (default is a `schwimmbad.SerialPool` instance).
-    random_state : `numpy.random.Generator` (optional)
+    rng : `numpy.random.Generator` (optional)
         A `numpy.random.Generator` instance for controlling random number
         generation.
     tempfile_path : str (optional)
@@ -40,41 +42,27 @@ class TheJoker:
         Default: ``~/.thejoker``
     """
 
-    def __init__(self, prior, pool=None, random_state=None,
-                 tempfile_path=None):
-
+    @deprecated_renamed_argument(
+        "random_state", "rng", since="v1.3", warning_type=DeprecationWarning
+    )
+    def __init__(self, prior, pool=None, rng=None, tempfile_path=None):
         # set the processing pool
         if pool is None:
             import schwimmbad
+
             pool = schwimmbad.SerialPool()
-        elif not hasattr(pool, 'map') or not hasattr(pool, 'close'):
-            raise TypeError("Input pool object must have .map() and .close() "
-                            "methods. We recommend using `schwimmbad` pools.")
+        elif not hasattr(pool, "map") or not hasattr(pool, "close"):
+            raise TypeError(
+                "Input pool object must have .map() and .close() "
+                "methods. We recommend using `schwimmbad` pools."
+            )
         self.pool = pool
 
         # Set the parent random state - child processes get different states
         # based on the parent
-        if random_state is None:
-            random_state = DEFAULT_RNG()
-        elif (isinstance(random_state, np.random.RandomState) and
-                not NUMPY_LT_1_17):
-            warnings.warn("With thejoker>=v1.2, use numpy.random.Generator "
-                          "objects instead of RandomState objects to control "
-                          "random numbers.", DeprecationWarning)
-            tmp = np.random.Generator(np.random.MT19937())
-            tmp.bit_generator.state = random_state.get_state()
-            random_state = tmp
-        elif (not NUMPY_LT_1_17 and
-                not isinstance(random_state, np.random.Generator)):
-            raise TypeError("Random state object must be a "
-                            "numpy.random.Generator instance, not "
-                            f"'{type(random_state)}'")
-        elif (NUMPY_LT_1_17 and
-                not isinstance(random_state, np.random.RandomState)):
-            raise TypeError("Random state object must be a "
-                            "numpy.random.RandomState instance, not "
-                            f"'{type(random_state)}'")
-        self.random_state = random_state
+        if rng is None:
+            rng = np.random.default_rng()
+        self.rng = rng
 
         # check if a JokerParams instance was passed in to specify the state
         if not isinstance(prior, JokerPrior):
@@ -82,10 +70,9 @@ class TheJoker:
         self.prior = prior
 
         if tempfile_path is None:
-            self._tempfile_path = os.path.expanduser('~/.thejoker/')
+            self._tempfile_path = os.path.expanduser("~/.thejoker/")
         else:
-            self._tempfile_path = os.path.abspath(
-                os.path.expanduser(tempfile_path))
+            self._tempfile_path = os.path.abspath(os.path.expanduser(tempfile_path))
 
     @property
     def tempfile_path(self):
@@ -93,14 +80,15 @@ class TheJoker:
         return self._tempfile_path
 
     def _make_joker_helper(self, data):
-        all_data, ids, trend_M = validate_prepare_data(data,
-                                                       self.prior.poly_trend,
-                                                       self.prior.n_offsets)
+        all_data, ids, trend_M = validate_prepare_data(
+            data, self.prior.poly_trend, self.prior.n_offsets
+        )
         joker_helper = CJokerHelper(all_data, self.prior, trend_M)
         return joker_helper
 
-    def marginal_ln_likelihood(self, data, prior_samples, n_batches=None,
-                               in_memory=False):
+    def marginal_ln_likelihood(
+        self, data, prior_samples, n_batches=None, in_memory=False
+    ):
         """
         Compute the marginal log-likelihood at each of the input prior samples.
 
@@ -129,32 +117,36 @@ class TheJoker:
             The marginal log-likelihood computed at the location of each prior
             sample.
         """
-        from .multiproc_helpers import marginal_ln_likelihood_helper
         from .likelihood_helpers import marginal_ln_likelihood_inmem
+        from .multiproc_helpers import marginal_ln_likelihood_helper
 
         joker_helper = self._make_joker_helper(data)  # also validates data
 
         if in_memory:
             if isinstance(prior_samples, JokerSamples):
                 prior_samples, _ = prior_samples.pack(
-                    units=joker_helper.internal_units,
-                    names=joker_helper.packed_order)
+                    units=joker_helper.internal_units, names=joker_helper.packed_order
+                )
             return marginal_ln_likelihood_inmem(joker_helper, prior_samples)
 
         else:
-            return marginal_ln_likelihood_helper(joker_helper, prior_samples,
-                                                 pool=self.pool,
-                                                 n_batches=n_batches)
+            return marginal_ln_likelihood_helper(
+                joker_helper, prior_samples, pool=self.pool, n_batches=n_batches
+            )
 
-    def rejection_sample(self, data, prior_samples,
-                         n_prior_samples=None,
-                         max_posterior_samples=None,
-                         n_linear_samples=1,
-                         return_logprobs=False,
-                         return_all_logprobs=False,
-                         n_batches=None,
-                         randomize_prior_order=False,
-                         in_memory=False):
+    def rejection_sample(
+        self,
+        data,
+        prior_samples,
+        n_prior_samples=None,
+        max_posterior_samples=None,
+        n_linear_samples=1,
+        return_logprobs=False,
+        return_all_logprobs=False,
+        n_batches=None,
+        randomize_prior_order=False,
+        in_memory=False,
+    ):
         """
         Run The Joker's rejection sampling on prior samples to get posterior
         samples for the input data.
@@ -212,65 +204,69 @@ class TheJoker:
             The posterior samples produced from The Joker.
 
         """
-        from .multiproc_helpers import rejection_sample_helper
         from .likelihood_helpers import rejection_sample_inmem
+        from .multiproc_helpers import rejection_sample_helper
 
         joker_helper = self._make_joker_helper(data)  # also validates data
 
         if isinstance(prior_samples, int):
             # If an integer, generate that many prior samples first
             N = prior_samples
-            prior_samples = self.prior.sample(size=N,
-                                              return_logprobs=return_logprobs)
+            prior_samples = self.prior.sample(size=N, return_logprobs=return_logprobs)
 
         if in_memory:
             if isinstance(prior_samples, JokerSamples):
                 ln_prior = None
                 if return_logprobs:
-                    ln_prior = prior_samples['ln_prior']
+                    ln_prior = prior_samples["ln_prior"]
 
                 prior_samples, _ = prior_samples.pack(
-                    units=joker_helper.internal_units,
-                    names=joker_helper.packed_order)
+                    units=joker_helper.internal_units, names=joker_helper.packed_order
+                )
             else:
                 ln_prior = return_logprobs
 
             samples = rejection_sample_inmem(
                 joker_helper,
                 prior_samples,
-                random_state=self.random_state,
+                rng=self.rng,
                 ln_prior=ln_prior,
                 max_posterior_samples=max_posterior_samples,
                 n_linear_samples=n_linear_samples,
-                return_all_logprobs=return_all_logprobs)
+                return_all_logprobs=return_all_logprobs,
+            )
 
         else:
             samples = rejection_sample_helper(
                 joker_helper,
                 prior_samples,
                 pool=self.pool,
-                random_state=self.random_state,
+                rng=self.rng,
                 n_prior_samples=n_prior_samples,
                 max_posterior_samples=max_posterior_samples,
                 n_linear_samples=n_linear_samples,
                 return_logprobs=return_logprobs,
                 n_batches=n_batches,
                 randomize_prior_order=randomize_prior_order,
-                return_all_logprobs=return_all_logprobs)
+                return_all_logprobs=return_all_logprobs,
+            )
 
         return samples
 
-    def iterative_rejection_sample(self, data, prior_samples,
-                                   n_requested_samples,
-                                   max_prior_samples=None,
-                                   n_linear_samples=1,
-                                   return_logprobs=False,
-                                   n_batches=None,
-                                   randomize_prior_order=False,
-                                   init_batch_size=None,
-                                   growth_factor=128,
-                                   in_memory=False):
-
+    def iterative_rejection_sample(
+        self,
+        data,
+        prior_samples,
+        n_requested_samples,
+        max_prior_samples=None,
+        n_linear_samples=1,
+        return_logprobs=False,
+        n_batches=None,
+        randomize_prior_order=False,
+        init_batch_size=None,
+        growth_factor=128,
+        in_memory=False,
+    ):
         """This is an experimental sampling method that adaptively generates
         posterior samples given a large library of prior samples. The advantage
         of this function over the standard ``rejection_sample`` method is that
@@ -324,8 +320,8 @@ class TheJoker:
         samples : `~thejoker.JokerSamples`
             The posterior samples produced from The Joker.
         """
-        from .multiproc_helpers import iterative_rejection_helper
         from .likelihood_helpers import iterative_rejection_inmem
+        from .multiproc_helpers import iterative_rejection_helper
 
         joker_helper = self._make_joker_helper(data)  # also validates data
 
@@ -333,23 +329,24 @@ class TheJoker:
             if isinstance(prior_samples, JokerSamples):
                 ln_prior = None
                 if return_logprobs:
-                    ln_prior = prior_samples['ln_prior']
+                    ln_prior = prior_samples["ln_prior"]
 
                 prior_samples, _ = prior_samples.pack(
-                    units=joker_helper.internal_units,
-                    names=joker_helper.packed_order)
+                    units=joker_helper.internal_units, names=joker_helper.packed_order
+                )
             else:
                 ln_prior = return_logprobs
 
             samples = iterative_rejection_inmem(
                 joker_helper,
                 prior_samples,
-                random_state=self.random_state,
+                rng=self.rng,
                 n_requested_samples=n_requested_samples,
                 ln_prior=ln_prior,
                 init_batch_size=init_batch_size,
                 growth_factor=growth_factor,
-                n_linear_samples=n_linear_samples)
+                n_linear_samples=n_linear_samples,
+            )
 
         else:
             samples = iterative_rejection_helper(
@@ -358,13 +355,14 @@ class TheJoker:
                 init_batch_size=init_batch_size,
                 growth_factor=growth_factor,
                 pool=self.pool,
-                random_state=self.random_state,
+                rng=self.rng,
                 n_requested_samples=n_requested_samples,
                 max_prior_samples=max_prior_samples,
                 n_linear_samples=n_linear_samples,
                 return_logprobs=return_logprobs,
                 n_batches=n_batches,
-                randomize_prior_order=randomize_prior_order)
+                randomize_prior_order=randomize_prior_order,
+            )
 
         return samples
 
@@ -392,25 +390,27 @@ class TheJoker:
         mcmc_init : dict
 
         """
-        import pymc3 as pm
+        import aesara_theano_fallback.tensor as tt
         import exoplanet as xo
         import exoplanet.units as xu
-        import aesara_theano_fallback.tensor as tt
+        import pymc3 as pm
 
         model = _validate_model(model)
 
         # Reduce data, strip units:
-        data, ids, _ = validate_prepare_data(data,
-                                             self.prior.poly_trend,
-                                             self.prior.n_offsets)
+        data, ids, _ = validate_prepare_data(
+            data, self.prior.poly_trend, self.prior.n_offsets
+        )
         x = data._t_bmjd - data._t_ref_bmjd
         y = data.rv.value
         err = data.rv_err.to_value(data.rv.unit)
 
         # First, prepare the joker_samples:
         if not isinstance(joker_samples, JokerSamples):
-            raise TypeError("You must pass in a JokerSamples instance to the "
-                            "joker_samples argument.")
+            raise TypeError(
+                "You must pass in a JokerSamples instance to the "
+                "joker_samples argument."
+            )
 
         if len(joker_samples) > 1:
             # check if unimodal in P, if not, warn
@@ -432,20 +432,20 @@ class TheJoker:
 
         p = self.prior.pars
 
-        if 't_peri' not in model.named_vars:
+        if "t_peri" not in model.named_vars:
             with model:
-                pm.Deterministic('t_peri', p['P'] * p['M0'] / (2*np.pi))
+                pm.Deterministic("t_peri", p["P"] * p["M0"] / (2 * np.pi))
 
-        if 'obs' in model.named_vars:
+        if "obs" in model.named_vars:
             return mcmc_init
 
         with model:
             # Set up the orbit model
             orbit = xo.orbits.KeplerianOrbit(
-                period=p['P'],
-                ecc=p['e'],
-                omega=p['omega'],
-                t_periastron=model.named_vars['t_peri']
+                period=p["P"],
+                ecc=p["e"],
+                omega=p["omega"],
+                t_periastron=model.named_vars["t_peri"],
             )
 
         # design matrix
@@ -456,28 +456,28 @@ class TheJoker:
         _, vtrend_names = validate_poly_trend(self.prior.poly_trend)
 
         with model:
-            v_pars = ([p['v0']]
-                      + [p[name] for name in offset_names]
-                      + [p[name] for name in vtrend_names[1:]])  # skip v0
+            v_pars = (
+                [p["v0"]]
+                + [p[name] for name in offset_names]
+                + [p[name] for name in vtrend_names[1:]]
+            )  # skip v0
             v_trend_vec = tt.stack(v_pars, axis=0)
             trend = tt.dot(M, v_trend_vec)
 
-            rv_model = orbit.get_radial_velocity(x, K=p['K']) + trend
+            rv_model = orbit.get_radial_velocity(x, K=p["K"]) + trend
             pm.Deterministic("model_rv", rv_model)
 
-            err = tt.sqrt(err**2 + p['s']**2)
+            err = tt.sqrt(err**2 + p["s"] ** 2)
             pm.Normal("obs", mu=rv_model, sd=err, observed=y)
 
-            pm.Deterministic('logp', model.logpt)
+            pm.Deterministic("logp", model.logpt)
 
             dist = pm.Normal.dist(model.model_rv, data.rv_err.value)
             lnlike = pm.Deterministic(
-                'ln_likelihood',
-                dist.logp(data.rv.value).sum(axis=-1))
+                "ln_likelihood", dist.logp(data.rv.value).sum(axis=-1)
+            )
 
-            pm.Deterministic(
-                'ln_prior',
-                model.logpt - lnlike)
+            pm.Deterministic("ln_prior", model.logpt - lnlike)
 
         return mcmc_init
 
@@ -490,10 +490,11 @@ class TheJoker:
         trace : `~pymc3.backends.base.MultiTrace`
         """
         warnings.warn(
-            'This method is deprecated: Use '
-            'thejoker.samples_helpers.trace_to_samples() instead',
-            UserWarning
+            "This method is deprecated: Use "
+            "thejoker.samples_helpers.trace_to_samples() instead",
+            UserWarning,
         )
 
         from thejoker.samples_helpers import trace_to_samples
+
         return trace_to_samples(self, trace, data, names)

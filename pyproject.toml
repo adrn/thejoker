@@ -26,7 +26,7 @@ dependencies = [
     "scipy",
     "h5py",
     "schwimmbad>=0.3.1",
-    "pymc3",
+    "pymc",
     "pymc_ext",
     "exoplanet>=0.2.2",
     "tables",

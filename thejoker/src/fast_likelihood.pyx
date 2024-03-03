@@ -463,7 +463,7 @@ cdef class CJokerHelper:
 
     cpdef batch_get_posterior_samples(self, double[:, ::1] chunk,
                                       int n_linear_samples_per,
-                                      object random_state):
+                                      object rng):
         """TODO:
 
         Parameters
@@ -519,7 +519,7 @@ cdef class CJokerHelper:
             # TODO: FIXME: this calls back to numpy at the Python layer
             # - use https://github.com/bashtage/randomgen instead?
             # a and Ainv are populated by the likelihood_worker()
-            linear_pars = random_state.multivariate_normal(
+            linear_pars = rng.multivariate_normal(
                 self.a, np.linalg.inv(self.Ainv), size=n_linear_samples_per)
 
             for j in range(n_linear_samples_per):
