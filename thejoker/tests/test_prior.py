@@ -134,7 +134,7 @@ def get_prior(case=None):
         return prior, units
 
     elif case == 8:
-        # Replace s with pymc3 var with .default()
+        # Replace s with pymc var with .default()
         units = default_expected_units.copy()
         with pm.Model() as model:
             s = xu.with_unit(pm.Normal("s", 10, 0.5), u.m / u.s)

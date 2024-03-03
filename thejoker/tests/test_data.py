@@ -121,11 +121,6 @@ def test_rvdata_init():
     data = RVData(t_arr, rv, err, t_ref=t_obj[3])
     assert np.isclose(data.t_ref.mjd, t_obj[3].mjd)
 
-    #  deprecated:
-    with warnings.catch_warnings(record=True) as warns:
-        RVData(t_arr, rv, err, t0=t_obj[3])
-        assert len(warns) != 0
-
     # ------------------------------------------------------------------------
     # Test expected failures:
 
@@ -196,17 +191,12 @@ def test_data_methods(tmpdir, inputs):
     assert u.allclose(data1.rv_err, data2.rv_err)
     assert u.allclose(data1.t_ref.mjd, data2.t_ref.mjd)
 
-    #  deprecated:
-    with warnings.catch_warnings(record=True) as warns:
-        data1.t0
-        assert len(warns) != 0
-
     # get phase from data object
     phase1 = data1.phase(P=15.0 * u.day)
     assert phase1.min() >= 0
     assert phase1.max() <= 1
 
-    phase2 = data1.phase(P=15.0 * u.day, t0=Time(58585.24, format="mjd"))
+    phase2 = data1.phase(P=15.0 * u.day, t_ref=Time(58585.24, format="mjd"))
     assert not np.allclose(phase1, phase2)
 
     # compute inverse variance

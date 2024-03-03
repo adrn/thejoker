@@ -18,6 +18,8 @@ from .py_likelihood import get_aAbB, marginal_ln_likelihood
 
 
 def test_against_py():
+    rng = np.random.default_rng(seed=42)
+
     with pm.Model():
         K = xu.with_unit(pm.Normal("K", 0, 10.0), u.km / u.s)
 
@@ -30,9 +32,9 @@ def test_against_py():
         )
 
     # t = np.random.uniform(0, 250, 16) + 56831.324
-    t = np.sort(np.random.uniform(0, 250, 3)) + 56831.324
+    t = np.sort(rng.uniform(0, 250, 3)) + 56831.324
     rv = np.cos(t)
-    rv_err = np.random.uniform(0.1, 0.2, t.size)
+    rv_err = rng.uniform(0.1, 0.2, t.size)
     data = RVData(t=t, rv=rv * u.km / u.s, rv_err=rv_err * u.km / u.s)
     trend_M = get_constant_term_design_matrix(data)
 
@@ -54,6 +56,8 @@ def test_against_py():
 
 
 def test_scale_varK_against_py():
+    rng = np.random.default_rng(seed=42)
+
     prior = JokerPrior.default(
         P_min=8 * u.day,
         P_max=32768 * u.day,
@@ -63,9 +67,9 @@ def test_scale_varK_against_py():
     )
 
     # t = np.random.uniform(0, 250, 16) + 56831.324
-    t = np.sort(np.random.uniform(0, 250, 3)) + 56831.324
+    t = np.sort(rng.uniform(0, 250, 3)) + 56831.324
     rv = np.cos(t)
-    rv_err = np.random.uniform(0.1, 0.2, t.size)
+    rv_err = rng.uniform(0.1, 0.2, t.size)
     data = RVData(t=t, rv=rv * u.km / u.s, rv_err=rv_err * u.km / u.s)
     trend_M = get_constant_term_design_matrix(data)
 
@@ -87,6 +91,8 @@ def test_scale_varK_against_py():
 
 
 def test_likelihood_helpers():
+    rng = np.random.default_rng(seed=42)
+
     with pm.Model():
         K = xu.with_unit(pm.Normal("K", 0, 1.0), u.km / u.s)
 
@@ -98,10 +104,10 @@ def test_likelihood_helpers():
             pars={"K": K},
         )
 
-    # t = np.random.uniform(0, 250, 16) + 56831.324
-    t = np.sort(np.random.uniform(0, 250, 3)) + 56831.324
+    # t = rng.uniform(0, 250, 16) + 56831.324
+    t = np.sort(rng.uniform(0, 250, 3)) + 56831.324
     rv = np.cos(t)
-    rv_err = np.random.uniform(0.1, 0.2, t.size)
+    rv_err = rng.uniform(0.1, 0.2, t.size)
     data = RVData(t=t, rv=rv * u.km / u.s, rv_err=rv_err * u.km / u.s)
     trend_M = get_constant_term_design_matrix(data)
 

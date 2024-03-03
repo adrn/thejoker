@@ -8,7 +8,6 @@ import numpy as np
 from astroML.utils import log_multivariate_gaussian
 from twobody.wrap import cy_rv_from_elements
 
-from ...distributions import FixedCompanionMass
 from ...samples import JokerSamples
 
 __all__ = ["get_ivar", "likelihood_worker", "marginal_ln_likelihood"]
@@ -145,19 +144,21 @@ def get_M_Lambda_ivar(samples, prior, data):
     for i, k in enumerate(prior._linear_equiv_units.keys()):
         if k == "K":
             continue  # set below
-        Lambda[i] = prior.pars[k].distribution.sd.eval() ** 2
+        pars = prior.pars[k].owner.inputs[3:]
+        Lambda[i] = pars[1].eval() ** 2
 
-    K_dist = prior.pars["K"].distribution
-    if isinstance(K_dist, FixedCompanionMass):
+    K_dist = prior.pars["K"]
+    K_pars = K_dist.owner.inputs[3:]
+    if K_dist.owner.op._print_name[0] == "FixedCompanionMass":
         sigma_K0 = K_dist._sigma_K0.to_value(v_unit)
         P0 = K_dist._P0.to_value(samples["P"].unit)
         max_K2 = K_dist._max_K.to_value(v_unit) ** 2
     else:
-        Lambda[0] = K_dist.sd.eval() ** 2
+        Lambda[0] = K_pars[1].eval() ** 2
 
     for n in range(n_samples):
         M = design_matrix(packed_samples[n], data, prior)
-        if isinstance(K_dist, FixedCompanionMass):
+        if K_dist.owner.op._print_name[0] == "FixedCompanionMass":
             P = samples["P"][n].value
             e = samples["e"][n]
             Lambda[0] = sigma_K0**2 / (1 - e**2) * (P / P0) ** (-2 / 3)
