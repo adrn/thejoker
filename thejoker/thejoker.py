@@ -1,6 +1,5 @@
 # Standard library
 import os
-import warnings
 
 import numpy as np
 
@@ -368,7 +367,7 @@ class TheJoker:
 
     def setup_mcmc(self, data, joker_samples, model=None, custom_func=None):
         """
-        Setup the model to run MCMC using pymc3.
+        Setup the model to run MCMC using pymc.
 
         Parameters
         ----------
@@ -376,13 +375,13 @@ class TheJoker:
             The radial velocity data, or an iterable containing ``RVData``
             objects for each data source.
         joker_samples : `~thejoker.JokerSamples`
-            If a single sample is passed in, this is packed into a pymc3
+            If a single sample is passed in, this is packed into a pymc
             initialization dictionary and returned after setting up. If
             multiple samples are passed in, the median (along period) sample is
             taken and returned after setting up for MCMC.
-        model : `pymc3.Model`
+        model : `pymc.Model`
             This is either required, or this function must be called within a
-            pymc3 model context.
+            pymc model context.
         custom_func : callable (optional)
 
         Returns
@@ -390,10 +389,11 @@ class TheJoker:
         mcmc_init : dict
 
         """
-        import aesara_theano_fallback.tensor as tt
-        import exoplanet as xo
-        import exoplanet.units as xu
-        import pymc3 as pm
+        import pymc as pm
+        import pytensor.tensor as pt
+
+        import thejoker.units as xu
+        from thejoker._keplerian_orbit import KeplerianOrbit
 
         model = _validate_model(model)
 
@@ -441,7 +441,7 @@ class TheJoker:
 
         with model:
             # Set up the orbit model
-            orbit = xo.orbits.KeplerianOrbit(
+            orbit = KeplerianOrbit(
                 period=p["P"],
                 ecc=p["e"],
                 omega=p["omega"],
@@ -461,13 +461,13 @@ class TheJoker:
                 + [p[name] for name in offset_names]
                 + [p[name] for name in vtrend_names[1:]]
             )  # skip v0
-            v_trend_vec = tt.stack(v_pars, axis=0)
-            trend = tt.dot(M, v_trend_vec)
+            v_trend_vec = pt.stack(v_pars, axis=0)
+            trend = pt.dot(M, v_trend_vec)
 
             rv_model = orbit.get_radial_velocity(x, K=p["K"]) + trend
             pm.Deterministic("model_rv", rv_model)
 
-            err = tt.sqrt(err**2 + p["s"] ** 2)
+            err = pt.sqrt(err**2 + p["s"] ** 2)
             pm.Normal("obs", mu=rv_model, sd=err, observed=y)
 
             pm.Deterministic("logp", model.logpt)
@@ -480,21 +480,3 @@ class TheJoker:
             pm.Deterministic("ln_prior", model.logpt - lnlike)
 
         return mcmc_init
-
-    def trace_to_samples(self, trace, data, names=None):
-        """
-        Create a ``JokerSamples`` instance from a pymc3 trace object.
-
-        Parameters
-        ----------
-        trace : `~pymc3.backends.base.MultiTrace`
-        """
-        warnings.warn(
-            "This method is deprecated: Use "
-            "thejoker.samples_helpers.trace_to_samples() instead",
-            UserWarning,
-        )
-
-        from thejoker.samples_helpers import trace_to_samples
-
-        return trace_to_samples(self, trace, data, names)

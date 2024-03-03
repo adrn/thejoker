@@ -15,6 +15,7 @@ np.import_array()
 import cython
 cimport cython
 cimport scipy.linalg.cython_lapack as lapack
+import thejoker.units as xu
 
 # from libc.stdio cimport printf
 from libc.math cimport pow, log, fabs, pi
@@ -202,7 +203,6 @@ cdef class CJokerHelper:
 
         # put v0_offsets variances into Lambda
         # - validated to be Normal() in JokerPrior
-        import exoplanet.units as xu
         for i in range(self.n_offsets):
             name = prior.v0_offsets[i].name
             dist = prior.v0_offsets[i].distribution
@@ -216,16 +216,23 @@ cdef class CJokerHelper:
         # ---------------------------------------------------------------------
         # TODO: This is a bit of a hack:
         from ..distributions import FixedCompanionMass
-        if isinstance(prior.pars['K'].distribution, FixedCompanionMass):
+        if prior.pars['K'].owner.op._print_name[0] == "FixedCompanionMass":
             self.fixed_K_prior = 0
         else:
             self.fixed_K_prior = 1
 
         for i, name in enumerate(prior._linear_equiv_units.keys()):
-            dist = prior.model[name].distribution
             _unit = getattr(prior.model[name], xu.UNIT_ATTR_NAME)
             to_unit = self.internal_units[name]
-            mu = (dist.mean.eval() * _unit).to_value(to_unit)
+
+            dist = prior.model[name]
+            # first three are (rng, size, dtype) as per
+            # https://github.com/pymc-devs/pymc/blob/main/pymc/printing.py#L43
+            pars = dist.owner.inputs[3:]
+
+            # mean is par 0
+            mu = (pars[0].eval() * _unit).to_value(to_unit)
+            std = (pars[1].eval() * _unit).to_value(to_unit)
 
             if name == 'K' and self.fixed_K_prior == 0:
                 # TODO: here's the major hack
@@ -236,12 +243,12 @@ cdef class CJokerHelper:
                 self.mu[i] = mu
 
             elif name == 'v0':
-                self.Lambda[i] = (dist.sd.eval() * _unit).to_value(to_unit) ** 2
+                self.Lambda[i] = std ** 2
                 self.mu[i] = mu
 
             else:  # v1, v2, etc.
                 j = i + self.n_offsets
-                self.Lambda[j] = (dist.sd.eval() * _unit).to_value(to_unit) ** 2
+                self.Lambda[j] = std ** 2
                 self.mu[j] = mu
         # ---------------------------------------------------------------------
 

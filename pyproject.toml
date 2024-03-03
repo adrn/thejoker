@@ -3,7 +3,6 @@ requires = [
     "setuptools>=64",
     "setuptools_scm>=8",
     "wheel",
-    "extension-helpers==1.*",
     "numpy",
     "scipy",
     "cython",
@@ -16,19 +15,19 @@ name = "thejoker"
 authors = [{name = "Adrian Price-Whelan", email = "adrianmpw@gmail.com"}]
 description = "A custom Monte Carlo sampler for the two-body problem."
 readme = "README.rst"
-requires-python = ">=3.7,<3.10"
+requires-python = ">=3.9"
 license.file = "LICENSE"
 dynamic = ["version"]
 dependencies = [
-    "astropy<6.0",
+    "astropy",
     "numpy",
     "twobody>=0.9",
     "scipy",
     "h5py",
     "schwimmbad>=0.3.1",
     "pymc",
-    "pymc_ext",
-    "exoplanet>=0.2.2",
+    "pymc_ext @ git+https://github.com/exoplanet-dev/pymc-ext",
+    "exoplanet-core[pymc]",
     "tables",
 ]
 
@@ -56,11 +55,16 @@ docs = [
     "ipykernel"
 ]
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["thejoker", "thejoker.*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.c"]
+"thejoker.src" = ["*.pyx", "*.pxd", "*.h"]
+
 [tool.setuptools_scm]
 version_file = "thejoker/_version.py"
-
-[tool.extension-helpers]
-use_extension_helpers = true
 
 [tool.pytest.ini_options]
 testpaths = ["thejoker", "docs"]

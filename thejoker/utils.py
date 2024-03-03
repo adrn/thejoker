@@ -16,9 +16,6 @@ from astropy.io.misc.hdf5 import meta_path
 from astropy.table.meta import get_header_from_yaml
 from astropy.utils.decorators import deprecated_renamed_argument
 
-# Package
-from .samples import JokerSamples
-
 __all__ = ["batch_tasks", "table_header_to_units", "read_batch", "tempfile_decorator"]
 
 
@@ -173,6 +170,7 @@ def read_batch_slice(prior_samples_file, columns, slice, units=None):
     Read a batch (row block) of prior samples into a plain numpy array,
     converting units where necessary.
     """
+    from .samples import JokerSamples
 
     path = JokerSamples._hdf5_path
 
@@ -205,6 +203,8 @@ def read_batch_idx(prior_samples_file, columns, idx, units=None):
     Read a batch (row block) of prior samples specified by the input index
     array, ``idx``, into a plain numpy array, converting units where necessary.
     """
+    from .samples import JokerSamples
+
     path = JokerSamples._hdf5_path
 
     # We have to do this with h5py because current (2021-02-05) versions of
@@ -233,6 +233,7 @@ def read_random_batch(prior_samples_file, columns, size, units=None, rng=None):
     Read a random batch (row block) of prior samples into a plain numpy array,
     converting units where necessary.
     """
+    from .samples import JokerSamples
 
     if rng is None:
         rng = np.random.default_rng()
@@ -245,6 +246,8 @@ def read_random_batch(prior_samples_file, columns, size, units=None, rng=None):
 
 
 def tempfile_decorator(func):
+    from .samples import JokerSamples
+
     wrapped_signature = inspect.signature(func)
     func_args = list(wrapped_signature.parameters.keys())
     if "prior_samples_file" not in func_args:
