@@ -240,7 +240,7 @@ def read_random_batch(prior_samples_file, columns, size, units=None, rng=None):
 
     path = JokerSamples._hdf5_path
     with tb.open_file(prior_samples_file, mode="r") as f:
-        idx = rng.integers(rng, 0, f.root[path].shape[0], size=size)
+        idx = rng.choice(f.root[path].shape[0], size=size, replace=False)
 
     return read_batch_idx(prior_samples_file, columns, idx=idx, units=units)
 

@@ -64,19 +64,13 @@ class JokerSamples:
         if n_offsets is None:
             n_offsets = 0
 
-        if isinstance(samples, (Row, Table)):
-            t_ref = samples.meta.pop("t_ref", t_ref)
-            poly_trend = samples.meta.pop("poly_trend", poly_trend)
-            n_offsets = samples.meta.pop("n_offsets", n_offsets)
-            kwargs.update(samples.meta)
-
-            if isinstance(samples, Table):
-                self.tbl = QTable()
-            elif isinstance(samples, Row):
-                self.tbl = samples
-
-        else:
-            self.tbl = QTable()
+        self.tbl = QTable()
+        if isinstance(samples, (Row, Table, QTable)):
+            meta = samples.meta.copy()
+            t_ref = meta.pop("t_ref", t_ref)
+            poly_trend = meta.pop("poly_trend", poly_trend)
+            n_offsets = meta.pop("n_offsets", n_offsets)
+            kwargs.update(meta)
 
         # Validate input poly_trend / n_offsets:
         poly_trend, _ = validate_poly_trend(poly_trend)
@@ -104,20 +98,19 @@ class JokerSamples:
         if samples is not None:
             _tbl = QTable(samples)
             for colname in _tbl.colnames:
-                self[colname] = _tbl[colname]
+                self[colname] = np.atleast_1d(_tbl[colname])
 
         # used for speed-ups below
-        self._cache = dict()
+        self._cache = {}
 
     def __getitem__(self, key):
         if isinstance(key, int):
             return self.__class__(samples=self.tbl[key])
 
-        elif isinstance(key, str) and key in self.par_names:
+        if isinstance(key, str) and key in self.par_names:
             return self.tbl[key]
 
-        else:
-            return self.__class__(samples=self.tbl[key])
+        return self.__class__(samples=self.tbl[key])
 
     def __setitem__(self, key, val):
         if key not in self._valid_units:
@@ -174,8 +167,8 @@ class JokerSamples:
         dt = (self["P"] * self["M0"] / (2 * np.pi)).to(u.day, u.dimensionless_angles())
         t0 = t_ref + dt
 
-        return t0 + (self["P"] * phase / (2 * np.pi)).to(
-            u.day, u.dimensionless_angles()
+        return np.squeeze(
+            t0 + (self["P"] * phase / (2 * np.pi)).to(u.day, u.dimensionless_angles())
         )
 
     # TODO: make a property, after deprecation cycle, to replace .t0
@@ -262,20 +255,21 @@ class JokerSamples:
         names = list(get_linear_equiv_units(self.poly_trend).keys())
         trend_coeffs = [self[x] for x in names[1:]]  # skip K
 
-        if index is None or self.isscalar:
+        if index is None:
             if len(self) > 1:
-                raise ValueError(
-                    "You must specify an index when the number "
-                    f"of samples is >1 (here, it's {len(self)})"
+                msg = (
+                    "You must specify an index when the number of samples is >1 (here, "
+                    f"it's {len(self)})"
                 )
+                raise ValueError(msg)
+            index = 0
 
-        else:
-            P = P[index]
-            e = e[index]
-            a = a[index]
-            omega = omega[index]
-            M0 = M0[index]
-            trend_coeffs = [x[index] for x in trend_coeffs]
+        P = P[index]
+        e = e[index]
+        a = a[index]
+        omega = omega[index]
+        M0 = M0[index]
+        trend_coeffs = [x[index] for x in trend_coeffs]
 
         orbit.elements.t0 = self.t_ref
         orbit.elements._P = P
@@ -310,7 +304,7 @@ class JokerSamples:
     def _apply(self, func):
         cls = self.__class__
 
-        new_samples = dict()
+        new_samples = {}
         for k in self.tbl.colnames:
             new_samples[k] = np.atleast_1d(func(self[k]))
 
@@ -320,17 +314,13 @@ class JokerSamples:
         """Return a new scalar object by taking the mean across all samples"""
         return self._apply(np.mean)
 
-    def median(self):
+    def median_period(self):
         """
         Return a new scalar object by taking the median in period, and
         returning the values for that sample
         """
-        med_val = np.percentile(self["P"], 0.5, interpolation="nearest")
-        if hasattr(med_val, "unit"):
-            med_val = med_val.value
-
-        (median_i,) = np.where(self["P"].value == med_val)
-        return self[median_i]
+        idx = np.argpartition(self["P"], len(self["P"]) // 2)[len(self["P"]) // 2]
+        return self[idx]
 
     def std(self):
         """Return a new scalar object by taking the standard deviation across
@@ -457,6 +447,8 @@ class JokerSamples:
             ext = ""
 
         if ext == ".fits":
+            from astropy.io import fits
+
             if append:
                 raise NotImplementedError()
 
@@ -474,7 +466,10 @@ class JokerSamples:
 
             if t.meta.get("t_ref", None) is not None:
                 t.meta["__t_ref_bmjd"] = t.meta.pop("t_ref").tcb.mjd
-            t.write(output, overwrite=overwrite)
+
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=fits.verify.VerifyWarning)
+                t.write(output, overwrite=overwrite)
         else:
             write_table_hdf5(
                 self.tbl,

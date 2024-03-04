@@ -32,9 +32,8 @@ def _validate_model(model):
             model = pm.Model()
 
     if not isinstance(model, pm.Model):
-        raise TypeError(
-            "Input model must be a pymc.Model instance, not " f"a {type(model)}"
-        )
+        msg = f"Input model must be a pymc.Model instance, not a {type(model)}"
+        raise TypeError(msg)
 
     return model
 
@@ -76,7 +75,7 @@ class JokerPrior:
 
         # Parse and clean up the input pars
         if pars is None:
-            pars = dict()
+            pars = {}
             pars.update(model.named_vars)
 
         elif isinstance(pars, pt.TensorVariable):  # a single variable
@@ -91,13 +90,13 @@ class JokerPrior:
                 # if that fails, assume it is an iterable, like a list or tuple
                 try:
                     pars = {p.name: p for p in pars}
-                except Exception:
-                    raise ValueError(
-                        "Invalid input parameters: The input "
-                        "`pars` must either be a dictionary, "
-                        "list, or a single pymc variable, not a "
+                except Exception as e:
+                    msg = (
+                        "Invalid input parameters: The input `pars` must either be a "
+                        "dictionary, list, or a single pymc variable, not a "
                         f"'{type(pars)}'."
                     )
+                    raise ValueError(msg) from e
 
         # Set the number of polynomial trend parameters
         self.poly_trend, self._v_trend_names = validate_poly_trend(poly_trend)
@@ -108,12 +107,12 @@ class JokerPrior:
 
         try:
             v0_offsets = list(v0_offsets)
-        except Exception:
-            raise TypeError(
-                "Constant velocity offsets must be an iterable "
-                "of pymc variables that define the priors on "
-                "each offset term."
+        except Exception as e:
+            msg = (
+                "Constant velocity offsets must be an iterable of pymc variables that "
+                "define the priors on each offset term."
             )
+            raise TypeError(msg) from e
 
         self.v0_offsets = v0_offsets
         pars.update({p.name: p for p in self.v0_offsets})
@@ -267,9 +266,7 @@ class JokerPrior:
         )
 
         pars = {**nl_pars, **l_pars}
-        obj = cls(pars=pars, model=model, poly_trend=poly_trend, v0_offsets=v0_offsets)
-
-        return obj
+        return cls(pars=pars, model=model, poly_trend=poly_trend, v0_offsets=v0_offsets)
 
     @property
     def par_names(self):
@@ -349,7 +346,7 @@ class JokerPrior:
             par_names = list(self._nonlinear_equiv_units.keys())
 
         # MAJOR HACK RELATED TO UPSTREAM ISSUES WITH pymc3:
-        # init_shapes = dict()
+        # init_shapes = {}
         # for name, par in sub_pars.items():
         #     if hasattr(par, "distribution"):
         #         init_shapes[name] = par.distribution.shape
@@ -366,23 +363,14 @@ class JokerPrior:
         }
 
         if return_logprobs:
+            # raise NotImplementedError("This feature has been disabled in v1.3")
             logp = []
-            for name, par in sub_pars.items():
+            for par in sub_pars.values():
                 try:
-                    _logp = par.distribution.logp(raw_samples[par.name]).eval()
-                except AttributeError:
-                    logger.warning(
-                        "Cannot auto-compute log-prior value for "
-                        f"parameter {par} because it is defined "
-                        "as a transformation from another "
-                        "variable."
-                    )
-                    continue
+                    _logp = pm.logp(par, raw_samples[par.name]).eval()
                 except Exception:
                     logger.warning(
-                        "Cannot auto-compute log-prior value for "
-                        f"parameter {par} because it depends on "
-                        "other variables."
+                        f"Cannot auto-compute log-prior value for parameter {par}"
                     )
                     continue
 
@@ -402,7 +390,7 @@ class JokerPrior:
             p = sub_pars[name]
             unit = getattr(p, xu.UNIT_ATTR_NAME, u.one)
 
-            if name not in prior_samples._valid_units.keys():
+            if name not in prior_samples._valid_units:
                 continue
 
             prior_samples[name] = np.atleast_1d(raw_samples[name]) * unit
@@ -455,7 +443,7 @@ def default_nonlinear_prior(P_min=None, P_max=None, s=None, model=None, pars=Non
     model = pm.modelcontext(model)
 
     if pars is None:
-        pars = dict()
+        pars = {}
 
     if s is None:
         s = 0 * u.m / u.s
@@ -467,7 +455,7 @@ def default_nonlinear_prior(P_min=None, P_max=None, s=None, model=None, pars=Non
             raise u.UnitsError("Invalid unit for s: must be equivalent to km/s")
 
     # dictionary of parameters to return
-    out_pars = dict()
+    out_pars = {}
 
     with model:
         # Set up the default priors for parameters with defaults
@@ -492,16 +480,16 @@ def default_nonlinear_prior(P_min=None, P_max=None, s=None, model=None, pars=Non
 
         if "P" not in pars:
             if P_min is None or P_max is None:
-                raise ValueError(
-                    "If you are using the default period prior, "
-                    "you must pass in both P_min and P_max to set "
-                    "the period prior domain."
+                msg = (
+                    "If you are using the default period prior, you must pass in both "
+                    "P_min and P_max to set the period prior domain."
                 )
+                raise ValueError(msg)
             out_pars["P"] = xu.with_unit(
                 UniformLog("P", P_min.value, P_max.to_value(P_min.unit)), P_min.unit
             )
 
-    for k in pars.keys():
+    for k in pars:
         out_pars[k] = pars[k]
 
     return out_pars
@@ -537,10 +525,10 @@ def default_linear_prior(
     model = pm.modelcontext(model)
 
     if pars is None:
-        pars = dict()
+        pars = {}
 
     # dictionary of parameters to return
-    out_pars = dict()
+    out_pars = {}
 
     # set up poly. trend names:
     poly_trend, v_names = validate_poly_trend(poly_trend)

@@ -1,5 +1,7 @@
-# Third-party
+import io
+
 import astropy.units as u
+import dill
 import numpy as np
 import pymc as pm
 import pytest
@@ -187,6 +189,17 @@ def test_init_sample(case):
     for k in samples.par_names:
         assert hasattr(samples[k], "unit")
         assert samples[k].unit == expected_units[k]
+
+
+@pytest.mark.parametrize("case", range(get_prior()))
+def test_pickle(case):
+    prior, _ = get_prior(case)
+
+    with io.BytesIO() as f:
+        dill.dump(prior, f)
+
+        f.seek(0)
+        dill.load(f)
 
 
 def test_dtype():

@@ -61,6 +61,12 @@ class TheJoker:
         # based on the parent
         if rng is None:
             rng = np.random.default_rng()
+        elif not isinstance(rng, np.random.Generator):
+            msg = (
+                "The input random number generator must be a numpy.random.Generator "
+                "instance."
+            )
+            raise TypeError(msg)
         self.rng = rng
 
         # check if a JokerParams instance was passed in to specify the state
@@ -82,8 +88,7 @@ class TheJoker:
         all_data, ids, trend_M = validate_prepare_data(
             data, self.prior.poly_trend, self.prior.n_offsets
         )
-        joker_helper = CJokerHelper(all_data, self.prior, trend_M)
-        return joker_helper
+        return CJokerHelper(all_data, self.prior, trend_M)
 
     def marginal_ln_likelihood(
         self, data, prior_samples, n_batches=None, in_memory=False
@@ -417,7 +422,7 @@ class TheJoker:
             if not is_P_unimodal(joker_samples, data):
                 logger.warn("TODO: samples ain't unimodal")
 
-            MAP_sample = joker_samples.median()
+            MAP_sample = joker_samples.median_period()
 
         else:
             MAP_sample = joker_samples

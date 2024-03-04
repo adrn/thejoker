@@ -24,11 +24,12 @@ dependencies = [
     "twobody>=0.9",
     "scipy",
     "h5py",
-    "schwimmbad>=0.3.1",
+    "schwimmbad>=0.4",
     "pymc>=5",
     "pymc_ext @ git+https://github.com/exoplanet-dev/pymc-ext",
     "exoplanet-core[pymc] @ git+https://github.com/exoplanet-dev/exoplanet-core",
     "tables",
+    "dill"
 ]
 
 [project.urls]

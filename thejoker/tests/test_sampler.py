@@ -1,7 +1,5 @@
-# Standard library
 import os
 
-# Third-party
 import astropy.units as u
 import numpy as np
 import pytest
@@ -9,12 +7,10 @@ from astropy.time import Time
 from schwimmbad import MultiPool, SerialPool
 from twobody import KeplerOrbit
 
-from ..data import RVData
-
-# Package
-from ..prior import JokerPrior
-from ..thejoker import TheJoker
-from .test_prior import get_prior
+from thejoker.data import RVData
+from thejoker.prior import JokerPrior
+from thejoker.tests.test_prior import get_prior
+from thejoker.thejoker import TheJoker
 
 
 def make_data(n_times=8, rng=None, v1=None, K=None):
@@ -69,7 +65,7 @@ def test_init(case):
         TheJoker(prior, pool="sdfks")
 
     # Random state:
-    rnd = np.random.default_rng(42)
+    rng = np.random.default_rng(42)
     TheJoker(prior, rng=rng)
 
     # fail when random state is invalid:
@@ -229,3 +225,9 @@ def test_iterative_rejection_sample(tmpdir, prior):
     for i in range(1, len(all_Ps)):
         assert u.allclose(all_Ps[0], all_Ps[i])
         assert u.allclose(all_Ks[0], all_Ks[i])
+
+
+if __name__ == "__main__":
+    import pathlib
+
+    test_marginal_ln_likelihood(pathlib.Path("/tmp/"), 0)
