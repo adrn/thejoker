@@ -24,6 +24,4 @@ cfg["extra_compile_args"].append("--std=gnu99")
 cfg["sources"].append("thejoker/src/fast_likelihood.pyx")
 exts.append(Extension("thejoker.src.fast_likelihood", **cfg))
 
-setup(
-    ext_modules=exts,
-)
+setup(ext_modules=exts)

@@ -1,19 +1,16 @@
 # Read the Docs configuration file
 # See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
 
-# Required
 version: 2
 
-# Build documentation in the docs/ directory with Sphinx
+build:
+  os: ubuntu-22.04
+  tools:
+    python: "3.11"
 sphinx:
   configuration: docs/conf.py
 
-# Have to use conda because of weird lazylinker error
-conda:
-  environment: environment.yml
-
 python:
-  version: 3.8
   install:
     - method: pip
       path: .
