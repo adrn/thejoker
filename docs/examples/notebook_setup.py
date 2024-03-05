@@ -1,7 +1,3 @@
-from IPython.display import set_matplotlib_formats
-set_matplotlib_formats('retina')
-
-import logging
 import warnings
 
 import matplotlib.pyplot as plt
@@ -10,8 +6,8 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 
-logger = logging.getLogger("theano.gof.compilelock")
-logger.setLevel(logging.ERROR)
+# logger = logging.getLogger("pytensor.gof.compilelock")
+# logger.setLevel(logging.ERROR)
 
 
 plt.style.use("default")
