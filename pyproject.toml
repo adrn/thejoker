@@ -53,7 +53,12 @@ docs = [
     "nbsphinx",
     "nbconvert",
     "nbformat",
-    "ipykernel"
+    "ipykernel",
+    "matplotlib",
+]
+tutorials = [
+    "thejoker[docs]",
+    "jupyter-client"
 ]
 
 [tool.setuptools.packages.find]
