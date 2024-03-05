@@ -1,16 +1,31 @@
-"""A port from exoplanet, to support pymc recent versions"""
+__all__ = [
+    "KeplerianOrbit",
+    "get_true_anomaly",
+    "get_aor_from_transit_duration",
+]
 
-__all__ = ["KeplerianOrbit"]
+import warnings
+from collections import defaultdict
 
-
+import astropy.constants as c
 import numpy as np
-import pytensor.tensor as pt
+import pytensor.tensor as tt
 from astropy import units as u
-from astropy.constants import G
 from exoplanet_core.pymc import ops
+from pytensor import ifelse
+from pytensor.tensor import as_tensor_variable
 
-tt = pt
-G_grav = G.to(u.R_sun**3 / u.M_sun / u.day**2).value
+from thejoker.units import has_unit, to_unit, with_unit
+
+G_grav = c.G.to(u.R_sun**3 / u.M_sun / u.day**2).value
+gcc_per_sun = (u.M_sun / u.R_sun**3).to(u.g / u.cm**3)
+au_per_R_sun = u.R_sun.to(u.au)
+c_light = c.c.to(u.R_sun / u.day).value
+
+day_per_yr_over_2pi = (
+    (1.0 * u.au) ** (3 / 2)
+    / (np.sqrt(c.G.to(u.au**3 / (u.M_sun * u.day**2)) * (1.0 * u.M_sun)))
+).value
 
 
 class KeplerianOrbit:
@@ -52,8 +67,15 @@ class KeplerianOrbit:
         m_star: The mass of the star in ``M_sun``.
         r_star: The radius of the star in ``R_sun``.
         rho_star: The density of the star in units of ``rho_star_units``.
+        m_planet_units: An ``astropy.units`` compatible unit object giving the
+            units of the planet masses. If not given, the default is ``M_sun``.
+        rho_star_units: An ``astropy.units`` compatible unit object giving the
+            units of the stellar density. If not given, the default is
+            ``g / cm^3``.
 
     """
+
+    __citations__ = ("astropy",)
 
     def __init__(
         self,
@@ -61,32 +83,94 @@ class KeplerianOrbit:
         a=None,
         t0=None,
         t_periastron=None,
+        incl=None,
+        b=None,
+        duration=None,
         ecc=None,
         omega=None,
         sin_omega=None,
         cos_omega=None,
         Omega=None,
+        m_planet=0.0,
+        m_star=None,
+        r_star=None,
+        rho_star=None,
+        ror=None,
         model=None,
         **kwargs,
     ):
-        self.period = period
-        self.m_planet = tt.zeros_like(period)
-        self.m_star = tt.ones_like(period)
+        if "m_planet_units" in kwargs:
+            # deprecation_warning(
+            #     "'m_planet_units' is deprecated; Use `with_unit` instead"
+            # )
+            m_planet = with_unit(m_planet, kwargs.pop("m_planet_units"))
+        if "rho_star_units" in kwargs:
+            # deprecation_warning(
+            #     "'rho_star_units' is deprecated; Use `with_unit` instead"
+            # )
+            rho_star = with_unit(rho_star, kwargs.pop("rho_star_units"))
+
+        self.jacobians = defaultdict(lambda: defaultdict(None))
+
+        daordtau = None
+        if ecc is None and duration is not None:
+            if r_star is None:
+                r_star = as_tensor_variable(1.0)
+            if b is None:
+                raise ValueError(
+                    "'b' must be provided for a circular orbit with a " "'duration'"
+                )
+            if ror is None:
+                warnings.warn(
+                    "When using the 'duration' parameter in KeplerianOrbit, "
+                    "the 'ror' parameter should also be provided.",
+                    UserWarning,
+                )
+            aor, daordtau = get_aor_from_transit_duration(duration, period, b, ror=ror)
+            a = r_star * aor
+            duration = None
+
+        inputs = _get_consistent_inputs(a, period, rho_star, r_star, m_star, m_planet)
+        (
+            self.a,
+            self.period,
+            self.rho_star,
+            self.r_star,
+            self.m_star,
+            self.m_planet,
+        ) = inputs
         self.m_total = self.m_star + self.m_planet
 
-        if a is None:
-            a = (
-                G_grav * (self.m_star + self.m_planet) * self.period**2 / (4 * np.pi**2)
-            ) ** (1.0 / 3)
-        self.a = a
-
         self.n = 2 * np.pi / self.period
+        self.a_star = self.a * self.m_planet / self.m_total
+        self.a_planet = -self.a * self.m_star / self.m_total
+
+        # Track the Jacobian between the duration and a
+        if daordtau is not None:
+            dadtau = self.r_star * daordtau
+            self.jacobians["duration"]["a"] = dadtau
+            self.jacobians["duration"]["a_star"] = dadtau * self.m_planet / self.m_total
+            self.jacobians["duration"]["a_planet"] = (
+                -dadtau * self.m_star / self.m_total
+            )
+
+            # rho = 3 * pi * (a/R)**3 / (G * P**2)
+            # -> drho / d(a/R) = 9 * pi * (a/R)**2 / (G * P**2)
+            self.jacobians["duration"]["rho_star"] = (
+                9
+                * np.pi
+                * (self.a / self.r_star) ** 2
+                * daordtau
+                * gcc_per_sun
+                / (G_grav * self.period**2)
+            )
+
         self.K0 = self.n * self.a / self.m_total
 
         if Omega is None:
             self.Omega = None
         else:
-            self.Omega = pt.as_tensor_variable(Omega)
+            self.Omega = as_tensor_variable(Omega)
             self.cos_Omega = tt.cos(self.Omega)
             self.sin_Omega = tt.sin(self.Omega)
 
@@ -94,20 +178,21 @@ class KeplerianOrbit:
         if ecc is None:
             self.ecc = None
             self.M0 = 0.5 * np.pi + tt.zeros_like(self.n)
+            incl_factor = 1
         else:
-            self.ecc = pt.as_tensor_variable(ecc)
+            self.ecc = as_tensor_variable(ecc)
             if omega is not None:
                 if sin_omega is not None and cos_omega is not None:
                     raise ValueError(
                         "either 'omega' or 'sin_omega' and 'cos_omega' can be "
                         "provided"
                     )
-                self.omega = pt.as_tensor_variable(omega)
+                self.omega = as_tensor_variable(omega)
                 self.cos_omega = tt.cos(self.omega)
                 self.sin_omega = tt.sin(self.omega)
             elif sin_omega is not None and cos_omega is not None:
-                self.cos_omega = pt.as_tensor_variable(cos_omega)
-                self.sin_omega = pt.as_tensor_variable(sin_omega)
+                self.cos_omega = as_tensor_variable(cos_omega)
+                self.sin_omega = as_tensor_variable(sin_omega)
                 self.omega = tt.arctan2(self.sin_omega, self.cos_omega)
 
             else:
@@ -122,11 +207,54 @@ class KeplerianOrbit:
 
             ome2 = 1 - self.ecc**2
             self.K0 /= tt.sqrt(ome2)
+            incl_factor = (1 + self.ecc * self.sin_omega) / ome2
 
-        zla = tt.zeros_like(self.period)
-        self.incl = 0.5 * np.pi + zla
-        self.cos_incl = zla
-        self.b = zla
+        # The Jacobian for the transform cos(i) -> b
+        self.dcosidb = self.jacobians["b"]["cos_incl"] = (
+            incl_factor * self.r_star / self.a
+        )
+
+        if b is not None:
+            if incl is not None or duration is not None:
+                raise ValueError("only one of 'incl', 'b', and 'duration' can be given")
+            self.b = as_tensor_variable(b)
+            self.cos_incl = self.dcosidb * self.b
+            self.incl = tt.arccos(self.cos_incl)
+        elif incl is not None:
+            if duration is not None:
+                raise ValueError("only one of 'incl', 'b', and 'duration' can be given")
+            self.incl = as_tensor_variable(incl)
+            self.cos_incl = tt.cos(self.incl)
+            self.b = self.cos_incl / self.dcosidb
+        elif duration is not None:
+            # This assertion should never be hit because of the first
+            # conditional in this method, but let's keep it here anyways
+            assert self.ecc is not None
+
+            self.duration = as_tensor_variable(to_unit(duration, u.day))
+            c = tt.sin(np.pi * self.duration * incl_factor / self.period)
+            c2 = c * c
+            aor = self.a_planet / self.r_star
+            esinw = self.ecc * self.sin_omega
+            self.b = tt.sqrt(
+                (aor**2 * c2 - 1)
+                / (
+                    c2 * esinw**2
+                    + 2 * c2 * esinw
+                    + c2
+                    - self.ecc**4
+                    + 2 * self.ecc**2
+                    - 1
+                )
+            )
+            self.b *= 1 - self.ecc**2
+            self.cos_incl = self.dcosidb * self.b
+            self.incl = tt.arccos(self.cos_incl)
+        else:
+            zla = tt.zeros_like(self.a)
+            self.incl = 0.5 * np.pi + zla
+            self.cos_incl = zla
+            self.b = zla
 
         if t0 is not None and t_periastron is not None:
             raise ValueError("you can't define both t0 and t_periastron")
@@ -134,10 +262,10 @@ class KeplerianOrbit:
             t0 = tt.zeros_like(self.period)
 
         if t0 is None:
-            self.t_periastron = pt.as_tensor_variable(t_periastron)
+            self.t_periastron = as_tensor_variable(t_periastron)
             self.t0 = self.t_periastron + self.M0 / self.n
         else:
-            self.t0 = pt.as_tensor_variable(t0)
+            self.t0 = as_tensor_variable(t0)
             self.t_periastron = self.t0 - self.M0 / self.n
 
         self.tref = self.t_periastron - self.t0
@@ -197,6 +325,236 @@ class KeplerianOrbit:
         sinf, cosf = ops.kepler(M, self.ecc + tt.zeros_like(M))
         return sinf, cosf
 
+    def _get_position_and_velocity(self, t, parallax=None):
+        sinf, cosf = self._get_true_anomaly(t)
+
+        if self.ecc is None:
+            r = 1.0
+            vx, vy, vz = self._rotate_vector(-self.K0 * sinf, self.K0 * cosf)
+        else:
+            r = (1.0 - self.ecc**2) / (1 + self.ecc * cosf)
+            vx, vy, vz = self._rotate_vector(
+                -self.K0 * sinf, self.K0 * (cosf + self.ecc)
+            )
+
+        x, y, z = self._rotate_vector(r * cosf, r * sinf)
+
+        pos = tt.stack((x, y, z), axis=-1)
+        pos = tt.concatenate(
+            (
+                tt.sum(tt.shape_padright(self.a_star) * pos, axis=0, keepdims=True),
+                tt.shape_padright(self.a_planet) * pos,
+            ),
+            axis=0,
+        )
+        vel = tt.stack((vx, vy, vz), axis=-1)
+        vel = tt.concatenate(
+            (
+                tt.sum(
+                    tt.shape_padright(self.m_planet) * vel,
+                    axis=0,
+                    keepdims=True,
+                ),
+                -tt.shape_padright(self.m_star) * vel,
+            ),
+            axis=0,
+        )
+
+        if parallax is not None:
+            # convert r into arcseconds
+            pos = pos * (parallax * au_per_R_sun)
+            vel = vel * (parallax * au_per_R_sun)
+
+        return pos, vel
+
+    def _get_position(self, a, t, parallax=None, light_delay=False, _pad=True):
+        """Get the position of a body.
+
+        Args:
+            a: the semi-major axis of the orbit.
+            t: the time (or tensor of times) to calculate the position.
+            parallax: (arcseconds) if provided, return the position in
+                units of arcseconds.
+            light_delay: account for the light travel time delay? Default is
+                False.
+
+        Returns:
+            The position of the body in the observer frame. Default is in units
+            of R_sun, but if parallax is provided, then in units of arcseconds.
+
+        """
+        if light_delay:
+            return self._get_retarded_position(a, t, parallax=None, _pad=_pad)
+
+        sinf, cosf = self._get_true_anomaly(t, _pad=_pad)
+        if self.ecc is None:
+            r = a
+        else:
+            r = a * (1.0 - self.ecc**2) / (1 + self.ecc * cosf)
+
+        if parallax is not None:
+            # convert r into arcseconds
+            r = r * parallax * au_per_R_sun
+
+        return self._rotate_vector(r * cosf, r * sinf)
+
+    def _get_retarded_position(self, a, t, parallax=None, z0=0.0, _pad=True):
+        """Get the retarded position of a body, accounting for light delay.
+
+        Args:
+            a: the semi-major axis of the orbit.
+            t: the time (or tensor of times) to calculate the position.
+            parallax: (arcseconds) if provided, return the position in
+                units of arcseconds.
+            z0: the reference point along the z axis whose light travel time
+                delay is taken to be zero. Default is the origin.
+
+        Returns:
+            The position of the body in the observer frame. Default is in units
+            of R_sun, but if parallax is provided, then in units of arcseconds.
+
+        """
+        sinf, cosf = self._get_true_anomaly(t, _pad=_pad)
+
+        # Compute the orbital radius and the component of the velocity
+        # in the z direction
+        angvel = 2 * np.pi / self.period
+        if self.ecc is None:
+            r = a
+            vamp = angvel * a
+            vz = vamp * self.sin_incl * cosf
+        else:
+            r = a * (1.0 - self.ecc**2) / (1 + self.ecc * cosf)
+            vamp = angvel * a / tt.sqrt(1 - self.ecc**2)
+            cwf = self.cos_omega * cosf - self.sin_omega * sinf
+            vz = vamp * self.sin_incl * (self.ecc * self.cos_omega + cwf)
+
+        # True position of the body
+        x, y, z = self._rotate_vector(r * cosf, r * sinf)
+
+        # Component of the acceleration in the z direction
+        az = -(angvel**2) * (a / r) ** 3 * z
+
+        # Compute the time delay at the **retarded** position, accounting
+        # for the instantaneous velocity and acceleration of the body.
+        # See the derivation at https://github.com/rodluger/starry/issues/66
+        delay = tt.switch(
+            tt.lt(tt.abs_(az), 1.0e-10),
+            (z0 - z) / (c_light + vz),
+            (c_light / az)
+            * (
+                (1 + vz / c_light)
+                - tt.sqrt(
+                    (1 + vz / c_light) * (1 + vz / c_light)
+                    - 2 * az * (z0 - z) / c_light**2
+                )
+            ),
+        )
+
+        if _pad:
+            new_t = tt.shape_padright(t) - delay
+        else:
+            new_t = t - delay
+
+        # Re-compute Kepler's equation, this time at the **retarded** position
+        return self._get_position(a, new_t, parallax, _pad=False)
+
+    def get_planet_position(self, t, parallax=None, light_delay=False):
+        """The planets' positions in the barycentric frame
+
+        Args:
+            t: The times where the position should be evaluated.
+            light_delay: account for the light travel time delay? Default is
+                False.
+
+        Returns:
+            The components of the position vector at ``t`` in units of
+            ``R_sun``.
+
+        """
+        return tuple(
+            tt.squeeze(x)
+            for x in self._get_position(
+                self.a_planet, t, parallax, light_delay=light_delay
+            )
+        )
+
+    def get_star_position(self, t, parallax=None, light_delay=False):
+        """The star's position in the barycentric frame
+
+        .. note:: If there are multiple planets in the system, this will
+            return one column per planet with each planet's contribution to
+            the motion. The star's full position can be computed by summing
+            over the last axis.
+
+        Args:
+            t: The times where the position should be evaluated.
+            light_delay: account for the light travel time delay? Default is
+                False.
+
+        Returns:
+            The components of the position vector at ``t`` in units of
+            ``R_sun``.
+
+        """
+        return tuple(
+            tt.squeeze(x)
+            for x in self._get_position(
+                self.a_star, t, parallax, light_delay=light_delay
+            )
+        )
+
+    def get_relative_position(self, t, parallax=None, light_delay=False):
+        """The planets' positions relative to the star in the X,Y,Z frame.
+
+        .. note:: This treats each planet independently and does not take the
+            other planets into account when computing the position of the
+            star. This is fine as long as the planet masses are small. In
+            other words, the reflex motion of the star caused by the other
+            planets is neglected when computing the relative coordinates of
+            one of the planets.
+
+        Args:
+            t: The times where the position should be evaluated.
+            light_delay: account for the light travel time delay? Default is
+                False.
+
+        Returns:
+            The components of the position vector at ``t`` in units of
+            ``R_sun``.
+
+        """
+        return tuple(
+            tt.squeeze(x)
+            for x in self._get_position(-self.a, t, parallax, light_delay=light_delay)
+        )
+
+    def get_relative_angles(self, t, parallax=None, light_delay=False):
+        """The planets' relative position to the star in the sky plane, in
+        separation, position angle coordinates.
+
+        .. note:: This treats each planet independently and does not take the
+            other planets into account when computing the position of the
+            star. This is fine as long as the planet masses are small.
+
+        Args:
+            t: The times where the position should be evaluated.
+            light_delay: account for the light travel time delay? Default is
+                False.
+
+        Returns:
+            The separation (arcseconds) and position angle (radians,
+            measured east of north) of the planet relative to the star.
+
+        """
+        X, Y, Z = self._get_position(-self.a, t, parallax, light_delay=light_delay)
+
+        # calculate rho and theta
+        rho = tt.squeeze(tt.sqrt(X**2 + Y**2))  # arcsec
+        theta = tt.squeeze(tt.arctan2(Y, X))  # radians between [-pi, pi]
+
+        return (rho, theta)
+
     def _get_velocity(self, m, t):
         """Get the velocity vector of a body in the observer frame"""
         sinf, cosf = self._get_true_anomaly(t)
@@ -204,6 +562,19 @@ class KeplerianOrbit:
         if self.ecc is None:
             return self._rotate_vector(-K * sinf, K * cosf)
         return self._rotate_vector(-K * sinf, K * (cosf + self.ecc))
+
+    def get_planet_velocity(self, t):
+        """Get the planets' velocity vectors
+
+        Args:
+            t: The times where the velocity should be evaluated.
+
+        Returns:
+            The components of the velocity vector at ``t`` in units of
+            ``M_sun/day``.
+
+        """
+        return tuple(tt.squeeze(x) for x in self._get_velocity(-self.m_star, t))
 
     def get_star_velocity(self, t):
         """Get the star's velocity vector
@@ -221,6 +592,23 @@ class KeplerianOrbit:
 
         """
         return tuple(tt.squeeze(x) for x in self._get_velocity(self.m_planet, t))
+
+    def get_relative_velocity(self, t):
+        """The planets' velocity relative to the star
+
+        .. note:: This treats each planet independently and does not take the
+            other planets into account when computing the position of the
+            star. This is fine as long as the planet masses are small.
+
+        Args:
+            t: The times where the velocity should be evaluated.
+
+        Returns:
+            The components of the velocity vector at ``t`` in units of
+            ``R_sun/day``.
+
+        """
+        return tuple(tt.squeeze(x) for x in self._get_velocity(-self.m_total, t))
 
     def get_radial_velocity(self, t, K=None, output_units=None):
         """Get the radial velocity of the star
@@ -268,6 +656,127 @@ class KeplerianOrbit:
         v = self.get_star_velocity(t)
         return -conv * v[2]
 
+    def _get_acceleration(self, a, m, t):
+        sinf, cosf = self._get_true_anomaly(t)
+        K = self.K0 * m
+        if self.ecc is None:
+            factor = -(K**2) / a
+        else:
+            factor = K**2 * (self.ecc * cosf + 1) ** 2 / (a * (self.ecc**2 - 1))
+        return self._rotate_vector(factor * cosf, factor * sinf)
+
+    def get_planet_acceleration(self, t):
+        return tuple(
+            tt.squeeze(x)
+            for x in self._get_acceleration(self.a_planet, -self.m_star, t)
+        )
+
+    def get_star_acceleration(self, t):
+        return tuple(
+            tt.squeeze(x) for x in self._get_acceleration(self.a_star, self.m_planet, t)
+        )
+
+    def get_relative_acceleration(self, t):
+        return tuple(
+            tt.squeeze(x) for x in self._get_acceleration(-self.a, -self.m_total, t)
+        )
+
+    def in_transit(self, t, r=0.0, texp=None, light_delay=False):
+        """Get a list of timestamps that are in transit
+
+        Args:
+            t (vector): A vector of timestamps to be evaluated.
+            r (Optional): The radii of the planets.
+            texp (Optional[float]): The exposure time.
+
+        Returns:
+            The indices of the timestamps that are in transit.
+
+        """
+        if light_delay:
+            raise NotImplementedError(
+                "Light travel time delay not yet implemented for `in_transit`"
+            )
+
+        z = tt.zeros_like(self.a)
+        r = as_tensor_variable(r) + z
+        R = self.r_star + z
+
+        # Wrap the times into time since transit
+        hp = 0.5 * self.period
+        dt = tt.mod(self._warp_times(t) + hp, self.period) - hp
+
+        if self.ecc is None:
+            # Equation 14 from Winn (2010)
+            k = r / R
+            arg = tt.square(1 + k) - tt.square(self.b)
+            factor = R / (self.a * self.sin_incl)
+            hdur = hp * tt.arcsin(factor * tt.sqrt(arg)) / np.pi
+            t_start = -hdur
+            t_end = hdur
+            flag = z
+
+        else:
+            M_contact = ops.contact_points(
+                self.a,
+                self.ecc,
+                self.cos_omega,
+                self.sin_omega,
+                self.cos_incl + z,
+                self.sin_incl + z,
+                R + r,
+            )
+            flag = M_contact[2]
+
+            t_start = (M_contact[0] - self.M0) / self.n
+            t_start = tt.mod(t_start + hp, self.period) - hp
+            t_end = (M_contact[1] - self.M0) / self.n
+            t_end = tt.mod(t_end + hp, self.period) - hp
+
+            t_start = tt.switch(tt.gt(t_start, 0.0), t_start - self.period, t_start)
+            t_end = tt.switch(tt.lt(t_end, 0.0), t_end + self.period, t_end)
+
+        if texp is not None:
+            t_start -= 0.5 * texp
+            t_end += 0.5 * texp
+
+        mask = tt.any(tt.and_(dt >= t_start, dt <= t_end), axis=-1)
+
+        result = ifelse(
+            tt.all(tt.eq(flag, 0)),
+            tt.arange(t.shape[0])[mask],
+            tt.arange(t.shape[0]),
+        )
+
+        return result
+
+    def _flip(self, r_planet, model=None):
+        if self.ecc is None:
+            orbit = type(self)(
+                period=self.period,
+                t_periastron=self.t_periastron + 0.5 * self.period,
+                incl=self.incl,
+                Omega=self.Omega,
+                m_star=self.m_planet,
+                m_planet=self.m_star,
+                r_star=r_planet,
+                model=model,
+            )
+        else:
+            orbit = type(self)(
+                period=self.period,
+                t_periastron=self.t_periastron,
+                incl=self.incl,
+                ecc=self.ecc,
+                omega=self.omega - np.pi,
+                Omega=self.Omega,
+                m_star=self.m_planet,
+                m_planet=self.m_star,
+                r_star=r_planet,
+                model=model,
+            )
+        return orbit
+
 
 def get_true_anomaly(M, e, **kwargs):
     """Get the true anomaly for a tensor of mean anomalies and eccentricities
@@ -282,3 +791,109 @@ def get_true_anomaly(M, e, **kwargs):
     """
     sinf, cosf = ops.kepler(M, e)
     return tt.arctan2(sinf, cosf)
+
+
+def get_aor_from_transit_duration(duration, period, b, ror=None):
+    """Get the semimajor axis implied by a circular orbit and duration
+
+    Args:
+        duration: The transit duration
+        period: The orbital period
+        b: The impact parameter of the transit
+        ror: The radius ratio of the planet to the star
+
+    Returns:
+        The semimajor axis in units of the stellar radius and the Jacobian
+        ``d a / d duration``
+
+    """
+    if ror is None:
+        ror = as_tensor_variable(0.0)
+    b2 = b**2
+    opk2 = (1 + ror) ** 2
+    phi = np.pi * duration / period
+    sinp = tt.sin(phi)
+    cosp = tt.cos(phi)
+    num = tt.sqrt(opk2 - b2 * cosp**2)
+    aor = num / sinp
+    grad = np.pi * cosp * (b2 - opk2) / (num * period * sinp**2)
+    return aor, grad
+
+
+def _get_consistent_inputs(a, period, rho_star, r_star, m_star, m_planet):
+    if a is None and period is None:
+        raise ValueError("values must be provided for at least one of a " "and period")
+
+    if m_planet is not None:
+        m_planet = as_tensor_variable(to_unit(m_planet, u.M_sun))
+
+    if a is not None:
+        a = as_tensor_variable(to_unit(a, u.R_sun))
+        if m_planet is None:
+            m_planet = tt.zeros_like(a)
+    if period is not None:
+        period = as_tensor_variable(to_unit(period, u.day))
+        if m_planet is None:
+            m_planet = tt.zeros_like(period)
+
+    # Compute the implied density if a and period are given
+    implied_rho_star = False
+    if a is not None and period is not None:
+        if rho_star is not None or m_star is not None:
+            raise ValueError(
+                "if both a and period are given, you can't "
+                "also define rho_star or m_star"
+            )
+
+        # Default to a stellar radius of 1 if not provided
+        if r_star is None:
+            r_star = as_tensor_variable(1.0)
+        else:
+            r_star = as_tensor_variable(to_unit(r_star, u.R_sun))
+
+        # Compute the implied mass via Kepler's 3rd law
+        m_tot = 4 * np.pi * np.pi * a**3 / (G_grav * period**2)
+
+        # Compute the implied density
+        m_star = m_tot - m_planet
+        vol_star = 4 * np.pi * r_star**3 / 3.0
+        rho_star = m_star / vol_star
+        implied_rho_star = True
+
+    # Make sure that the right combination of stellar parameters are given
+    if r_star is None and m_star is None:
+        r_star = 1.0
+        if rho_star is None:
+            m_star = 1.0
+    if (not implied_rho_star) and sum(
+        arg is None for arg in (rho_star, r_star, m_star)
+    ) != 1:
+        raise ValueError(
+            "values must be provided for exactly two of " "rho_star, m_star, and r_star"
+        )
+
+    if rho_star is not None and not implied_rho_star:
+        if has_unit(rho_star):
+            rho_star = as_tensor_variable(to_unit(rho_star, u.M_sun / u.R_sun**3))
+        else:
+            rho_star = as_tensor_variable(rho_star) / gcc_per_sun
+    if r_star is not None:
+        r_star = as_tensor_variable(to_unit(r_star, u.R_sun))
+    if m_star is not None:
+        m_star = as_tensor_variable(to_unit(m_star, u.M_sun))
+
+    # Work out the stellar parameters
+    if rho_star is None:
+        rho_star = 3 * m_star / (4 * np.pi * r_star**3)
+    elif r_star is None:
+        r_star = (3 * m_star / (4 * np.pi * rho_star)) ** (1 / 3)
+    elif m_star is None:
+        m_star = 4 * np.pi * r_star**3 * rho_star / 3.0
+
+    # Work out the planet parameters
+    if a is None:
+        a = (G_grav * (m_star + m_planet) * period**2 / (4 * np.pi**2)) ** (1.0 / 3)
+    elif period is None:
+        period = 2 * np.pi * a ** (3 / 2) / (tt.sqrt(G_grav * (m_star + m_planet)))
+
+    return a, period, rho_star * gcc_per_sun, r_star, m_star, m_planet

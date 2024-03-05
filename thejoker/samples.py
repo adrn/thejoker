@@ -103,6 +103,67 @@ class JokerSamples:
         # used for speed-ups below
         self._cache = {}
 
+    @classmethod
+    def from_inference_data(cls, prior, idata, data, prune_divergences=True):
+        """
+        Create a ``JokerSamples`` instance from an arviz object.
+
+        Parameters
+        ----------
+        prior : `thejoker.JokerPrior`
+        idata : `arviz.InferenceData`
+        data : `thejoker.RVData`
+        prune_divergences : bool (optional)
+
+        """
+        import thejoker.units as xu
+        from thejoker.thejoker import validate_prepare_data
+
+        if hasattr(idata, "posterior"):
+            posterior = idata.posterior
+
+        else:
+            posterior = idata
+            idata = None
+
+        data, *_ = validate_prepare_data(data, prior.poly_trend, prior.n_offsets)
+
+        samples = cls(
+            poly_trend=prior.poly_trend,
+            n_offsets=prior.n_offsets,
+            t_ref=data.t_ref,
+        )
+
+        names = prior.par_names
+
+        for name in names:
+            if name in prior.pars:
+                par = prior.pars[name]
+                unit = getattr(par, xu.UNIT_ATTR_NAME)
+                samples[name] = posterior[name].to_numpy().ravel() * unit
+            else:
+                samples[name] = posterior[name].to_numpy().ravel()
+
+        if hasattr(posterior, "logp"):
+            samples["ln_posterior"] = posterior.logp.to_numpy().ravel()
+
+        for name in ["ln_likelihood", "ln_prior"]:
+            if hasattr(posterior, name):
+                samples[name] = getattr(posterior, name).to_numpy().ravel()
+
+        if prune_divergences:
+            if idata is None:
+                msg = (
+                    "If you want to remove divergences, you must pass in the root level"
+                    " inferencedata object (instead of, e.g., inferencedata.posterior"
+                )
+                raise ValueError(msg)
+
+            divergences = idata.sample_stats.diverging.to_numpy().ravel()
+            samples = samples[~divergences]
+
+        return samples
+
     def __getitem__(self, key):
         if isinstance(key, int):
             return self.__class__(samples=self.tbl[key])

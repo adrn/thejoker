@@ -133,10 +133,9 @@ class TheJoker:
                 )
             return marginal_ln_likelihood_inmem(joker_helper, prior_samples)
 
-        else:
-            return marginal_ln_likelihood_helper(
-                joker_helper, prior_samples, pool=self.pool, n_batches=n_batches
-            )
+        return marginal_ln_likelihood_helper(
+            joker_helper, prior_samples, pool=self.pool, n_batches=n_batches
+        )
 
     def rejection_sample(
         self,
@@ -427,7 +426,7 @@ class TheJoker:
         else:
             MAP_sample = joker_samples
 
-        mcmc_init = dict()
+        mcmc_init = {}
         for name in self.prior.par_names:
             unit = getattr(self.prior.pars[name], xu.UNIT_ATTR_NAME)
             mcmc_init[name] = MAP_sample[name].to_value(unit)

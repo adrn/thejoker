@@ -388,15 +388,15 @@ class RVData:
             t_ref = self.t_ref
         return ((self.t - t_ref) / P) % 1.0
 
+    @deprecated_renamed_argument("phase_fold", "phase_fold_period", "v1.3")
     def plot(
         self,
         ax=None,
         rv_unit=None,
         time_format="mjd",
-        phase_fold=None,
+        phase_fold_period=None,
         relative_to_t_ref=False,
         add_labels=True,
-        color_by=None,
         **kwargs,
     ):
         """
@@ -458,8 +458,8 @@ class RVData:
         if relative_to_t_ref:
             t = t - t0
 
-        if phase_fold:
-            t = (t / phase_fold.to(u.day).value) % 1
+        if phase_fold_period is not None:
+            t = (t / phase_fold_period.to(u.day).value) % 1
 
         if self._has_cov:
             # FIXME: this is a bit of a hack

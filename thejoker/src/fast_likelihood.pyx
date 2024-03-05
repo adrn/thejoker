@@ -205,13 +205,19 @@ cdef class CJokerHelper:
         # - validated to be Normal() in JokerPrior
         for i in range(self.n_offsets):
             name = prior.v0_offsets[i].name
-            dist = prior.v0_offsets[i].distribution
-            _unit = getattr(prior.model[name], xu.UNIT_ATTR_NAME)
+            # dist = prior.v0_offsets[i].distribution
+            dist = prior.model[name]
+            _unit = getattr(dist, xu.UNIT_ATTR_NAME)
             to_unit = self.internal_units[name]
 
+            # mean is par 0, stddev par 1
+            pars = dist.owner.inputs[3:]
+            mu = (pars[0].eval() * _unit).to_value(to_unit)
+            std = (pars[1].eval() * _unit).to_value(to_unit)
+
             # K, v0 = 2 - start at index 2
-            self.mu[2+i] = (dist.mean.eval() * _unit).to_value(to_unit)
-            self.Lambda[2+i] = (dist.sd.eval() * _unit).to_value(to_unit) ** 2
+            self.mu[2+i] = mu
+            self.Lambda[2+i] = std ** 2
 
         # ---------------------------------------------------------------------
         # TODO: This is a bit of a hack:
