@@ -6,9 +6,11 @@ __all__ = ["KeplerianOrbit"]
 import numpy as np
 import pytensor.tensor as pt
 from astropy import units as u
+from astropy.constants import G
 from exoplanet_core.pymc import ops
 
 tt = pt
+G_grav = G.to(u.R_sun**3 / u.M_sun / u.day**2).value
 
 
 class KeplerianOrbit:
@@ -67,10 +69,16 @@ class KeplerianOrbit:
         model=None,
         **kwargs,
     ):
-        self.a = a
         self.period = period
         self.m_planet = tt.zeros_like(period)
-        # self.m_total = self.m_star + self.m_planet
+        self.m_star = tt.ones_like(period)
+        self.m_total = self.m_star + self.m_planet
+
+        if a is None:
+            a = (
+                G_grav * (self.m_star + self.m_planet) * self.period**2 / (4 * np.pi**2)
+            ) ** (1.0 / 3)
+        self.a = a
 
         self.n = 2 * np.pi / self.period
         self.K0 = self.n * self.a / self.m_total
@@ -115,7 +123,7 @@ class KeplerianOrbit:
             ome2 = 1 - self.ecc**2
             self.K0 /= tt.sqrt(ome2)
 
-        zla = tt.zeros_like(self.P)
+        zla = tt.zeros_like(self.period)
         self.incl = 0.5 * np.pi + zla
         self.cos_incl = zla
         self.b = zla

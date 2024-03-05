@@ -473,15 +473,15 @@ class TheJoker:
             pm.Deterministic("model_rv", rv_model)
 
             err = pt.sqrt(err**2 + p["s"] ** 2)
-            pm.Normal("obs", mu=rv_model, sd=err, observed=y)
+            pm.Normal("obs", mu=rv_model, sigma=err, observed=y)
 
-            pm.Deterministic("logp", model.logpt)
+            pm.Deterministic("logp", model.logp())
 
             dist = pm.Normal.dist(model.model_rv, data.rv_err.value)
             lnlike = pm.Deterministic(
-                "ln_likelihood", dist.logp(data.rv.value).sum(axis=-1)
+                "ln_likelihood", pm.logp(dist, data.rv.value).sum(axis=-1)
             )
 
-            pm.Deterministic("ln_prior", model.logpt - lnlike)
+            pm.Deterministic("ln_prior", model.logp() - lnlike)
 
         return mcmc_init

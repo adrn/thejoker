@@ -2,6 +2,7 @@ import os
 
 import astropy.units as u
 import numpy as np
+import pymc as pm
 import pytest
 from astropy.time import Time
 from schwimmbad import MultiPool, SerialPool
@@ -107,24 +108,24 @@ def test_marginal_ln_likelihood(tmpdir, case):
     assert len(ll) == len(prior_samples)
 
 
-@pytest.mark.parametrize(
-    "prior",
-    [
-        JokerPrior.default(
-            P_min=5 * u.day,
-            P_max=500 * u.day,
-            sigma_K0=25 * u.km / u.s,
-            sigma_v=100 * u.km / u.s,
-        ),
-        JokerPrior.default(
-            P_min=5 * u.day,
-            P_max=500 * u.day,
-            sigma_K0=25 * u.km / u.s,
-            poly_trend=2,
-            sigma_v=[100 * u.km / u.s, 0.5 * u.km / u.s / u.day],
-        ),
-    ],
-)
+priors = [
+    JokerPrior.default(
+        P_min=5 * u.day,
+        P_max=500 * u.day,
+        sigma_K0=25 * u.km / u.s,
+        sigma_v=100 * u.km / u.s,
+    ),
+    JokerPrior.default(
+        P_min=5 * u.day,
+        P_max=500 * u.day,
+        sigma_K0=25 * u.km / u.s,
+        poly_trend=2,
+        sigma_v=[100 * u.km / u.s, 0.5 * u.km / u.s / u.day],
+    ),
+]
+
+
+@pytest.mark.parametrize("prior", priors)
 def test_rejection_sample(tmpdir, prior):
     data, orbit = make_data()
     flat_data, orbit = make_data(K=0.1 * u.m / u.s)
@@ -172,24 +173,7 @@ def test_rejection_sample(tmpdir, prior):
         assert u.allclose(all_Ks[0], all_Ks[i])
 
 
-@pytest.mark.parametrize(
-    "prior",
-    [
-        JokerPrior.default(
-            P_min=5 * u.day,
-            P_max=500 * u.day,
-            sigma_K0=25 * u.km / u.s,
-            sigma_v=100 * u.km / u.s,
-        ),
-        JokerPrior.default(
-            P_min=5 * u.day,
-            P_max=500 * u.day,
-            sigma_K0=25 * u.km / u.s,
-            poly_trend=2,
-            sigma_v=[100 * u.km / u.s, 0.5 * u.km / u.s / u.day],
-        ),
-    ],
-)
+@pytest.mark.parametrize("prior", priors)
 def test_iterative_rejection_sample(tmpdir, prior):
     data, orbit = make_data(n_times=3)
 
@@ -227,7 +211,14 @@ def test_iterative_rejection_sample(tmpdir, prior):
         assert u.allclose(all_Ks[0], all_Ks[i])
 
 
-if __name__ == "__main__":
-    import pathlib
+@pytest.mark.parametrize("prior", priors)
+def test_continue_mcmc(prior):
+    data, orbit = make_data(n_times=10)
 
-    test_marginal_ln_likelihood(pathlib.Path("/tmp/"), 0)
+    prior_samples = prior.sample(size=16384, return_logprobs=True)
+    joker = TheJoker(prior)
+    joker_samples = joker.rejection_sample(data, prior_samples)
+
+    with prior.model:
+        mcmc_init = joker.setup_mcmc(data, joker_samples)
+        trace = pm.sample(tune=500, draws=500, initvals=mcmc_init, cores=1, chains=1)
