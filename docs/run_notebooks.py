@@ -2,21 +2,18 @@
 
 # Standard library
 import glob
+import logging
 import os
 import sys
-import logging
 
 
 def process_notebook(filename, kernel_name=None):
     import nbformat
     from nbconvert.preprocessors import CellExecutionError, ExecutePreprocessor
 
-    path = os.path.join(
-        os.path.abspath("theano_cache"), "p{0}".format(os.getpid())
-    )
+    path = os.path.join(os.path.abspath("cache"), f"p{os.getpid()}")
     os.makedirs(path, exist_ok=True)
-    os.environ["THEANO_FLAGS"] = "base_compiledir={0}".format(path)
-    os.environ["AESARA_FLAGS"] = os.environ["THEANO_FLAGS"]
+    os.environ["PYTENSOR_FLAGS"] = f"base_compiledir={path}"
 
     with open(filename) as f:
         notebook = nbformat.read(f, as_version=4)
@@ -28,7 +25,7 @@ def process_notebook(filename, kernel_name=None):
     try:
         ep.preprocess(notebook, {"metadata": {"path": "examples/"}})
     except CellExecutionError as e:
-        msg = "error while running: {0}\n\n".format(filename)
+        msg = f"error while running: {filename}\n\n"
         msg += e.traceback
         print(msg)
     finally:
@@ -36,14 +33,14 @@ def process_notebook(filename, kernel_name=None):
             nbformat.write(notebook, f)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     if len(sys.argv) == 2:
         pattern = sys.argv[1]
 
     else:
         pattern = "examples/*.ipynb"
 
-    nbsphinx_kernel_name = os.environ.get('NBSPHINX_KERNEL', 'python3')
+    nbsphinx_kernel_name = os.environ.get("NBSPHINX_KERNEL", "python3")
 
     for filename in sorted(glob.glob(pattern)):
         process_notebook(filename, kernel_name=nbsphinx_kernel_name)
