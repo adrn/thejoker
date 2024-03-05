@@ -15,6 +15,3 @@ plt.rcParams["savefig.dpi"] = 200
 plt.rcParams["figure.dpi"] = 200
 plt.rcParams["font.size"] = 16
 plt.rcParams["font.family"] = "serif"
-plt.rcParams["font.serif"] = ["Liberation Serif"]
-plt.rcParams["font.cursive"] = ["Liberation Serif"]
-plt.rcParams["mathtext.fontset"] = "custom"
