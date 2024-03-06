@@ -6,16 +6,22 @@ Introduction
 ============
 
 |thejoker| [#f1]_ is a custom Monte Carlo sampler for the `two-body problem
-<https://en.wikipedia.org/wiki/Two-body_problem>`_ that generates posterior
-samplings in Keplerian orbital parameters given radial velocity observations of
-stars. It is designed to deliver converged posterior samplings even when the
-radial velocity measurements are sparse or very noisy. It is therefore useful
-for constraining the orbital properties of binary star or star-planet systems.
-Though it fundamentally assumes that any system has two massive bodies (and only
-the primary is observed), |thejoker| can also be used for hierarchical systems
-in which the velocity perturbations from a third or other bodies are much longer
-than the dominant companion. See the paper [#f2]_ for more details about the
-method and applications.
+<https://en.wikipedia.org/wiki/Two-body_problem>`_ that generates posterior samplings in
+Keplerian orbital parameters given radial velocity observations of stars. It is designed
+to deliver converged posterior samplings even when the radial velocity measurements are
+sparse or very noisy. It is therefore useful for constraining the orbital properties of
+binary star or star-planet systems. Though it fundamentally assumes that any system has
+two massive bodies (and only the primary is observed), |thejoker| can also be used for
+hierarchical systems in which the velocity perturbations from a third or other bodies
+are much longer than the dominant companion. See the paper [#f2]_ for more details about
+the method and applications.
+
+.. note::
+
+    New with v1.3, ``thejoker`` is no longer based on ``pymc3`` and is now instead built
+    on `pymc <https://github.com/pymc-devs/pymc/>`_. If you used ``thejoker`` previously
+    with ``pymc3``, you will have to upgrade and modify some code to use the new version
+    of ``pymc`` instead.
 
 .. toctree::
     :maxdepth: 1
@@ -70,8 +76,8 @@ object:
     >>> rv = [38.77, 39.70, 37.45, 38.31, 38.31] * u.km/u.s
     >>> err = [0.184, 0.261, 0.112, 0.155, 0.223] * u.km/u.s
     >>> data = tj.RVData(t=t, rv=rv, rv_err=err)
-    >>> ax = data.plot() # doctest: +SKIP
-    >>> ax.set_xlim(-10, 200) # doctest: +SKIP
+    >>> ax = data.plot()  # doctest: +SKIP
+    >>> ax.set_xlim(-10, 200)  # doctest: +SKIP
 
 .. plot::
     :align: center
@@ -85,7 +91,7 @@ object:
     err = [0.184, 0.261, 0.112, 0.155, 0.223] * u.km/u.s
 
     data = RVData(t=t, rv=rv, rv_err=err)
-    ax = data.plot() # doctest: +SKIP
+    ax = data.plot()  # doctest: +SKIP
     ax.set_xlim(-10, 200)
 
 We next need to specify the prior distributions for the parameters of
@@ -96,16 +102,18 @@ along with parameters that specify the prior over the linear parameters in *The
 Joker* (the velocity semi-amplitude, ``K``, and the systemic velocity, ``v0``):
 
     >>> import numpy as np
-    >>> prior = tj.JokerPrior.default(P_min=2*u.day, P_max=256*u.day,
-    ...                               sigma_K0=30*u.km/u.s,
-    ...                               sigma_v=100*u.km/u.s)
+    >>> prior = tj.JokerPrior.default(
+    ...     P_min=2*u.day, P_max=256*u.day,
+    ...     sigma_K0=30*u.km/u.s,
+    ...     sigma_v=100*u.km/u.s
+    ... )
 
 With the data and prior created, we can now instantiate the sampler object and
 run the rejection sampler:
 
     >>> joker = tj.TheJoker(prior)
     >>> prior_samples = prior.sample(size=100_000)
-    >>> samples = joker.rejection_sample(data, prior_samples) # doctest: +SKIP
+    >>> samples = joker.rejection_sample(data, prior_samples)  # doctest: +SKIP
 
 Of the 100_000 prior samples we generated, only a handful pass the rejection
 sampling step of |thejoker|. Let's visualize the surviving samples in the

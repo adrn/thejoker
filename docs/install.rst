@@ -31,4 +31,5 @@ To install from source (i.e. from the cloned Git repository), also use pip:
 Dependencies
 ============
 
-See the `pyproject.toml <todo>`_ file for the most up-to-date list of dependencies.
+See the `pyproject.toml <https://github.com/adrn/thejoker/blob/main/pyproject.toml>`_
+file for the most up-to-date list of dependencies.
