@@ -3,10 +3,8 @@ The Joker [YO-ker]
 
 .. image:: https://img.shields.io/badge/Made%20at-%23AstroHackWeek-8063d5.svg?style=flat
         :target: http://astrohackweek.org/
-.. image:: https://circleci.com/gh/adrn/thejoker.svg?style=svg
-        :target: https://circleci.com/gh/adrn/thejoker
-.. image:: https://codecov.io/gh/adrn/thejoker/branch/main/graph/badge.svg
-        :target: https://codecov.io/gh/adrn/thejoker
+.. image:: https://github.com/adrn/thejoker/actions/workflows/ci.yml/badge.svg
+        :target: https://github.com/adrn/thejoker/actions/workflows/ci.yml
 
 
 A custom Monte Carlo sampler for the two-body problem.
