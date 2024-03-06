@@ -31,6 +31,21 @@ exclude_patterns = [
 ]
 
 html_theme = "pydata_sphinx_theme"
+html_theme_options = {
+    "github_url": "https://github.com/adrn/thejoker",
+    "use_edit_page_button": True,
+    "navigation_with_keys": False,
+}
+
+html_context = {
+    "default_mode": "light",
+    "to_be_indexed": ["stable", "latest"],
+    "github_user": "adrn",
+    "github_repo": "thejoker",
+    "github_version": "main",
+    "doc_path": "docs",
+}
+
 html_static_path = ["_static"]
 html_css_files = [
     "custom.css",
