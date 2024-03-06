@@ -1,12 +1,11 @@
 import os
-import platform
 
 import astropy.units as u
 import numpy as np
 import pymc as pm
 import pytest
 from astropy.time import Time
-from schwimmbad import MultiPool, SerialPool
+from schwimmbad import SerialPool
 from twobody import KeplerOrbit
 
 from thejoker.data import RVData
@@ -103,10 +102,10 @@ def test_marginal_ln_likelihood(tmpdir, case):
     assert len(ll) == len(prior_samples)
 
     # NOTE: this makes it so I can't parallelize tests, I think
-    with MultiPool(processes=2) as pool:
-        joker = TheJoker(prior, pool=pool)
-        ll = joker.marginal_ln_likelihood(data, filename)
-    assert len(ll) == len(prior_samples)
+    # with MultiPool(processes=2) as pool:
+    #     joker = TheJoker(prior, pool=pool)
+    #     ll = joker.marginal_ln_likelihood(data, filename)
+    # assert len(ll) == len(prior_samples)
 
 
 priors = [
@@ -213,7 +212,6 @@ def test_iterative_rejection_sample(tmpdir, prior):
 
 
 @pytest.mark.parametrize("prior", priors)
-@pytest.mark.skipif(platform.system() == "Darwin", reason="Test fails on MacOS CI")
 def test_continue_mcmc(prior):
     data, orbit = make_data(n_times=8)
 
