@@ -58,7 +58,9 @@ docs = [
 ]
 tutorials = [
     "thejoker[docs]",
-    "jupyter-client"
+    "jupyter-client",
+    "corner",
+    "arviz"
 ]
 
 [tool.setuptools.packages.find]
