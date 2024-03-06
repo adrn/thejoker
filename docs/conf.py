@@ -11,6 +11,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
+    "nbsphinx",
     # "sphinx_autodoc_typehints",
     "sphinx_copybutton",
     "sphinx_automodapi.automodapi",
@@ -63,6 +64,9 @@ nitpick_ignore = [
 ]
 
 always_document_param_types = True
+
+# We execute the tutorial notebooks using GitHub Actions and upload to RTD:
+nbsphinx_execute = "never"
 
 # The name of your GitHub repository
 rtds_action_github_repo = "adrn/thejoker"
