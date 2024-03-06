@@ -1,9 +1,9 @@
-1.3 (unreleased)
-----------------
+1.3.0 (2024-03-06)
+------------------
 
 - Fix bug with ``plot_phase_fold()`` that would cause it to fail if ``data=None``.
 - Overhaul packaging layout to use more modern practices.
-- Replace the ``pymc3`` backend to use the newer ``pymc`` instead.
+- Replace the ``pymc3`` backend to use the newer ``pymc``.
 
 
 1.2.2 (2022-03-03)
