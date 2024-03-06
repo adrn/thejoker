@@ -14,6 +14,7 @@ extensions = [
     "sphinx_copybutton",
     "sphinx_automodapi.automodapi",
     "sphinx_automodapi.smart_resolver",
+    "rtds_action",
 ]
 
 source_suffix = [".rst", ".md"]
@@ -60,3 +61,20 @@ nitpick_ignore = [
 ]
 
 always_document_param_types = True
+
+# The name of your GitHub repository
+rtds_action_github_repo = "adrn/thejoker"
+
+# The path where the artifact should be extracted
+# Note: this is relative to the conf.py file!
+rtds_action_path = "examples"
+
+# The "prefix" used in the `upload-artifact` step of the action
+rtds_action_artifact_prefix = "notebooks-for-"
+
+# A GitHub personal access token is required, more info below
+rtds_action_github_token = os.environ["GITHUB_TOKEN"]
+
+# Whether or not to raise an error on Read the Docs if the
+# artifact containing the notebooks can't be downloaded (optional)
+rtds_action_error_if_missing = False

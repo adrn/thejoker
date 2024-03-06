@@ -19,18 +19,22 @@ def process_notebook(filename, kernel_name=None):
         notebook = nbformat.read(f, as_version=4)
 
     ep = ExecutePreprocessor(timeout=-1, kernel_name=kernel_name)
-    ep.log.setLevel(logging.DEBUG)
+    ep.log.setLevel(logging.INFO)
     ep.log.addHandler(logging.StreamHandler())
 
+    success = True
     try:
         ep.preprocess(notebook, {"metadata": {"path": "examples/"}})
     except CellExecutionError as e:
-        msg = f"error while running: {filename}\n\n"
+        msg = f"Error while running: {filename}\n\n"
         msg += e.traceback
         print(msg)
+        success = False
     finally:
         with open(os.path.join(filename), mode="w") as f:
             nbformat.write(notebook, f)
+
+    return success
 
 
 if __name__ == "__main__":
@@ -42,5 +46,10 @@ if __name__ == "__main__":
 
     nbsphinx_kernel_name = os.environ.get("NBSPHINX_KERNEL", "python3")
 
+    fail = False
     for filename in sorted(glob.glob(pattern)):
-        process_notebook(filename, kernel_name=nbsphinx_kernel_name)
+        success = process_notebook(filename, kernel_name=nbsphinx_kernel_name)
+        fail = fail or not success
+
+    if fail:
+        sys.exit(1)
