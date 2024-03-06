@@ -213,9 +213,9 @@ def test_iterative_rejection_sample(tmpdir, prior):
 
 @pytest.mark.parametrize("prior", priors)
 def test_continue_mcmc(prior):
-    data, orbit = make_data(n_times=10)
+    data, orbit = make_data(n_times=8)
 
-    prior_samples = prior.sample(size=16384, return_logprobs=True)
+    prior_samples = prior.sample(size=16384)
     joker = TheJoker(prior)
     joker_samples = joker.rejection_sample(data, prior_samples)
 
