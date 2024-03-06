@@ -26,8 +26,8 @@ dependencies = [
     "h5py",
     "schwimmbad>=0.4",
     "pymc>=5",
-    "pymc_ext @ git+https://github.com/exoplanet-dev/pymc-ext",
-    "exoplanet-core[pymc] @ git+https://github.com/exoplanet-dev/exoplanet-core",
+    "pymc_ext>=1.0.1",
+    "exoplanet-core[pymc]>=0.3.0",
     "tables<3.9.2",  # https://github.com/PyTables/PyTables/issues/1093
     "dill"
 ]
