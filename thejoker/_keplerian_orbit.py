@@ -1,3 +1,7 @@
+"""
+NOTE: This comes from the exoplanet-devs/exoplanet project! Modified to work with pymc
+instead of pymc3.
+"""
 __all__ = [
     "KeplerianOrbit",
     "get_true_anomaly",
