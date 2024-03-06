@@ -1,48 +1,63 @@
 # Third-party
 import astropy.units as u
 import numpy as np
-import pymc3 as pm
-from pymc3.distributions import generate_samples
-import aesara_theano_fallback.tensor as tt
-import exoplanet.units as xu
+import pymc as pm
+import pytensor.tensor as pt
+from pymc.distributions.dist_math import check_parameters
+from pytensor.tensor.random.basic import NormalRV, RandomVariable
 
-__all__ = ['UniformLog', 'FixedCompanionMass']
+from thejoker.units import UNIT_ATTR_NAME
+
+__all__ = ["UniformLog", "FixedCompanionMass"]
+
+
+class UniformLogRV(RandomVariable):
+    name = "uniformlog"
+    ndim_supp = 0
+    ndims_params = [0, 0]
+    dtype = "floatX"
+
+    @classmethod
+    def rng_fn(cls, rng, a, b, size):
+        _fac = np.log(b) - np.log(a)
+        uu = rng.uniform(size=size)
+        return np.exp(uu * _fac + np.log(a))
+
+
+uniformlog = UniformLogRV()
 
 
 class UniformLog(pm.Continuous):
+    rv_op = uniformlog
 
-    def __init__(self, a, b, **kwargs):
-        """A distribution over a value, x, that is uniform in log(x) over the
-        domain :math:`(a, b)`.
-        """
+    @classmethod
+    def dist(cls, a, b, **kwargs):
+        a = pt.as_tensor_variable(a)
+        b = pt.as_tensor_variable(b)
+        return super().dist([a, b], **kwargs)
 
-        self.a = float(a)
-        self.b = float(b)
-        assert (self.a > 0) and (self.b > 0)
-        self._fac = np.log(self.b) - np.log(self.a)
+    def support_point(rv, size, a, b):
+        a, b = pt.broadcast_arrays(a, b)
+        return 0.5 * (a + b)
 
-        shape = kwargs.get("shape", None)
-        if shape is None:
-            testval = 0.5 * (self.a + self.b)
-        else:
-            testval = 0.5 * (self.a + self.b) + np.zeros(shape)
-        kwargs["testval"] = kwargs.pop("testval", testval)
-        super(UniformLog, self).__init__(**kwargs)
+    # TODO: remove this once new pymc version is released
+    moment = support_point
 
-    def _random(self, size=None):
-        uu = np.random.uniform(size=size)
-        return np.exp(uu * self._fac + np.log(self.a))
-
-    def random(self, point=None, size=None):
-        return generate_samples(
-            self._random,
-            dist_shape=self.shape,
-            broadcast_shape=self.shape,
-            size=size,
+    def logp(value, a, b):
+        _fac = pt.log(b) - pt.log(a)
+        res = -pt.as_tensor_variable(value) - pt.log(_fac)
+        return check_parameters(
+            res,
+            (a > 0) & (a < b),
+            msg="a > 0 and a < b",
         )
 
-    def logp(self, value):
-        return -tt.as_tensor_variable(value) - np.log(self._fac)
+
+class FixedCompanionMassRV(NormalRV):
+    _print_name = ("FixedCompanionMass", "\\mathcal{N}")
+
+
+fixedcompanionmass = FixedCompanionMassRV()
 
 
 class FixedCompanionMass(pm.Normal):
@@ -62,50 +77,60 @@ class FixedCompanionMass(pm.Normal):
     be specified.
     """
 
-    @u.quantity_input(sigma_K0=u.km/u.s, P0=u.day, max_K=u.km/u.s)
-    def __init__(self, P, e, sigma_K0, P0, mu=0., max_K=500*u.km/u.s,
-                 K_unit=None, **kwargs):
-        self._sigma_K0 = sigma_K0
-        self._P0 = P0
-        self._max_K = max_K
+    rv_op = fixedcompanionmass
 
+    @classmethod
+    @u.quantity_input(sigma_K0=u.km / u.s, P0=u.day, max_K=u.km / u.s)
+    def dist(
+        cls,
+        P,
+        e,
+        sigma_K0,
+        P0,
+        mu=0.0,
+        max_K=500 * u.km / u.s,
+        K_unit=None,
+        *args,
+        **kwargs,
+    ):
         if K_unit is not None:
-            self._sigma_K0 = self.sigma_K0.to(K_unit)
-        self._max_K = self._max_K.to(self._sigma_K0.unit)
+            sigma_K0 = sigma_K0.to_value(K_unit)
+        max_K = max_K.to(sigma_K0.unit)
 
-        if hasattr(P, xu.UNIT_ATTR_NAME):
-            self._P0 = self._P0.to(getattr(P, xu.UNIT_ATTR_NAME))
+        if hasattr(P, UNIT_ATTR_NAME):
+            P0 = P0.to(getattr(P, UNIT_ATTR_NAME))
 
-        sigma_K0 = self._sigma_K0.value
-        P0 = self._P0.value
-
-        sigma = tt.min([self._max_K.value,
-                        sigma_K0 * (P/P0)**(-1/3) / np.sqrt(1-e**2)])
-        super().__init__(mu=mu, sigma=sigma)
+        sigma = pt.clip(
+            sigma_K0.value * (P / P0.value) ** (-1 / 3) / np.sqrt(1 - e**2),
+            0.0,
+            max_K.value,
+        )
+        dist = super().dist(mu=mu, sigma=sigma, *args, **kwargs)
+        dist._sigma_K0 = sigma_K0
+        dist._max_K = max_K
+        dist._P0 = P0
+        return dist
 
 
 class Kipping13Long(pm.Beta):
+    rv_op = pt.random.beta
 
-    def __init__(self):
-        r"""
-        The inferred long-period eccentricity distribution from Kipping (2013).
-        """
-        super().__init__(1.12, 3.09)
+    @classmethod
+    def dist(cls, *args, **kwargs):
+        return super().dist(alpha=1.12, beta=3.09, *args, **kwargs)
 
 
 class Kipping13Short(pm.Beta):
+    rv_op = pt.random.beta
 
-    def __init__(self):
-        r"""
-        The inferred short-period eccentricity distribution from Kipping (2013).
-        """
-        super().__init__(0.697, 3.27)
+    @classmethod
+    def dist(cls, *args, **kwargs):
+        return super().dist(alpha=0.697, beta=3.27, *args, **kwargs)
 
 
 class Kipping13Global(pm.Beta):
+    rv_op = pt.random.beta
 
-    def __init__(self):
-        r"""
-        The inferred global eccentricity distribution from Kipping (2013).
-        """
-        super().__init__(0.867, 3.03)
+    @classmethod
+    def dist(cls, *args, **kwargs):
+        return super().dist(alpha=0.867, beta=3.03, *args, **kwargs)

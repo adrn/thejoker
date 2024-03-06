@@ -18,9 +18,9 @@ def get_constant_term_design_matrix(data, ids=None):
     unq_ids = np.unique(ids)
     constant_part = np.zeros((len(data), len(unq_ids)))
 
-    constant_part[:, 0] = 1.
+    constant_part[:, 0] = 1.0
     for j, id_ in enumerate(unq_ids[1:]):
-        constant_part[ids == id_, j+1] = 1.
+        constant_part[ids == id_, j + 1] = 1.0
 
     return constant_part
 
@@ -66,32 +66,37 @@ def marginal_ln_likelihood_inmem(joker_helper, prior_samples_batch):
     return np.array(ll)
 
 
-def make_full_samples_inmem(joker_helper, prior_samples_batch, random_state,
-                            n_linear_samples=1):
+def make_full_samples_inmem(joker_helper, prior_samples_batch, rng, n_linear_samples=1):
     from .samples import JokerSamples
 
     if prior_samples_batch.dtype != np.float64:
         prior_samples_batch = prior_samples_batch.astype(np.float64)
 
     raw_samples, _ = joker_helper.batch_get_posterior_samples(
-        prior_samples_batch, n_linear_samples, random_state)
+        prior_samples_batch, n_linear_samples, rng
+    )
 
     # unpack the raw samples
-    samples = JokerSamples.unpack(raw_samples,
-                                  joker_helper.internal_units,
-                                  t_ref=joker_helper.data.t_ref,
-                                  poly_trend=joker_helper.prior.poly_trend,
-                                  n_offsets=joker_helper.prior.n_offsets)
+    samples = JokerSamples.unpack(
+        raw_samples,
+        joker_helper.internal_units,
+        t_ref=joker_helper.data.t_ref,
+        poly_trend=joker_helper.prior.poly_trend,
+        n_offsets=joker_helper.prior.n_offsets,
+    )
 
     return samples
 
 
-def rejection_sample_inmem(joker_helper, prior_samples_batch, random_state,
-                           ln_prior=None,
-                           max_posterior_samples=None,
-                           n_linear_samples=1,
-                           return_all_logprobs=False):
-
+def rejection_sample_inmem(
+    joker_helper,
+    prior_samples_batch,
+    rng,
+    ln_prior=None,
+    max_posterior_samples=None,
+    n_linear_samples=1,
+    return_all_logprobs=False,
+):
     if max_posterior_samples is None:
         max_posterior_samples = len(prior_samples_batch)
 
@@ -99,19 +104,21 @@ def rejection_sample_inmem(joker_helper, prior_samples_batch, random_state,
     lls = marginal_ln_likelihood_inmem(joker_helper, prior_samples_batch)
 
     # get indices of samples that pass rejection step
-    uu = random_state.uniform(size=len(lls))
+    uu = rng.uniform(size=len(lls))
     good_samples_idx = np.where(np.exp(lls - lls.max()) > uu)[0]
     good_samples_idx = good_samples_idx[:max_posterior_samples]
 
     # generate linear parameters
-    samples = make_full_samples_inmem(joker_helper,
-                                      prior_samples_batch[good_samples_idx],
-                                      random_state,
-                                      n_linear_samples=n_linear_samples)
+    samples = make_full_samples_inmem(
+        joker_helper,
+        prior_samples_batch[good_samples_idx],
+        rng,
+        n_linear_samples=n_linear_samples,
+    )
 
     if ln_prior is not None and ln_prior is not False:
-        samples['ln_prior'] = ln_prior[good_samples_idx]
-        samples['ln_likelihood'] = lls[good_samples_idx]
+        samples["ln_prior"] = ln_prior[good_samples_idx]
+        samples["ln_likelihood"] = lls[good_samples_idx]
 
     if return_all_logprobs:
         return samples, lls
@@ -120,13 +127,16 @@ def rejection_sample_inmem(joker_helper, prior_samples_batch, random_state,
         return samples
 
 
-def iterative_rejection_inmem(joker_helper, prior_samples_batch, random_state,
-                              n_requested_samples,
-                              ln_prior=None,
-                              init_batch_size=None,
-                              growth_factor=128,
-                              n_linear_samples=1):
-
+def iterative_rejection_inmem(
+    joker_helper,
+    prior_samples_batch,
+    rng,
+    n_requested_samples,
+    ln_prior=None,
+    init_batch_size=None,
+    growth_factor=128,
+    n_linear_samples=1,
+):
     n_total_samples = len(prior_samples_batch)
 
     # The "magic numbers" below control how fast the iterative batches grow
@@ -139,12 +149,14 @@ def iterative_rejection_inmem(joker_helper, prior_samples_batch, random_state,
         n_process = init_batch_size
 
     if n_process > n_total_samples:
-        raise ValueError("Prior sample library not big enough! For "
-                         "iterative sampling, you have to have at least "
-                         "growth_factor * n_requested_samples = "
-                         f"{growth_factor * n_requested_samples} samples in "
-                         "the prior samples cache file. You have, or have "
-                         f"limited to, {n_total_samples} samples.")
+        raise ValueError(
+            "Prior sample library not big enough! For "
+            "iterative sampling, you have to have at least "
+            "growth_factor * n_requested_samples = "
+            f"{growth_factor * n_requested_samples} samples in "
+            "the prior samples cache file. You have, or have "
+            f"limited to, {n_total_samples} samples."
+        )
 
     all_idx = np.arange(0, n_total_samples, 1)
 
@@ -154,18 +166,21 @@ def iterative_rejection_inmem(joker_helper, prior_samples_batch, random_state,
         logger.log(1, f"iteration {i}, computing {n_process} likelihoods")
 
         marg_lls = marginal_ln_likelihood_inmem(
-            joker_helper, prior_samples_batch[start_idx:start_idx + n_process])
+            joker_helper, prior_samples_batch[start_idx : start_idx + n_process]
+        )
         all_marg_lls = np.concatenate((all_marg_lls, marg_lls))
 
         if np.any(~np.isfinite(all_marg_lls)):
-            return RuntimeError("There are NaN or Inf likelihood values in "
-                                f"iteration step {i}!")
+            return RuntimeError(
+                "There are NaN or Inf likelihood values in " f"iteration step {i}!"
+            )
         elif len(all_marg_lls) == 0:
-            return RuntimeError("No likelihood values returned in iteration "
-                                f"step {i}")
+            return RuntimeError(
+                "No likelihood values returned in iteration " f"step {i}"
+            )
 
         # get indices of samples that pass rejection step
-        uu = random_state.uniform(size=len(all_marg_lls))
+        uu = rng.uniform(size=len(all_marg_lls))
         aa = np.exp(all_marg_lls - all_marg_lls.max())
         good_samples_idx = np.where(aa > uu)[0]
 
@@ -199,18 +214,20 @@ def iterative_rejection_inmem(joker_helper, prior_samples_batch, random_state,
     full_samples_idx = all_idx[good_samples_idx]
 
     # generate linear parameters
-    samples = make_full_samples_inmem(joker_helper,
-                                      prior_samples_batch[full_samples_idx],
-                                      random_state,
-                                      n_linear_samples=n_linear_samples)
+    samples = make_full_samples_inmem(
+        joker_helper,
+        prior_samples_batch[full_samples_idx],
+        rng,
+        n_linear_samples=n_linear_samples,
+    )
 
     # FIXME: copy-pasted from function above
     if ln_prior is not None and ln_prior is not False:
-        samples['ln_prior'] = ln_prior[full_samples_idx]
-        samples['ln_likelihood'] = all_marg_lls[good_samples_idx]
+        samples["ln_prior"] = ln_prior[full_samples_idx]
+        samples["ln_likelihood"] = all_marg_lls[good_samples_idx]
 
     return samples
 
 
 def ln_normal(x, mu, var):
-    return -0.5 * (np.log(2*np.pi * var) + (x - mu)**2 / var)
+    return -0.5 * (np.log(2 * np.pi * var) + (x - mu) ** 2 / var)

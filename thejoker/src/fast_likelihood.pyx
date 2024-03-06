@@ -15,6 +15,7 @@ np.import_array()
 import cython
 cimport cython
 cimport scipy.linalg.cython_lapack as lapack
+import thejoker.units as xu
 
 # from libc.stdio cimport printf
 from libc.math cimport pow, log, fabs, pi
@@ -202,30 +203,42 @@ cdef class CJokerHelper:
 
         # put v0_offsets variances into Lambda
         # - validated to be Normal() in JokerPrior
-        import exoplanet.units as xu
         for i in range(self.n_offsets):
             name = prior.v0_offsets[i].name
-            dist = prior.v0_offsets[i].distribution
-            _unit = getattr(prior.model[name], xu.UNIT_ATTR_NAME)
+            # dist = prior.v0_offsets[i].distribution
+            dist = prior.model[name]
+            _unit = getattr(dist, xu.UNIT_ATTR_NAME)
             to_unit = self.internal_units[name]
 
+            # mean is par 0, stddev par 1
+            pars = dist.owner.inputs[3:]
+            mu = (pars[0].eval() * _unit).to_value(to_unit)
+            std = (pars[1].eval() * _unit).to_value(to_unit)
+
             # K, v0 = 2 - start at index 2
-            self.mu[2+i] = (dist.mean.eval() * _unit).to_value(to_unit)
-            self.Lambda[2+i] = (dist.sd.eval() * _unit).to_value(to_unit) ** 2
+            self.mu[2+i] = mu
+            self.Lambda[2+i] = std ** 2
 
         # ---------------------------------------------------------------------
         # TODO: This is a bit of a hack:
         from ..distributions import FixedCompanionMass
-        if isinstance(prior.pars['K'].distribution, FixedCompanionMass):
+        if prior.pars['K'].owner.op._print_name[0] == "FixedCompanionMass":
             self.fixed_K_prior = 0
         else:
             self.fixed_K_prior = 1
 
         for i, name in enumerate(prior._linear_equiv_units.keys()):
-            dist = prior.model[name].distribution
             _unit = getattr(prior.model[name], xu.UNIT_ATTR_NAME)
             to_unit = self.internal_units[name]
-            mu = (dist.mean.eval() * _unit).to_value(to_unit)
+
+            dist = prior.model[name]
+            # first three are (rng, size, dtype) as per
+            # https://github.com/pymc-devs/pymc/blob/main/pymc/printing.py#L43
+            pars = dist.owner.inputs[3:]
+
+            # mean is par 0
+            mu = (pars[0].eval() * _unit).to_value(to_unit)
+            std = (pars[1].eval() * _unit).to_value(to_unit)
 
             if name == 'K' and self.fixed_K_prior == 0:
                 # TODO: here's the major hack
@@ -236,12 +249,12 @@ cdef class CJokerHelper:
                 self.mu[i] = mu
 
             elif name == 'v0':
-                self.Lambda[i] = (dist.sd.eval() * _unit).to_value(to_unit) ** 2
+                self.Lambda[i] = std ** 2
                 self.mu[i] = mu
 
             else:  # v1, v2, etc.
                 j = i + self.n_offsets
-                self.Lambda[j] = (dist.sd.eval() * _unit).to_value(to_unit) ** 2
+                self.Lambda[j] = std ** 2
                 self.mu[j] = mu
         # ---------------------------------------------------------------------
 
@@ -463,7 +476,7 @@ cdef class CJokerHelper:
 
     cpdef batch_get_posterior_samples(self, double[:, ::1] chunk,
                                       int n_linear_samples_per,
-                                      object random_state):
+                                      object rng):
         """TODO:
 
         Parameters
@@ -519,7 +532,7 @@ cdef class CJokerHelper:
             # TODO: FIXME: this calls back to numpy at the Python layer
             # - use https://github.com/bashtage/randomgen instead?
             # a and Ainv are populated by the likelihood_worker()
-            linear_pars = random_state.multivariate_normal(
+            linear_pars = rng.multivariate_normal(
                 self.a, np.linalg.inv(self.Ainv), size=n_linear_samples_per)
 
             for j in range(n_linear_samples_per):

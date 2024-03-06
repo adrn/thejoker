@@ -5,16 +5,12 @@ NOTE: this is only used for testing the cython / c implementation.
 # Third-party
 import astropy.units as u
 import numpy as np
-from twobody.wrap import cy_rv_from_elements
 from astroML.utils import log_multivariate_gaussian
-# from scipy.stats import multivariate_normal
+from twobody.wrap import cy_rv_from_elements
 
-# Project
 from ...samples import JokerSamples
-from ...distributions import FixedCompanionMass
-from ...utils import DEFAULT_RNG
 
-__all__ = ['get_ivar', 'likelihood_worker', 'marginal_ln_likelihood']
+__all__ = ["get_ivar", "likelihood_worker", "marginal_ln_likelihood"]
 
 
 def get_ivar(data, s):
@@ -126,7 +122,7 @@ def design_matrix(nonlinear_p, data, prior):
 
     t = data._t_bmjd
     t0 = data._t_ref_bmjd
-    zdot = cy_rv_from_elements(t, P, 1., ecc, omega, M0, t0, 1e-8, 128)
+    zdot = cy_rv_from_elements(t, P, 1.0, ecc, omega, M0, t0, 1e-8, 128)
 
     M1 = np.vander(t - t0, N=prior.poly_trend, increasing=True)
     M = np.hstack((zdot[:, None], M1))
@@ -136,7 +132,7 @@ def design_matrix(nonlinear_p, data, prior):
 
 def get_M_Lambda_ivar(samples, prior, data):
     v_unit = data.rv.unit
-    units = {'K': v_unit, 's': v_unit}
+    units = {"K": v_unit, "s": v_unit}
     for i, k in enumerate(list(prior._linear_equiv_units.keys())[1:]):  # skip K
         units[k] = v_unit / u.day**i
     packed_samples, _ = samples.pack(units=units)
@@ -146,24 +142,26 @@ def get_M_Lambda_ivar(samples, prior, data):
 
     Lambda = np.zeros(n_linear)
     for i, k in enumerate(prior._linear_equiv_units.keys()):
-        if k == 'K':
+        if k == "K":
             continue  # set below
-        Lambda[i] = prior.pars[k].distribution.sd.eval() ** 2
+        pars = prior.pars[k].owner.inputs[3:]
+        Lambda[i] = pars[1].eval() ** 2
 
-    K_dist = prior.pars['K'].distribution
-    if isinstance(K_dist, FixedCompanionMass):
+    K_dist = prior.pars["K"]
+    K_pars = K_dist.owner.inputs[3:]
+    if K_dist.owner.op._print_name[0] == "FixedCompanionMass":
         sigma_K0 = K_dist._sigma_K0.to_value(v_unit)
-        P0 = K_dist._P0.to_value(samples['P'].unit)
+        P0 = K_dist._P0.to_value(samples["P"].unit)
         max_K2 = K_dist._max_K.to_value(v_unit) ** 2
     else:
-        Lambda[0] = K_dist.sd.eval() ** 2
+        Lambda[0] = K_pars[1].eval() ** 2
 
     for n in range(n_samples):
         M = design_matrix(packed_samples[n], data, prior)
-        if isinstance(K_dist, FixedCompanionMass):
-            P = samples['P'][n].value
-            e = samples['e'][n]
-            Lambda[0] = sigma_K0**2 / (1 - e**2) * (P / P0)**(-2/3)
+        if K_dist.owner.op._print_name[0] == "FixedCompanionMass":
+            P = samples["P"][n].value
+            e = samples["e"][n]
+            Lambda[0] = sigma_K0**2 / (1 - e**2) * (P / P0) ** (-2 / 3)
             Lambda[0] = min(max_K2, Lambda[0])
 
         # jitter must be in same units as the data RV's / ivar!
@@ -197,9 +195,9 @@ def marginal_ln_likelihood(samples, prior, data):
     marg_ll = np.zeros(n_samples)
     for n, M, Lambda, ivar, *_ in get_M_Lambda_ivar(samples, prior, data):
         try:
-            marg_ll[n], *_ = likelihood_worker(data.rv.value, ivar, M,
-                                               mu, np.diag(Lambda),
-                                               make_aA=False)
+            marg_ll[n], *_ = likelihood_worker(
+                data.rv.value, ivar, M, mu, np.diag(Lambda), make_aA=False
+            )
         except np.linalg.LinAlgError as e:
             raise e
 
@@ -220,7 +218,7 @@ def rejection_sample(samples, prior, data, rnd=None):
     mu = np.zeros(n_linear)
 
     if rnd is None:
-        rnd = DEFAULT_RNG()
+        rnd = np.random.default_rng()
 
     ll = marginal_ln_likelihood(samples, prior, data)
     uu = rnd.uniform(size=len(ll))
@@ -231,11 +229,12 @@ def rejection_sample(samples, prior, data, rnd=None):
 
     all_packed = np.zeros((n_good_samples, len(prior.par_names)))
     for n, M, Lambda, ivar, packed_nonlinear, units in get_M_Lambda_ivar(
-            good_samples, prior, data):
+        good_samples, prior, data
+    ):
         try:
-            _, b, B, a, A = likelihood_worker(data.rv.value, ivar, M,
-                                              mu, np.diag(Lambda),
-                                              make_aA=True)
+            _, b, B, a, A = likelihood_worker(
+                data.rv.value, ivar, M, mu, np.diag(Lambda), make_aA=True
+            )
         except np.linalg.LinAlgError as e:
             raise e
 
@@ -249,8 +248,7 @@ def rejection_sample(samples, prior, data, rnd=None):
         else:
             unpack_units[k] = samples[k].unit
 
-    return JokerSamples.unpack(all_packed, unpack_units, prior.poly_trend,
-                               data.t_ref)
+    return JokerSamples.unpack(all_packed, unpack_units, prior.poly_trend, data.t_ref)
 
 
 def get_aAbB(samples, prior, data):
@@ -269,22 +267,24 @@ def get_aAbB(samples, prior, data):
     n_times = len(data)
     mu = np.zeros(n_linear)
 
-    out = {'a': np.zeros((n_samples, n_linear)),
-           'A': np.zeros((n_samples, n_linear, n_linear)),
-           'b': np.zeros((n_samples, n_times)),
-           'B': np.zeros((n_samples, n_times, n_times))}
+    out = {
+        "a": np.zeros((n_samples, n_linear)),
+        "A": np.zeros((n_samples, n_linear, n_linear)),
+        "b": np.zeros((n_samples, n_times)),
+        "B": np.zeros((n_samples, n_times, n_times)),
+    }
 
     for n, M, Lambda, ivar, *_ in get_M_Lambda_ivar(samples, prior, data):
         try:
-            _, b, B, a, A = likelihood_worker(data.rv.value, ivar, M,
-                                              mu, np.diag(Lambda),
-                                              make_aA=True)
+            _, b, B, a, A = likelihood_worker(
+                data.rv.value, ivar, M, mu, np.diag(Lambda), make_aA=True
+            )
         except np.linalg.LinAlgError as e:
             raise e
 
-        out['a'][n] = a
-        out['A'][n] = A
-        out['b'][n] = b
-        out['B'][n] = B
+        out["a"][n] = a
+        out["A"][n] = A
+        out["b"][n] = b
+        out["B"][n] = B
 
     return out

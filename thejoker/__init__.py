@@ -1,14 +1,35 @@
-from ._astropy_init import *  # noqa
+from ._version import version as __version__
+from .data import RVData
+from .plot import plot_phase_fold, plot_rv_curves
+from .prior import JokerPrior
+from .samples import JokerSamples
+from .samples_analysis import (
+    MAP_sample,
+    is_P_Kmodal,
+    is_P_unimodal,
+    max_phase_gap,
+    periods_spanned,
+    phase_coverage,
+    phase_coverage_per_period,
+)
+from .thejoker import TheJoker
 
-
-# For egg_info test builds to pass, put package imports here.
-if not _ASTROPY_SETUP_:  # noqa
-    from .thejoker import TheJoker  # noqa
-    from .data import RVData  # noqa
-    from .samples import JokerSamples  # noqa
-    from .prior import JokerPrior  # noqa
-    from .plot import plot_rv_curves, plot_phase_fold  # noqa
-    from .samples_analysis import *  # noqa
+__all__ = [
+    "__version__",
+    "TheJoker",
+    "RVData",
+    "JokerSamples",
+    "JokerPrior",
+    "plot_rv_curves",
+    "plot_phase_fold",
+    "MAP_sample",
+    "is_P_unimodal",
+    "is_P_Kmodal",
+    "max_phase_gap",
+    "phase_coverage",
+    "periods_spanned",
+    "phase_coverage_per_period",
+]
 
 
 __bibtex__ = __citation__ = """@ARTICLE{thejoker,

@@ -1,6 +1,0 @@
-dependencies:
-  - python=3.8
-  - mkl
-  - pip
-  - pip:
-    - -e .[docs]

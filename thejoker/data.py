@@ -1,18 +1,16 @@
-import warnings
-
 # Third-party
+import astropy.units as u
+import numpy as np
 from astropy.table import Table
 from astropy.time import Time
 from astropy.utils.decorators import deprecated_renamed_argument
-import astropy.units as u
-import numpy as np
+
+from .data_helpers import guess_time_format
 
 # Project
 from .logging import logger
-from .data_helpers import guess_time_format
-from .exceptions import TheJokerDeprecationWarning
 
-__all__ = ['RVData']
+__all__ = ["RVData"]
 
 
 class RVData:
@@ -37,11 +35,9 @@ class RVData:
         Filter out any NaN or Inf data points.
 
     """
-    @deprecated_renamed_argument('t0', 't_ref', since='v1.2',
-                                 warning_type=TheJokerDeprecationWarning)
-    @u.quantity_input(rv=u.km/u.s, rv_err=[u.km/u.s, (u.km/u.s)**2])
-    def __init__(self, t, rv, rv_err, t_ref=None, clean=True):
 
+    @u.quantity_input(rv=u.km / u.s, rv_err=[u.km / u.s, (u.km / u.s) ** 2])
+    def __init__(self, t, rv, rv_err, t_ref=None, clean=True):
         # For speed, time is saved internally as BMJD:
         if isinstance(t, Time):
             _t_bmjd = t.tcb.mjd
@@ -59,22 +55,26 @@ class RVData:
         elif self.rv_err.ndim == 2:
             self._has_cov = True
 
-        if (self.rv_err.shape != (self.rv.size, self.rv.size)
-                and self.rv_err.shape != (self.rv.size, )):
-            raise ValueError(f"Invalid shape for input RV error "
-                             f"{self.rv_err.shape}. Should either be "
-                             f"({self.rv.size},) or "
-                             f"({self.rv.size}, {self.rv.size})")
+        if self.rv_err.shape != (self.rv.size, self.rv.size) and self.rv_err.shape != (
+            self.rv.size,
+        ):
+            raise ValueError(
+                f"Invalid shape for input RV error "
+                f"{self.rv_err.shape}. Should either be "
+                f"({self.rv.size},) or "
+                f"({self.rv.size}, {self.rv.size})"
+            )
 
         # make sure shapes are consistent
         if self._t_bmjd.shape != self.rv.shape:
-            raise ValueError(f"Shape of input times and RVs must be consistent"
-                             f" ({self._t_bmjd.shape} vs {self.rv.shape})")
+            raise ValueError(
+                f"Shape of input times and RVs must be consistent"
+                f" ({self._t_bmjd.shape} vs {self.rv.shape})"
+            )
 
         if clean:
             # filter out NAN or INF data points
-            idx = (np.isfinite(self._t_bmjd)
-                   & np.isfinite(self.rv))
+            idx = np.isfinite(self._t_bmjd) & np.isfinite(self.rv)
 
             if self._has_cov:
                 idx &= np.isfinite(self.rv_err).all(axis=0)
@@ -106,25 +106,20 @@ class RVData:
 
         if t_ref is False:
             self.t_ref = None
-            self._t_ref_bmjd = 0.
+            self._t_ref_bmjd = 0.0
 
         else:
             if t_ref is None:
                 t_ref = self.t.min()
 
             if not isinstance(t_ref, Time):
-                raise TypeError('If a reference time t_ref is specified, it '
-                                'must be an astropy.time.Time object.')
+                raise TypeError(
+                    "If a reference time t_ref is specified, it "
+                    "must be an astropy.time.Time object."
+                )
 
             self.t_ref = t_ref
             self._t_ref_bmjd = self.t_ref.tcb.mjd
-
-    @property
-    def t0(self):
-        warnings.warn('The argument and attribute "t0" has been renamed '
-                      'and should now be specified / accessed as "t_ref"',
-                      TheJokerDeprecationWarning)
-        return self.t_ref
 
     # ------------------------------------------------------------------------
     # Computed or convenience properties
@@ -138,7 +133,7 @@ class RVData:
         t : `~astropy.time.Time`
             An Astropy Time object for all times.
         """
-        return Time(self._t_bmjd, scale='tcb', format='mjd')
+        return Time(self._t_bmjd, scale="tcb", format="mjd")
 
     @property
     def cov(self):
@@ -154,16 +149,15 @@ class RVData:
         if self._has_cov:
             return np.linalg.inv(self.rv_err.value) / self.rv_err.unit
         else:
-            return 1 / self.rv_err ** 2
+            return 1 / self.rv_err**2
 
     # ------------------------------------------------------------------------
     # Other initialization methods:
 
     @classmethod
-    @deprecated_renamed_argument('t0', 't_ref', since='v1.2',
-                                 warning_type=TheJokerDeprecationWarning)
-    def guess_from_table(cls, tbl, time_kwargs=None, rv_unit=None,
-                         fuzzy=False, t_ref=None):
+    def guess_from_table(
+        cls, tbl, time_kwargs=None, rv_unit=None, fuzzy=False, t_ref=None
+    ):
         """
         Try to construct an ``RVData`` instance by guessing column names from
         the input table.
@@ -201,49 +195,57 @@ class RVData:
 
         # First check for any of the valid astropy Time format names:
         # FUTURETODO: right now we only support jd and mjd (and b-preceding)
-        for fmt in ['jd', 'mjd']:
+        for fmt in ["jd", "mjd"]:
             if fmt in lwr_cols:
-                time_kwargs['format'] = time_kwargs.get('format', fmt)
+                time_kwargs["format"] = time_kwargs.get("format", fmt)
                 time_data = tbl[lwr_to_col[fmt]]
                 break
 
-            elif f'b{fmt}' in lwr_cols:
-                time_kwargs['format'] = time_kwargs.get('format', fmt)
-                time_kwargs['scale'] = time_kwargs.get('scale', 'tcb')
-                time_data = tbl[lwr_to_col[f'b{fmt}']]
+            elif f"b{fmt}" in lwr_cols:
+                time_kwargs["format"] = time_kwargs.get("format", fmt)
+                time_kwargs["scale"] = time_kwargs.get("scale", "tcb")
+                time_data = tbl[lwr_to_col[f"b{fmt}"]]
                 _scale_specified = True
                 break
 
-        time_info_msg = ("Assuming time scale is '{}' because it was not "
-                         "specified. To change this, pass in: "
-                         "time_kwargs=dict(scale='...') with whatever time "
-                         "scale your data are in.")
-        _fmt_specified = 'format' in time_kwargs
-        _scale_specified = 'scale' in time_kwargs
+        time_info_msg = (
+            "Assuming time scale is '{}' because it was not "
+            "specified. To change this, pass in: "
+            "time_kwargs=dict(scale='...') with whatever time "
+            "scale your data are in."
+        )
+        _fmt_specified = "format" in time_kwargs
+        _scale_specified = "scale" in time_kwargs
 
         # check colnames for "t" or "time"
-        for name in ['t', 'time']:
+        for name in ["t", "time"]:
             if name in lwr_cols:
                 time_data = tbl[lwr_to_col[name]]
-                time_kwargs['format'] = time_kwargs.get(
-                    'format', guess_time_format(tbl[lwr_to_col[name]]))
+                time_kwargs["format"] = time_kwargs.get(
+                    "format", guess_time_format(tbl[lwr_to_col[name]])
+                )
                 if not _fmt_specified:
-                    logger.info("Guessed time format: '{}'. If this is "
-                                "incorrect, try passing in "
-                                "time_kwargs=dict(format='...') with the "
-                                "correct format, and open an issue at "
-                                "https://github.com/adrn/thejoker/issues"
-                                .format(time_kwargs['format']))
+                    logger.info(
+                        "Guessed time format: '{}'. If this is "
+                        "incorrect, try passing in "
+                        "time_kwargs=dict(format='...') with the "
+                        "correct format, and open an issue at "
+                        "https://github.com/adrn/thejoker/issues".format(
+                            time_kwargs["format"]
+                        )
+                    )
                 break
 
         if not _scale_specified:
-            logger.info(time_info_msg.format(time_kwargs.get('scale', 'utc')))
+            logger.info(time_info_msg.format(time_kwargs.get("scale", "utc")))
 
         if time_data is None:
-            raise RuntimeWarning("Failed to parse time data and format from "
-                                 "input table. Instead, try using the "
-                                 "initializer directly, and specify the time "
-                                 "as an astropy.time.Time instance.")
+            raise RuntimeWarning(
+                "Failed to parse time data and format from "
+                "input table. Instead, try using the "
+                "initializer directly, and specify the time "
+                "as an astropy.time.Time instance."
+            )
 
         time = Time(time_data, **time_kwargs)
 
@@ -251,16 +253,17 @@ class RVData:
         # Now deal with RV data:
 
         # FUTURETODO: could make this customizable...
-        _valid_rv_names = ['rv', 'vr', 'radial_velocity',
-                           'vhelio', 'vrad', 'vlos']
+        _valid_rv_names = ["rv", "vr", "radial_velocity", "vhelio", "vrad", "vlos"]
 
         if fuzzy:
             try:
                 from fuzzywuzzy import process
             except ImportError:
-                raise ImportError("Fuzzy column name matching requires "
-                                  "`fuzzywuzzy`. Install with pip install "
-                                  "fuzzywuzzy.")
+                raise ImportError(
+                    "Fuzzy column name matching requires "
+                    "`fuzzywuzzy`. Install with pip install "
+                    "fuzzywuzzy."
+                )
 
             # FUTURETODO: could make this customizable too...
             score_thresh = 90
@@ -276,16 +279,19 @@ class RVData:
 
             # error if the best match is below threshold
             if scores.max() < score_thresh:
-                raise RuntimeError("Failed to parse radial velocity data from "
-                                   "input table: No column names looked "
-                                   "good with fuzzy name matching.")
+                raise RuntimeError(
+                    "Failed to parse radial velocity data from "
+                    "input table: No column names looked "
+                    "good with fuzzy name matching."
+                )
 
             # check for multiple bests:
             if np.sum(scores == scores.max()) > 1:
-                raise RuntimeError("Failed to parse radial velocity data from "
-                                   "input table: Multiple column names looked "
-                                   "good with fuzzy matching {}."
-                                   .format(matches[scores == scores.max()]))
+                raise RuntimeError(
+                    "Failed to parse radial velocity data from "
+                    "input table: Multiple column names looked "
+                    f"good with fuzzy matching {matches[scores == scores.max()]}."
+                )
 
             best_rv_name = matches[scores.argmax()]
 
@@ -295,25 +301,33 @@ class RVData:
                     best_rv_name = name
                     break
             else:
-                raise RuntimeError("Failed to parse radial velocity data from "
-                                   "input table: no matches to input names: "
-                                   f"{_valid_rv_names}. Use fuzzy=True or "
-                                   "use the initializer directly.")
+                raise RuntimeError(
+                    "Failed to parse radial velocity data from "
+                    "input table: no matches to input names: "
+                    f"{_valid_rv_names}. Use fuzzy=True or "
+                    "use the initializer directly."
+                )
 
         rv_data = u.Quantity(tbl[lwr_to_col[best_rv_name]])
 
         # FUTURETODO: allow customizing?
-        _valid_err_names = [f'{best_rv_name}err', f'{best_rv_name}_err',
-                            f'{best_rv_name}_e', f'e_{best_rv_name}']
+        _valid_err_names = [
+            f"{best_rv_name}err",
+            f"{best_rv_name}_err",
+            f"{best_rv_name}_e",
+            f"e_{best_rv_name}",
+        ]
         for err_name in _valid_err_names:
             if err_name in lwr_cols:
                 err_data = u.Quantity(tbl[lwr_to_col[err_name]])
                 break
         else:
-            raise RuntimeError("Failed to parse radial velocity error data "
-                               "from input table: no matches to input names: "
-                               f"{_valid_err_names}. Try using the "
-                               "initializer directly.")
+            raise RuntimeError(
+                "Failed to parse radial velocity error data "
+                "from input table: no matches to input names: "
+                f"{_valid_err_names}. Try using the "
+                "initializer directly."
+            )
 
         if rv_unit is not None:
             if rv_data.unit is u.one:
@@ -333,25 +347,23 @@ class RVData:
         """
         from astropy.timeseries import TimeSeries
 
-        ts = TimeSeries(time=self.t, data={'rv': self.rv,
-                                           'rv_err': self.rv_err})
-        ts.meta['t_ref'] = self.t_ref
+        ts = TimeSeries(time=self.t, data={"rv": self.rv, "rv_err": self.rv_err})
+        ts.meta["t_ref"] = self.t_ref
         return ts
 
     @classmethod
     def from_timeseries(cls, f, path=None):
         from astropy.timeseries import TimeSeries
+
         ts = TimeSeries.read(f, path=path)
-        t_ref = ts.meta.get('t_ref', None)
-        return cls(t=ts['time'],
-                   rv=ts['rv'],
-                   rv_err=ts['rv_err'],
-                   t_ref=t_ref)
+        t_ref = ts.meta.get("t_ref", None)
+        return cls(t=ts["time"], rv=ts["rv"], rv_err=ts["rv_err"], t_ref=t_ref)
 
     # ------------------------------------------------------------------------
     # Other methods
 
-    def phase(self, P, t0=None):
+    @deprecated_renamed_argument("t0", "t_ref", "v1.3")
+    def phase(self, P, t_ref=None):
         """
         Convert time to a phase.
 
@@ -362,7 +374,7 @@ class RVData:
         ----------
         P : `~astropy.units.Quantity` [time]
             The period.
-        t0 : `~astropy.time.Time` (optional)
+        t_ref : `~astropy.time.Time` (optional)
             Default uses the internal reference epoch. Use this to compute the
             phase relative to some other epoch
 
@@ -372,16 +384,21 @@ class RVData:
             The dimensionless phase of each observation.
 
         """
-        if t0 is None:
-            t0 = self.t_ref
-        return ((self.t - t0) / P) % 1.
+        if t_ref is None:
+            t_ref = self.t_ref
+        return ((self.t - t_ref) / P) % 1.0
 
-    @deprecated_renamed_argument('relative_to_t0', 'relative_to_t_ref',
-                                 since='v1.2',
-                                 warning_type=TheJokerDeprecationWarning)
-    def plot(self, ax=None, rv_unit=None, time_format='mjd', phase_fold=None,
-             relative_to_t_ref=False, add_labels=True, color_by=None,
-             **kwargs):
+    @deprecated_renamed_argument("phase_fold", "phase_fold_period", "v1.3")
+    def plot(
+        self,
+        ax=None,
+        rv_unit=None,
+        time_format="mjd",
+        phase_fold_period=None,
+        relative_to_t_ref=False,
+        add_labels=True,
+        **kwargs,
+    ):
         """
         Plot the data points.
 
@@ -414,6 +431,7 @@ class RVData:
         """
         if ax is None:
             import matplotlib.pyplot as plt
+
             ax = plt.gca()
 
         if rv_unit is None:
@@ -421,14 +439,14 @@ class RVData:
 
         # some default stylings
         style = kwargs.copy()
-        style.setdefault('linestyle', 'none')
-        style.setdefault('alpha', 1.)
-        style.setdefault('marker', 'o')
-        style.setdefault('elinewidth', 1)
+        style.setdefault("linestyle", "none")
+        style.setdefault("alpha", 1.0)
+        style.setdefault("marker", "o")
+        style.setdefault("elinewidth", 1)
 
-        if style.get('color', 'k') is not None:
-            style.setdefault('color', 'k')
-            style.setdefault('ecolor', '#666666')
+        if style.get("color", "k") is not None:
+            style.setdefault("color", "k")
+            style.setdefault("ecolor", "#666666")
 
         if callable(time_format):
             t = time_format(self.t)
@@ -440,42 +458,45 @@ class RVData:
         if relative_to_t_ref:
             t = t - t0
 
-        if phase_fold:
-            t = (t / phase_fold.to(u.day).value) % 1
+        if phase_fold_period is not None:
+            t = (t / phase_fold_period.to(u.day).value) % 1
 
         if self._has_cov:
             # FIXME: this is a bit of a hack
             diag_var = np.diag(self.rv_err.value)
-            err = np.sqrt(diag_var) * self.rv_err.unit ** 0.5
+            err = np.sqrt(diag_var) * self.rv_err.unit**0.5
         else:
             err = self.rv_err
 
-        ax.errorbar(t, self.rv.to(rv_unit).value,
-                    err.to(rv_unit).value, **style)
+        ax.errorbar(t, self.rv.to(rv_unit).value, err.to(rv_unit).value, **style)
 
         if add_labels:
-            ax.set_xlabel('time [BMJD]')
-            ax.set_ylabel('RV [{:latex_inline}]'.format(rv_unit))
+            ax.set_xlabel("time [BMJD]")
+            ax.set_ylabel(f"RV [{rv_unit:latex_inline}]")
 
         return ax
 
     def __copy__(self):
-        return self.__class__(t=self.t.copy(),
-                              rv=self.rv.copy(),
-                              rv_err=self.rv_err.copy())
+        return self.__class__(
+            t=self.t.copy(), rv=self.rv.copy(), rv_err=self.rv_err.copy()
+        )
 
     def copy(self):
         return self.__copy__()
 
     def __getitem__(self, slc):
         if self._has_cov:
-            return self.__class__(t=self.t.copy()[slc],
-                                  rv=self.rv.copy()[slc],
-                                  rv_err=self.rv_err.copy()[slc][:, slc])
+            return self.__class__(
+                t=self.t.copy()[slc],
+                rv=self.rv.copy()[slc],
+                rv_err=self.rv_err.copy()[slc][:, slc],
+            )
         else:
-            return self.__class__(t=self.t.copy()[slc],
-                                  rv=self.rv.copy()[slc],
-                                  rv_err=self.rv_err.copy()[slc])
+            return self.__class__(
+                t=self.t.copy()[slc],
+                rv=self.rv.copy()[slc],
+                rv_err=self.rv_err.copy()[slc],
+            )
 
     def __len__(self):
         return len(self.rv.value)
