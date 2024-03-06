@@ -1,5 +1,4 @@
 import os
-import platform
 
 import astropy.units as u
 import numpy as np
@@ -91,23 +90,22 @@ def test_marginal_ln_likelihood(tmpdir, case):
     ll = joker.marginal_ln_likelihood(data, prior_samples)
     assert len(ll) == len(prior_samples)
 
-    if platform.system() != "Darwin":  # this part of the test fails on CI macos??
-        # save prior samples to a file and pass that instead
-        filename = str(tmpdir / "samples.hdf5")
-        prior_samples.write(filename, overwrite=True)
+    # save prior samples to a file and pass that instead
+    filename = str(tmpdir / "samples.hdf5")
+    prior_samples.write(filename, overwrite=True)
 
+    ll = joker.marginal_ln_likelihood(data, filename)
+    assert len(ll) == len(prior_samples)
+
+    # make sure batches work:
+    ll = joker.marginal_ln_likelihood(data, filename, n_batches=10)
+    assert len(ll) == len(prior_samples)
+
+    # NOTE: this makes it so I can't parallelize tests, I think
+    with MultiPool(processes=2) as pool:
+        joker = TheJoker(prior, pool=pool)
         ll = joker.marginal_ln_likelihood(data, filename)
-        assert len(ll) == len(prior_samples)
-
-        # make sure batches work:
-        ll = joker.marginal_ln_likelihood(data, filename, n_batches=10)
-        assert len(ll) == len(prior_samples)
-
-        # NOTE: this makes it so I can't parallelize tests, I think
-        with MultiPool(processes=2) as pool:
-            joker = TheJoker(prior, pool=pool)
-            ll = joker.marginal_ln_likelihood(data, filename)
-        assert len(ll) == len(prior_samples)
+    assert len(ll) == len(prior_samples)
 
 
 priors = [
