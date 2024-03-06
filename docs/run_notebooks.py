@@ -46,10 +46,7 @@ if __name__ == "__main__":
 
     nbsphinx_kernel_name = os.environ.get("NBSPHINX_KERNEL", "python3")
 
-    fail = False
     for filename in sorted(glob.glob(pattern)):
         success = process_notebook(filename, kernel_name=nbsphinx_kernel_name)
-        fail = fail or not success
-
-    if fail:
-        sys.exit(1)
+        if not success:
+            sys.exit(1)
