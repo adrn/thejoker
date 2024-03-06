@@ -210,3 +210,17 @@ def test_dtype():
     samples = prior.sample(size=100, dtype=np.float32)
     for name in samples.par_names:
         assert samples[name].dtype == np.float32
+
+
+def test_rng_prior_sample():
+    """Check that passing in a random number generator works as expected"""
+
+    prior, _ = get_prior(0)
+
+    rng = np.random.default_rng(seed=42)
+    prior_samples1 = prior.sample(size=100, rng=rng)
+
+    rng = np.random.default_rng(seed=42)
+    prior_samples2 = prior.sample(size=100, rng=rng)
+
+    assert np.allclose(prior_samples1["P"], prior_samples2["P"])

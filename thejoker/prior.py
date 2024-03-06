@@ -16,7 +16,6 @@ from .prior_helpers import (
     validate_poly_trend,
     validate_sigma_v,
 )
-from .utils import rng_context
 
 __all__ = ["JokerPrior"]
 
@@ -354,8 +353,7 @@ class JokerPrior:
 
         par_names = list(sub_pars.keys())
         par_list = [sub_pars[k] for k in par_names]
-        with rng_context(rng):
-            samples_values = pm.draw(par_list, draws=size)
+        samples_values = pm.draw(par_list, draws=size, random_seed=rng)
 
         raw_samples = {
             name: samples.astype(dtype)
