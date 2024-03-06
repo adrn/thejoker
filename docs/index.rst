@@ -69,7 +69,7 @@ use these plain arrays to construct a `~thejoker.RVData` object:
     err = [0.184, 0.261, 0.112, 0.155, 0.223] * u.km/u.s
 
     data = RVData(t=t, rv=rv, rv_err=err)
-    fig, ax = plt.subplots(figsize=(6, 4))
+    fig, ax = plt.subplots(figsize=(6, 4), layout="tight")
     ax = data.plot(ax=ax)
     ax.set_xlim(-10, 200)
 
@@ -124,9 +124,9 @@ posterior samples (check the source code below to see how these were made):
     samples = joker.rejection_sample(data, prior_samples)
     samples = samples.wrap_K()
 
-    fig, ax = plt.subplots(1, 1, figsize=(6, 4)) # doctest: +SKIP
+    fig, ax = plt.subplots(1, 1, figsize=(6, 4), layout="tight")
     ax.scatter(samples['P'].value, samples['K'].to(u.km/u.s).value,
-               marker='.', color='k', alpha=0.45) # doctest: +SKIP
+               marker='.', color='k', alpha=0.45)
     ax.set_xlabel("$P$ [day]")
     ax.set_ylabel("$K$ [km/s]")
     ax.set_xlim(0, 256)
@@ -134,7 +134,7 @@ posterior samples (check the source code below to see how these were made):
 
     ax.scatter(61.942, 1.3959, marker='o', color='#31a354', zorder=-100)
 
-    fig, ax = plt.subplots(1, 1, figsize=(6, 4)) # doctest: +SKIP
+    fig, ax = plt.subplots(1, 1, figsize=(6, 4), layout="tight")
     t_grid = np.linspace(-10, 210, 1024)
     plot_rv_curves(samples, t_grid, rv_unit=u.km/u.s, data=data, ax=ax,
                    plot_kwargs=dict(color='#888888'))
