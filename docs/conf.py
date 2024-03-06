@@ -1,4 +1,5 @@
 import importlib.metadata
+import os
 
 project = "thejoker"
 copyright = "2024, Adrian Price-Whelan"
