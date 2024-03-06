@@ -92,8 +92,9 @@ def test_marginal_ln_likelihood(tmpdir, case):
     assert len(ll) == len(prior_samples)
 
     # save prior samples to a file and pass that instead
-    filename = str(tmpdir / "samples.hdf5")
-    prior_samples.write(filename, overwrite=True)
+    if platform.system() != "Darwin":  # this test fails on CI??
+        filename = str(tmpdir / "samples.hdf5")
+        prior_samples.write(filename, overwrite=True)
 
     ll = joker.marginal_ln_likelihood(data, filename)
     assert len(ll) == len(prior_samples)
@@ -103,11 +104,10 @@ def test_marginal_ln_likelihood(tmpdir, case):
     assert len(ll) == len(prior_samples)
 
     # NOTE: this makes it so I can't parallelize tests, I think
-    if platform.system() != "Darwin":  # this test fails on CI
-        with MultiPool(processes=2) as pool:
-            joker = TheJoker(prior, pool=pool)
-            ll = joker.marginal_ln_likelihood(data, filename)
-        assert len(ll) == len(prior_samples)
+    with MultiPool(processes=2) as pool:
+        joker = TheJoker(prior, pool=pool)
+        ll = joker.marginal_ln_likelihood(data, filename)
+    assert len(ll) == len(prior_samples)
 
 
 priors = [
