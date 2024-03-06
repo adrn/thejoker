@@ -1,4 +1,8 @@
-get_ipython().magic('config InlineBackend.figure_format = "retina"')  # noqa
+from IPython.core.getipython import get_ipython
+
+ipy = get_ipython()
+if ipy is not None:
+    ipy.magic('config InlineBackend.figure_format = "retina"')
 
 import warnings
 

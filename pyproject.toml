@@ -82,7 +82,8 @@ testpaths = ["thejoker", "docs"]
 doctest_plus = "enabled"
 text_file_format = "rst"
 addopts = [
-    "--doctest-rst", "-ra", "--showlocals", "--strict-markers", "--strict-config"
+    "--doctest-rst", "-ra", "--showlocals", "--strict-markers", "--strict-config",
+    "--ignore=docs/_build"
 ]
 xfail_strict = true
 filterwarnings = [

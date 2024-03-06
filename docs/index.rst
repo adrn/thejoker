@@ -126,6 +126,7 @@ below to see how these were made):
     :align: center
     :width: 512
 
+    import matplotlib.pyplot as plt
     from thejoker import JokerPrior, TheJoker, RVData
     from thejoker.plot import plot_rv_curves
     import astropy.units as u
