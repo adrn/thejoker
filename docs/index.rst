@@ -27,31 +27,9 @@ the method and applications.
     :maxdepth: 1
 
     install
+    tutorials
+    api_docs
     changes
-
-
-Tutorials
-=========
-
-.. toctree::
-    :maxdepth: 1
-
-    examples/1-Getting-started.ipynb
-    examples/2-Customize-prior.ipynb
-    examples/3-Polynomial-velocity-trend.ipynb
-    examples/4-Continue-sampling-mcmc.ipynb
-    examples/5-Calibration-offsets.ipynb
-
-
-Science demonstrations
-======================
-
-.. toctree::
-    :maxdepth: 1
-
-    examples/Thompson-black-hole.ipynb
-    examples/Strader-circular-only.ipynb
-
 
 Getting started
 ===============
@@ -82,6 +60,7 @@ use these plain arrays to construct a `~thejoker.RVData` object:
     :align: center
     :width: 512
 
+    import matplotlib.pyplot as plt
     from thejoker.data import RVData
     import astropy.units as u
 
@@ -90,7 +69,8 @@ use these plain arrays to construct a `~thejoker.RVData` object:
     err = [0.184, 0.261, 0.112, 0.155, 0.223] * u.km/u.s
 
     data = RVData(t=t, rv=rv, rv_err=err)
-    ax = data.plot()  # doctest: +SKIP
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax = data.plot(ax=ax)
     ax.set_xlim(-10, 200)
 
 We next need to specify the prior distributions for the parameters of |thejoker|. The
@@ -112,7 +92,7 @@ run the rejection sampler:
 
     >>> joker = tj.TheJoker(prior)
     >>> prior_samples = prior.sample(size=100_000)
-    >>> samples = joker.rejection_sample(data, prior_samples)  # doctest: +SKIP
+    >>> samples = joker.rejection_sample(data, prior_samples)
 
 Of the 100,000 prior samples we generated, only a handful pass the rejection sampling
 step of |thejoker|. Let's visualize the surviving samples in the subspace of the period
@@ -128,6 +108,7 @@ posterior samples (check the source code below to see how these were made):
     from thejoker import JokerPrior, TheJoker, RVData
     from thejoker.plot import plot_rv_curves
     import astropy.units as u
+    import numpy as np
 
     t = [0., 49.452, 95.393, 127.587, 190.408]
     rv = [38.77, 39.70, 37.45, 38.31, 38.31] * u.km/u.s
@@ -138,8 +119,10 @@ posterior samples (check the source code below to see how these were made):
                                sigma_K0=30*u.km/u.s, sigma_v=100*u.km/u.s)
     joker = TheJoker(prior)
 
-    prior_samples = prior.sample(size=100_000)
+    rng = np.random.default_rng(seed=42)
+    prior_samples = prior.sample(size=100_000, rng=rng)
     samples = joker.rejection_sample(data, prior_samples)
+    samples = samples.wrap_K()
 
     fig, ax = plt.subplots(1, 1, figsize=(6, 4)) # doctest: +SKIP
     ax.scatter(samples['P'].value, samples['K'].to(u.km/u.s).value,
@@ -156,13 +139,6 @@ posterior samples (check the source code below to see how these were made):
     plot_rv_curves(samples, t_grid, rv_unit=u.km/u.s, data=data, ax=ax,
                    plot_kwargs=dict(color='#888888'))
     ax.set_xlim(-5, 205)
-
-
-API
-===
-
-.. automodapi:: thejoker
-    :no-inheritance-diagram:
 
 
 .. rubric:: Footnotes

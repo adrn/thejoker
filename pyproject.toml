@@ -57,7 +57,7 @@ docs = [
     "matplotlib",
     "sphinx_copybutton",
     "rtds_action",
-    "pydata-sphinx-theme"
+    "sphinx_book_theme"
 ]
 tutorials = [
     "thejoker[docs]",

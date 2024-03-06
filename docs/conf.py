@@ -18,6 +18,7 @@ extensions = [
     "sphinx_automodapi.smart_resolver",
     "rtds_action",
     "matplotlib.sphinxext.plot_directive",
+    "matplotlib.sphinxext.figmpl_directive",
 ]
 
 source_suffix = [".rst", ".md"]
@@ -30,26 +31,29 @@ exclude_patterns = [
     ".venv",
 ]
 
-html_theme = "pydata_sphinx_theme"
-html_theme_options = {
-    "github_url": "https://github.com/adrn/thejoker",
-    "use_edit_page_button": True,
-    "navigation_with_keys": False,
-}
-
-html_context = {
-    "default_mode": "light",
-    "to_be_indexed": ["stable", "latest"],
-    "github_user": "adrn",
-    "github_repo": "thejoker",
-    "github_version": "main",
-    "doc_path": "docs",
-}
-
+# HTML theme
+html_theme = "sphinx_book_theme"
+html_copy_source = True
+html_show_sourcelink = True
+html_sourcelink_suffix = ""
+html_title = "thejoker"
+html_logo = "_static/thejoker.png"
+html_favicon = "_static/icon.ico"
 html_static_path = ["_static"]
-html_css_files = [
-    "custom.css",
-]
+html_css_files = ["custom.css"]
+html_theme_options = {
+    "path_to_docs": "docs",
+    "repository_url": "https://github.com/adrn/thejoker",
+    "repository_branch": "main",
+    "launch_buttons": {
+        "binderhub_url": "https://mybinder.org",
+        "notebook_interface": "classic",
+    },
+    "use_edit_page_button": True,
+    "use_issues_button": True,
+    "use_repository_button": True,
+    "use_download_button": True,
+}
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
@@ -77,6 +81,10 @@ nitpick_ignore = [
     ("py:class", "_io.StringIO"),
     ("py:class", "_io.BytesIO"),
 ]
+
+plot_srcset = ["2.0x"]  # for retina displays
+plot_rcparams = {"font.size": 16, "font.family": "serif", "figure.figsize": (6, 4)}
+plot_apply_rcparams = True
 
 always_document_param_types = True
 
