@@ -11,11 +11,12 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
-    "sphinx_autodoc_typehints",
+    # "sphinx_autodoc_typehints",
     "sphinx_copybutton",
     "sphinx_automodapi.automodapi",
     "sphinx_automodapi.smart_resolver",
     "rtds_action",
+    "matplotlib.sphinxext.plot_directive",
 ]
 
 source_suffix = [".rst", ".md"]
@@ -37,7 +38,7 @@ html_css_files = [
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "pandas": ("https://pandas.pydata.org/pandas-docs/stable/", None),
-    "pymc": ("https://docs.pymc.io/", None),
+    "pymc": ("https://www.pymc.io/projects/docs/en/stable", None),
     "h5py": ("http://docs.h5py.org/en/latest/", None),
     "twobody": ("https://twobody.readthedocs.io/en/latest/", None),
     "schwimmbad": ("https://schwimmbad.readthedocs.io/en/latest/", None),
@@ -74,7 +75,7 @@ rtds_action_path = "examples"
 rtds_action_artifact_prefix = "notebooks-for-"
 
 # A GitHub personal access token is required, more info below
-rtds_action_github_token = os.environ["GITHUB_TOKEN"]
+rtds_action_github_token = os.environ.get("GITHUB_TOKEN", "")
 
 # Whether or not to raise an error on Read the Docs if the
 # artifact containing the notebooks can't be downloaded (optional)

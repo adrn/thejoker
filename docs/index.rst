@@ -142,17 +142,17 @@ below to see how these were made):
     prior_samples = prior.sample(size=100_000)
     samples = joker.rejection_sample(data, prior_samples)
 
-    fig, ax = plt.subplots(1, 1, figsize=(6,6)) # doctest: +SKIP
+    fig, ax = plt.subplots(1, 1, figsize=(6, 4)) # doctest: +SKIP
     ax.scatter(samples['P'].value, samples['K'].to(u.km/u.s).value,
                marker='.', color='k', alpha=0.45) # doctest: +SKIP
     ax.set_xlabel("$P$ [day]")
     ax.set_ylabel("$K$ [km/s]")
-    ax.set_xlim(2, 256)
+    ax.set_xlim(0, 256)
     ax.set_ylim(0.75, 3.)
 
     ax.scatter(61.942, 1.3959, marker='o', color='#31a354', zorder=-100)
 
-    fig, ax = plt.subplots(1, 1, figsize=(8,5)) # doctest: +SKIP
+    fig, ax = plt.subplots(1, 1, figsize=(6, 4)) # doctest: +SKIP
     t_grid = np.linspace(-10, 210, 1024)
     plot_rv_curves(samples, t_grid, rv_unit=u.km/u.s, data=data, ax=ax,
                    plot_kwargs=dict(color='#888888'))
@@ -170,3 +170,5 @@ API
 
 .. [#f1] Short for Johannes Kepler.
 .. [#f2] `<https://arxiv.org/abs/1610.07602>`_
+
+.. |thejoker| replace:: *The Joker*
