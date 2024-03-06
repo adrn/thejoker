@@ -2,11 +2,8 @@
 Installation
 ************
 
-We recommend installing |thejoker| into a new `Anaconda environment
-<http://conda.pydata.org/docs/using/envs.html>`_.
-
-pip
-===
+With ``pip``
+============
 
 You can install the latest release of The Joker using ``pip``:
 

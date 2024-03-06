@@ -58,17 +58,16 @@ Getting started
 
 Generating samples with |thejoker| requires three things:
 
-    #. **The data**, `~thejoker.RVData`: radial velocity measurements,
+    #. **The data**, :class:`thejoker.RVData`: radial velocity measurements,
        uncertainties, and observation times
-    #. **The priors**, `~thejoker.JokerPrior`:
-       the prior distributions over the parameters in *The Joker*
-    #. **The sampler**, `~thejoker.TheJoker`: the work horse that runs the
+    #. **The priors**, :class:`thejoker.JokerPrior`: the prior distributions over the
+       parameters in *The Joker*
+    #. **The sampler**, :class:`thejoker.TheJoker`: the work horse that runs the
        rejection sampler
 
-Here, we'll work through a simple example to generate poserior samples for
-orbital parameters given some sparse, simulated radial velocity data (shown
-below). We'll first use these plain arrays to construct a `~thejoker.RVData`
-object:
+Here, we'll work through a simple example to generate posterior samples for orbital
+parameters given some sparse, simulated radial velocity data (shown below). We'll first
+use these plain arrays to construct a `~thejoker.RVData` object:
 
     >>> import astropy.units as u
     >>> import thejoker as tj
@@ -94,12 +93,12 @@ object:
     ax = data.plot()  # doctest: +SKIP
     ax.set_xlim(-10, 200)
 
-We next need to specify the prior distributions for the parameters of
-|thejoker|. The default prior, explained in the docstring of
-`~thejoker.JokerPrior.default()`, assumes some reasonable defaults where
-possible, but requires specifying the minimum and maximum period to sample over,
-along with parameters that specify the prior over the linear parameters in *The
-Joker* (the velocity semi-amplitude, ``K``, and the systemic velocity, ``v0``):
+We next need to specify the prior distributions for the parameters of |thejoker|. The
+default prior, explained in the docstring of :meth:`thejoker.JokerPrior.default()`,
+assumes some reasonable defaults where possible, but requires specifying the minimum and
+maximum period to sample over, along with parameters that specify the prior over the
+linear parameters in *The Joker* (the velocity semi-amplitude, ``K``, and the systemic
+velocity, ``v0``):
 
     >>> import numpy as np
     >>> prior = tj.JokerPrior.default(
@@ -115,12 +114,11 @@ run the rejection sampler:
     >>> prior_samples = prior.sample(size=100_000)
     >>> samples = joker.rejection_sample(data, prior_samples)  # doctest: +SKIP
 
-Of the 100_000 prior samples we generated, only a handful pass the rejection
-sampling step of |thejoker|. Let's visualize the surviving samples in the
-subspace of the period :math:`P` and velocity semi-amplitude :math:`K`. We'll
-also plot the true values as a green marker. As a separate plot, we'll also
-visualize orbits computed from these posterior samples (check the source code
-below to see how these were made):
+Of the 100,000 prior samples we generated, only a handful pass the rejection sampling
+step of |thejoker|. Let's visualize the surviving samples in the subspace of the period
+:math:`P` and velocity semi-amplitude :math:`K`. We'll also plot the true values as a
+green marker. As a separate plot, we'll also visualize orbits computed from these
+posterior samples (check the source code below to see how these were made):
 
 .. plot::
     :align: center
