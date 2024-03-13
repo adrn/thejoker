@@ -31,6 +31,10 @@ __all__ = [
     "phase_coverage_per_period",
 ]
 
+    # SB2:
+    from .thejoker_sb2 import *
+    from .prior_sb2 import JokerSB2Prior
+
 
 __bibtex__ = __citation__ = """@ARTICLE{thejoker,
        author = {{Price-Whelan}, Adrian M. and {Hogg}, David W. and
@@ -55,3 +59,12 @@ archivePrefix = {arXiv},
       adsnote = {Provided by the SAO/NASA Astrophysics Data System}
 }
 """
+
+__all__ = [
+    'TheJoker',
+    'RVData',
+    'JokerSamples',
+    'JokerPrior',
+    'plot_rv_curves',
+    'TheJokerSB2'
+]

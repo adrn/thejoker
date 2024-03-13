@@ -38,6 +38,8 @@ def _validate_model(model):
 
 
 class JokerPrior:
+    _sb2 = False
+
     def __init__(self, pars=None, poly_trend=1, v0_offsets=None, model=None):
         """
         This class controls the prior probability distributions for the
@@ -121,7 +123,9 @@ class JokerPrior:
         # are only used to validate that the units for each parameter are
         # equivalent to these
         self._nonlinear_equiv_units = get_nonlinear_equiv_units()
-        self._linear_equiv_units = get_linear_equiv_units(self.poly_trend)
+        self._linear_equiv_units = get_linear_equiv_units(
+            self.poly_trend, sb2=self._sb2
+        )
         self._v0_offsets_equiv_units = get_v0_offsets_equiv_units(self.n_offsets)
         self._all_par_unit_equiv = {
             **self._nonlinear_equiv_units,
@@ -291,10 +295,7 @@ class JokerPrior:
     def __str__(self):
         return ", ".join(self.par_names)
 
-    @deprecated_renamed_argument(
-        "random_state", "rng", since="v1.3", warning_type=DeprecationWarning
-    )
-    def sample(
+    def _get_raw_samples(
         self,
         size=1,
         generate_linear=False,
@@ -303,29 +304,6 @@ class JokerPrior:
         dtype=None,
         **kwargs,
     ):
-        """
-        Generate random samples from the prior.
-
-        Parameters
-        ----------
-        size : int (optional)
-            The number of samples to generate.
-        generate_linear : bool (optional)
-            Also generate samples in the linear parameters.
-        return_logprobs : bool (optional)
-            Generate the log-prior probability at the position of each sample.
-        **kwargs
-            Additional keyword arguments are passed to the
-            `~thejoker.JokerSamples` initializer.
-
-        Returns
-        -------
-        samples : `thejoker.Jokersamples`
-            The random samples.
-
-        """
-        from .samples import JokerSamples
-
         if dtype is None:
             dtype = np.float64
 
@@ -338,11 +316,6 @@ class JokerPrior:
                 and generate_linear
             )
         }
-
-        if generate_linear:
-            par_names = self.par_names
-        else:
-            par_names = list(self._nonlinear_equiv_units.keys())
 
         # MAJOR HACK RELATED TO UPSTREAM ISSUES WITH pymc3:
         # init_shapes = {}
@@ -374,11 +347,67 @@ class JokerPrior:
 
                 logp.append(_logp)
             log_prior = np.sum(logp, axis=0)
+        else:
+            log_prior = None
 
         # CONTINUED MAJOR HACK RELATED TO UPSTREAM ISSUES WITH pymc3:
         # for name, par in sub_pars.items():
         #     if hasattr(par, "distribution"):
         #         par.distribution.shape = init_shapes[name]
+
+        return raw_samples, sub_pars, log_prior
+
+    @deprecated_renamed_argument(
+        "random_state", "rng", since="v1.3", warning_type=DeprecationWarning
+    )
+    def sample(
+        self,
+        size=1,
+        generate_linear=False,
+        return_logprobs=False,
+        rng=None,
+        dtype=None,
+        **kwargs,
+    ):
+        """
+        Generate random samples from the prior.
+
+        .. note::
+
+            Right now, generating samples with the prior values is slow (i.e.
+            with ``return_logprobs=True``) because of pymc3 issues (see
+            discussion here:
+            https://discourse.pymc.io/t/draw-values-speed-scaling-with-transformed-variables/4076).
+            This will hopefully be resolved in the future...
+
+        Parameters
+        ----------
+        size : int (optional)
+            The number of samples to generate.
+        generate_linear : bool (optional)
+            Also generate samples in the linear parameters.
+        return_logprobs : bool (optional)
+            Generate the log-prior probability at the position of each sample.
+        **kwargs
+            Additional keyword arguments are passed to the
+            `~thejoker.JokerSamples` initializer.
+
+        Returns
+        -------
+        samples : `thejoker.Jokersamples`
+            The random samples.
+
+        """
+        from thejoker.samples import JokerSamples
+
+        raw_samples, sub_pars, log_prior = self._get_raw_samples(
+            size, generate_linear, return_logprobs, rng, dtype, **kwargs
+        )
+
+        if generate_linear:
+            par_names = self.par_names
+        else:
+            par_names = list(self._nonlinear_equiv_units.keys())
 
         # Apply units if they are specified:
         prior_samples = JokerSamples(
@@ -448,9 +477,8 @@ def default_nonlinear_prior(P_min=None, P_max=None, s=None, model=None, pars=Non
 
     if isinstance(s, pt.TensorVariable):
         pars["s"] = pars.get("s", s)
-    else:
-        if not hasattr(s, "unit") or not s.unit.is_equivalent(u.km / u.s):
-            raise u.UnitsError("Invalid unit for s: must be equivalent to km/s")
+    elif not hasattr(s, "unit") or not s.unit.is_equivalent(u.km / u.s):
+        raise u.UnitsError("Invalid unit for s: must be equivalent to km/s")
 
     # dictionary of parameters to return
     out_pars = {}
