@@ -29,6 +29,14 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
+    - name: "Install hdf5 for tables (linux)"
+      if: runner.os == 'ubuntu-latest'
+      run: sudo apt-get install libhdf5-serial-dev
+
+    - name : "Install hdf5 for tables (mac)"
+      if: runner.os == 'macos-latest'
+      run: brew install hdf5
+
     - name: Install dependencies
       run: |
         python -m pip install -U pip

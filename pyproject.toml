@@ -27,7 +27,7 @@ dependencies = [
     "pymc>=5",
     "pymc_ext>=1.0.1",
     "exoplanet-core[pymc]>=0.3.0",
-    "tables<3.9.2",  # https://github.com/PyTables/PyTables/issues/1093
+    "tables",
     "dill"
 ]
 
