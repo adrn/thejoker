@@ -13,9 +13,6 @@ __all__ = ["UniformLog", "FixedCompanionMass"]
 
 class UniformLogRV(RandomVariable):
     name = "uniformlog"
-    ndim_supp = 0
-    ndims_params = [0, 0]
-    dtype = "floatX"
 
     @classmethod
     def rng_fn(cls, rng, a, b, size):
