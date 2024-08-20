@@ -47,6 +47,14 @@ if __name__ == "__main__":
     nbsphinx_kernel_name = os.environ.get("NBSPHINX_KERNEL", "python3")
 
     for filename in sorted(glob.glob(pattern)):
-        success = process_notebook(filename, kernel_name=nbsphinx_kernel_name)
+        try:
+            success = process_notebook(filename, kernel_name=nbsphinx_kernel_name)
+        except Exception as e:
+            print(f"Error while processing: {filename}")
+            print(e)
+            success = False
+
         if not success:
             sys.exit(1)
+
+        print(f"✅ Processed: {filename}")
