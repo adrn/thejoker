@@ -27,6 +27,30 @@ if PYMC_GT_516:
             uu = rng.uniform(size=size)
             return np.exp(uu * _fac + np.log(a))
 
+    uniformlog = UniformLogRV()
+
+    class UniformLog(pm.Continuous):
+        rv_op = uniformlog
+
+        @classmethod
+        def dist(cls, a, b, **kwargs):
+            a = pt.as_tensor_variable(a)
+            b = pt.as_tensor_variable(b)
+            return super().dist([a, b], **kwargs)
+
+        def support_point(rv, size, a, b):
+            a, b = pt.broadcast_arrays(a, b)
+            return 0.5 * (a + b)
+
+        def logp(value, a, b):
+            _fac = pt.log(b) - pt.log(a)
+            res = -pt.as_tensor_variable(value) - pt.log(_fac)
+            return check_parameters(
+                res,
+                (a > 0) & (a < b),
+                msg="a > 0 and a < b",
+            )
+
 else:  # old behavior
 
     class UniformLogRV(RandomVariable):
@@ -41,31 +65,32 @@ else:  # old behavior
             uu = rng.uniform(size=size)
             return np.exp(uu * _fac + np.log(a))
 
+    uniformlog = UniformLogRV()
 
-uniformlog = UniformLogRV()
+    class UniformLog(pm.Continuous):
+        rv_op = uniformlog
 
+        @classmethod
+        def dist(cls, a, b, **kwargs):
+            a = pt.as_tensor_variable(a)
+            b = pt.as_tensor_variable(b)
+            return super().dist([a, b], **kwargs)
 
-class UniformLog(pm.Continuous):
-    rv_op = uniformlog
+        def support_point(rv, size, a, b):
+            a, b = pt.broadcast_arrays(a, b)
+            return 0.5 * (a + b)
 
-    @classmethod
-    def dist(cls, a, b, **kwargs):
-        a = pt.as_tensor_variable(a)
-        b = pt.as_tensor_variable(b)
-        return super().dist([a, b], **kwargs)
+        # TODO: remove this once new pymc version is released
+        moment = support_point
 
-    def support_point(rv, size, a, b):
-        a, b = pt.broadcast_arrays(a, b)
-        return 0.5 * (a + b)
-
-    def logp(value, a, b):
-        _fac = pt.log(b) - pt.log(a)
-        res = -pt.as_tensor_variable(value) - pt.log(_fac)
-        return check_parameters(
-            res,
-            (a > 0) & (a < b),
-            msg="a > 0 and a < b",
-        )
+        def logp(value, a, b):
+            _fac = pt.log(b) - pt.log(a)
+            res = -pt.as_tensor_variable(value) - pt.log(_fac)
+            return check_parameters(
+                res,
+                (a > 0) & (a < b),
+                msg="a > 0 and a < b",
+            )
 
 
 class FixedCompanionMassRV(NormalRV):
