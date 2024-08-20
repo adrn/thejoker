@@ -3,22 +3,43 @@ import astropy.units as u
 import numpy as np
 import pymc as pm
 import pytensor.tensor as pt
+from packaging.version import Version
 from pymc.distributions.dist_math import check_parameters
 from pytensor.tensor.random.basic import NormalRV, RandomVariable
 
 from thejoker.units import UNIT_ATTR_NAME
 
+PYMC_GT_516 = Version(pm.__version__) >= Version("5.16.0")
+
 __all__ = ["UniformLog", "FixedCompanionMass"]
 
 
-class UniformLogRV(RandomVariable):
-    name = "uniformlog"
+if PYMC_GT_516:
 
-    @classmethod
-    def rng_fn(cls, rng, a, b, size):
-        _fac = np.log(b) - np.log(a)
-        uu = rng.uniform(size=size)
-        return np.exp(uu * _fac + np.log(a))
+    class UniformLogRV(RandomVariable):
+        name: str = "uniformlog"
+        dtype: str = "floatX"
+        signature: str = "(),()->()"
+
+        @classmethod
+        def rng_fn(cls, rng, a, b, size):
+            _fac = np.log(b) - np.log(a)
+            uu = rng.uniform(size=size)
+            return np.exp(uu * _fac + np.log(a))
+
+else:  # old behavior
+
+    class UniformLogRV(RandomVariable):
+        name: str = "uniformlog"
+        dtype: str = "floatX"
+        ndim_supp: int = 0
+        ndims_params: list[int] = [0, 0]
+
+        @classmethod
+        def rng_fn(cls, rng, a, b, size):
+            _fac = np.log(b) - np.log(a)
+            uu = rng.uniform(size=size)
+            return np.exp(uu * _fac + np.log(a))
 
 
 uniformlog = UniformLogRV()
