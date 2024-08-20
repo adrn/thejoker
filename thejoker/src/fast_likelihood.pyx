@@ -1,11 +1,11 @@
 # coding: utf-8
-# cython: boundscheck=False
-# cython: nonecheck=False
-# cython: wraparound=False
-# cython: initializedcheck=False
-# cython: overflowcheck=False
-# cython: linetrace=False
-# cython: profile=False
+# cython: boundscheck=True
+# cython: nonecheck=True
+# cython: wraparound=True
+# cython: initializedcheck=True
+# cython: overflowcheck=True
+# cython: linetrace=True
+# cython: profile=True
 # cython: cdivision=True
 # cython: language_level=3
 
@@ -213,10 +213,7 @@ cdef class CJokerHelper:
             _unit = getattr(dist, xu.UNIT_ATTR_NAME)
             to_unit = self.internal_units[name]
 
-            # mean is par 0, stddev par 1
-            pars = dist.owner.inputs[3:]
-            mu = (pars[0].eval() * _unit).to_value(to_unit)
-            std = (pars[1].eval() * _unit).to_value(to_unit)
+            mu, std = _pytensor_get_mean_std(dist, _unit, to_unit)
 
             # K, v0 = 2 - start at index 2
             self.mu[2+i] = mu
