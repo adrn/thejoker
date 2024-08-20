@@ -1,10 +1,12 @@
 # coding: utf-8
 # cython: boundscheck=False
 # cython: nonecheck=False
-# cython: cdivision=True
 # cython: wraparound=False
 # cython: initializedcheck=False
+# cython: overflowcheck=False
+# cython: linetrace=False
 # cython: profile=False
+# cython: cdivision=True
 # cython: language_level=3
 
 # Third-party
