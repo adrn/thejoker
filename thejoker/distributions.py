@@ -58,9 +58,6 @@ class UniformLog(pm.Continuous):
         a, b = pt.broadcast_arrays(a, b)
         return 0.5 * (a + b)
 
-    # TODO: remove this once new pymc version is released
-    moment = support_point
-
     def logp(value, a, b):
         _fac = pt.log(b) - pt.log(a)
         res = -pt.as_tensor_variable(value) - pt.log(_fac)
