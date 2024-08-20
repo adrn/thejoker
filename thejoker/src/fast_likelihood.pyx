@@ -17,6 +17,11 @@ cimport cython
 cimport scipy.linalg.cython_lapack as lapack
 import thejoker.units as xu
 
+# Change of behavior:
+import pytensor
+from packaging.version import Version
+PYTENSOR_GT_223 = Version(pytensor.__version__) >= Version("2.23.0")
+
 # from libc.stdio cimport printf
 from libc.math cimport pow, log, fabs, pi
 
@@ -232,13 +237,20 @@ cdef class CJokerHelper:
             to_unit = self.internal_units[name]
 
             dist = prior.model[name]
-            # first three are (rng, size, dtype) as per
-            # https://github.com/pymc-devs/pymc/blob/main/pymc/printing.py#L43
-            pars = dist.owner.inputs[3:]
 
-            # mean is par 0
-            mu = (pars[0].eval() * _unit).to_value(to_unit)
-            std = (pars[1].eval() * _unit).to_value(to_unit)
+            if PYTENSOR_GT_223:
+                # See: https://github.com/pymc-devs/pytensor/releases/tag/rel-2.23.0
+                dist_params = dist.owner.op.dist_params(dist.owner)
+                mu = (dist_params[0].eval() * _unit).to_value(to_unit)
+                std = (dist_params[1].eval() * _unit).to_value(to_unit)
+            else:  # old behavior
+                # first three are (rng, size, dtype) as per
+                # https://github.com/pymc-devs/pymc/blob/main/pymc/printing.py#L43
+                pars = dist.owner.inputs[3:]
+
+                # mean is par 0
+                mu = (pars[0].eval() * _unit).to_value(to_unit)
+                std = (pars[1].eval() * _unit).to_value(to_unit)
 
             if name == 'K' and self.fixed_K_prior == 0:
                 # TODO: here's the major hack
