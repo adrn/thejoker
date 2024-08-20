@@ -2,10 +2,10 @@
 requires = [
     "setuptools>=64",
     "setuptools_scm>=8",
-    "numpy",
+    "numpy>=2.0",
     "scipy",
     "cython",
-    "twobody"
+    "twobody>=0.9.1",
 ]
 build-backend = 'setuptools.build_meta'
 
@@ -14,20 +14,20 @@ name = "thejoker"
 authors = [{name = "Adrian Price-Whelan", email = "adrianmpw@gmail.com"}]
 description = "A custom Monte Carlo sampler for the two-body problem."
 readme = "README.rst"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license.file = "LICENSE"
 dynamic = ["version"]
 dependencies = [
     "astropy",
-    "numpy",
-    "twobody>=0.9",
+    "numpy>=1.24.4",
+    "twobody>=0.9.1",
     "scipy",
     "h5py",
     "schwimmbad>=0.4",
-    "pymc>=5",
+    "pymc>=5.10.0",
     "pymc_ext>=1.0.1",
     "exoplanet-core[pymc]>=0.3.0",
-    "tables<3.9.2",  # https://github.com/PyTables/PyTables/issues/1093
+    "tables",
     "dill"
 ]
 

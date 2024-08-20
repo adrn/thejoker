@@ -3,54 +3,94 @@ import astropy.units as u
 import numpy as np
 import pymc as pm
 import pytensor.tensor as pt
+from packaging.version import Version
 from pymc.distributions.dist_math import check_parameters
 from pytensor.tensor.random.basic import NormalRV, RandomVariable
 
 from thejoker.units import UNIT_ATTR_NAME
 
+PYMC_GT_516 = Version(pm.__version__) >= Version("5.16.0")
+
 __all__ = ["UniformLog", "FixedCompanionMass"]
 
 
-class UniformLogRV(RandomVariable):
-    name = "uniformlog"
-    ndim_supp = 0
-    ndims_params = [0, 0]
-    dtype = "floatX"
+if PYMC_GT_516:
 
-    @classmethod
-    def rng_fn(cls, rng, a, b, size):
-        _fac = np.log(b) - np.log(a)
-        uu = rng.uniform(size=size)
-        return np.exp(uu * _fac + np.log(a))
+    class UniformLogRV(RandomVariable):
+        name: str = "uniformlog"
+        dtype: str = "floatX"
+        signature: str = "(),()->()"
 
+        @classmethod
+        def rng_fn(cls, rng, a, b, size):
+            _fac = np.log(b) - np.log(a)
+            uu = rng.uniform(size=size)
+            return np.exp(uu * _fac + np.log(a))
 
-uniformlog = UniformLogRV()
+    uniformlog = UniformLogRV()
 
+    class UniformLog(pm.Continuous):
+        rv_op = uniformlog
 
-class UniformLog(pm.Continuous):
-    rv_op = uniformlog
+        @classmethod
+        def dist(cls, a, b, **kwargs):
+            a = pt.as_tensor_variable(a)
+            b = pt.as_tensor_variable(b)
+            return super().dist([a, b], **kwargs)
 
-    @classmethod
-    def dist(cls, a, b, **kwargs):
-        a = pt.as_tensor_variable(a)
-        b = pt.as_tensor_variable(b)
-        return super().dist([a, b], **kwargs)
+        def support_point(rv, size, a, b):
+            a, b = pt.broadcast_arrays(a, b)
+            return 0.5 * (a + b)
 
-    def support_point(rv, size, a, b):
-        a, b = pt.broadcast_arrays(a, b)
-        return 0.5 * (a + b)
+        def logp(value, a, b):
+            _fac = pt.log(b) - pt.log(a)
+            res = -pt.as_tensor_variable(value) - pt.log(_fac)
+            return check_parameters(
+                res,
+                (a > 0) & (a < b),
+                msg="a > 0 and a < b",
+            )
 
-    # TODO: remove this once new pymc version is released
-    moment = support_point
+else:  # old behavior
 
-    def logp(value, a, b):
-        _fac = pt.log(b) - pt.log(a)
-        res = -pt.as_tensor_variable(value) - pt.log(_fac)
-        return check_parameters(
-            res,
-            (a > 0) & (a < b),
-            msg="a > 0 and a < b",
-        )
+    class UniformLogRV(RandomVariable):
+        name: str = "uniformlog"
+        dtype: str = "floatX"
+        ndim_supp: int = 0
+        ndims_params: list[int] = [0, 0]
+
+        @classmethod
+        def rng_fn(cls, rng, a, b, size):
+            _fac = np.log(b) - np.log(a)
+            uu = rng.uniform(size=size)
+            return np.exp(uu * _fac + np.log(a))
+
+    uniformlog = UniformLogRV()
+
+    class UniformLog(pm.Continuous):
+        rv_op = uniformlog
+
+        @classmethod
+        def dist(cls, a, b, **kwargs):
+            a = pt.as_tensor_variable(a)
+            b = pt.as_tensor_variable(b)
+            return super().dist([a, b], **kwargs)
+
+        def support_point(rv, size, a, b):
+            a, b = pt.broadcast_arrays(a, b)
+            return 0.5 * (a + b)
+
+        # TODO: remove this once new pymc version is released
+        moment = support_point
+
+        def logp(value, a, b):
+            _fac = pt.log(b) - pt.log(a)
+            res = -pt.as_tensor_variable(value) - pt.log(_fac)
+            return check_parameters(
+                res,
+                (a > 0) & (a < b),
+                msg="a > 0 and a < b",
+            )
 
 
 class FixedCompanionMassRV(NormalRV):

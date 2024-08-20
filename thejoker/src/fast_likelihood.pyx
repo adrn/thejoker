@@ -1,10 +1,12 @@
 # coding: utf-8
-# cython: boundscheck=False
-# cython: nonecheck=False
+# cython: boundscheck=True
+# cython: nonecheck=True
+# cython: wraparound=True
+# cython: initializedcheck=True
+# cython: overflowcheck=True
+# cython: linetrace=True
+# cython: profile=True
 # cython: cdivision=True
-# cython: wraparound=False
-# cython: initializedcheck=False
-# cython: profile=False
 # cython: language_level=3
 
 # Third-party
@@ -16,6 +18,7 @@ import cython
 cimport cython
 cimport scipy.linalg.cython_lapack as lapack
 import thejoker.units as xu
+from thejoker.utils import _pytensor_get_mean_std
 
 # from libc.stdio cimport printf
 from libc.math cimport pow, log, fabs, pi
@@ -210,10 +213,7 @@ cdef class CJokerHelper:
             _unit = getattr(dist, xu.UNIT_ATTR_NAME)
             to_unit = self.internal_units[name]
 
-            # mean is par 0, stddev par 1
-            pars = dist.owner.inputs[3:]
-            mu = (pars[0].eval() * _unit).to_value(to_unit)
-            std = (pars[1].eval() * _unit).to_value(to_unit)
+            mu, std = _pytensor_get_mean_std(dist, _unit, to_unit)
 
             # K, v0 = 2 - start at index 2
             self.mu[2+i] = mu
@@ -232,13 +232,7 @@ cdef class CJokerHelper:
             to_unit = self.internal_units[name]
 
             dist = prior.model[name]
-            # first three are (rng, size, dtype) as per
-            # https://github.com/pymc-devs/pymc/blob/main/pymc/printing.py#L43
-            pars = dist.owner.inputs[3:]
-
-            # mean is par 0
-            mu = (pars[0].eval() * _unit).to_value(to_unit)
-            std = (pars[1].eval() * _unit).to_value(to_unit)
+            mu, std = _pytensor_get_mean_std(dist, _unit, to_unit)
 
             if name == 'K' and self.fixed_K_prior == 0:
                 # TODO: here's the major hack

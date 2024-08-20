@@ -1,20 +1,20 @@
 """Miscellaneous utilities"""
 
-# Standard library
 import contextlib
 import inspect
 import os
 from functools import wraps
 from tempfile import NamedTemporaryFile
 
-# Third-party
 import astropy.units as u
 import h5py
 import numpy as np
+import pytensor
 import tables as tb
 from astropy.io.misc.hdf5 import meta_path
 from astropy.table.meta import get_header_from_yaml
 from astropy.utils.decorators import deprecated_renamed_argument
+from packaging.version import Version
 
 __all__ = ["batch_tasks", "table_header_to_units", "read_batch", "tempfile_decorator"]
 
@@ -312,3 +312,23 @@ def rng_context(rng):
     finally:
         if rng is not None:
             np.random.set_bit_generator(pre_state)
+
+
+def _pytensor_get_mean_std(dist, in_unit, out_unit):
+    PYTENSOR_GT_223 = Version(pytensor.__version__) >= Version("2.23.0")
+
+    if PYTENSOR_GT_223:
+        # See: https://github.com/pymc-devs/pytensor/releases/tag/rel-2.23.0
+        dist_params = dist.owner.op.dist_params(dist.owner)
+        mu = dist_params[0].eval()
+        std = dist_params[1].eval()
+    else:  # old behavior
+        # first three are (rng, size, dtype) as per
+        # https://github.com/pymc-devs/pymc/blob/main/pymc/printing.py#L43
+        pars = dist.owner.inputs[3:]
+
+        # mean is par 0
+        mu = pars[0].eval()
+        std = pars[1].eval()
+
+    return (mu * in_unit).to_value(out_unit), (std * in_unit).to_value(out_unit)
