@@ -23,6 +23,7 @@ jobs:
         pymc-version: ["latest"]
         include:
           - os: ubuntu-latest
+            python-version: "3.10"
             pymc-version: "5.0.0"
     steps:
       - uses: actions/checkout@v4
