@@ -25,9 +25,8 @@ def _custom_tbl_dtype_compare(dtype1, dtype2):
                     return False
                 if d1.get(k, "") != d2.get(k, ""):
                     return False
-            else:
-                if d1.get(k, "1") != d2.get(k, "2"):
-                    return False
+            elif d1.get(k, "1") != d2.get(k, "2"):
+                return False
 
     return True
 
