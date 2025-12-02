@@ -2,6 +2,7 @@ from ._version import version as __version__
 from .data import RVData
 from .plot import plot_phase_fold, plot_rv_curves
 from .prior import JokerPrior
+from .prior_sb2 import JokerSB2Prior
 from .samples import JokerSamples
 from .samples_analysis import (
     MAP_sample,
@@ -13,24 +14,24 @@ from .samples_analysis import (
     phase_coverage_per_period,
 )
 from .thejoker import TheJoker
+from .thejoker_sb2 import *
 
 __all__ = [
-    "__version__",
-    "TheJoker",
-    "RVData",
-    "JokerSamples",
     "JokerPrior",
-    "plot_rv_curves",
-    "plot_phase_fold",
+    "JokerSamples",
     "MAP_sample",
-    "is_P_unimodal",
+    "RVData",
+    "TheJoker",
+    "__version__",
     "is_P_Kmodal",
+    "is_P_unimodal",
     "max_phase_gap",
-    "phase_coverage",
     "periods_spanned",
+    "phase_coverage",
     "phase_coverage_per_period",
+    "plot_phase_fold",
+    "plot_rv_curves",
 ]
-
 
 __bibtex__ = __citation__ = """@ARTICLE{thejoker,
        author = {{Price-Whelan}, Adrian M. and {Hogg}, David W. and
@@ -55,3 +56,12 @@ archivePrefix = {arXiv},
       adsnote = {Provided by the SAO/NASA Astrophysics Data System}
 }
 """
+
+__all__ = [
+    "JokerPrior",
+    "JokerSamples",
+    "RVData",
+    "TheJoker",
+    "TheJokerSB2",
+    "plot_rv_curves",
+]

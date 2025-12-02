@@ -66,8 +66,13 @@ def marginal_ln_likelihood_inmem(joker_helper, prior_samples_batch):
     return np.array(ll)
 
 
-def make_full_samples_inmem(joker_helper, prior_samples_batch, rng, n_linear_samples=1):
-    from .samples import JokerSamples
+def make_full_samples_inmem(
+    joker_helper, prior_samples_batch, rng, n_linear_samples=1, SamplesCls=None
+):
+    if SamplesCls is None:
+        from .samples import JokerSamples
+
+        SamplesCls = JokerSamples
 
     if prior_samples_batch.dtype != np.float64:
         prior_samples_batch = prior_samples_batch.astype(np.float64)
@@ -77,7 +82,7 @@ def make_full_samples_inmem(joker_helper, prior_samples_batch, rng, n_linear_sam
     )
 
     # unpack the raw samples
-    samples = JokerSamples.unpack(
+    samples = SamplesCls.unpack(
         raw_samples,
         joker_helper.internal_units,
         t_ref=joker_helper.data.t_ref,
@@ -96,6 +101,7 @@ def rejection_sample_inmem(
     max_posterior_samples=None,
     n_linear_samples=1,
     return_all_logprobs=False,
+    SamplesCls=None,
 ):
     if max_posterior_samples is None:
         max_posterior_samples = len(prior_samples_batch)
@@ -114,6 +120,7 @@ def rejection_sample_inmem(
         prior_samples_batch[good_samples_idx],
         rng,
         n_linear_samples=n_linear_samples,
+        SamplesCls=SamplesCls,
     )
 
     if ln_prior is not None and ln_prior is not False:
@@ -136,6 +143,7 @@ def iterative_rejection_inmem(
     init_batch_size=None,
     growth_factor=128,
     n_linear_samples=1,
+    SamplesCls=None,
 ):
     n_total_samples = len(prior_samples_batch)
 
@@ -219,6 +227,7 @@ def iterative_rejection_inmem(
         prior_samples_batch[full_samples_idx],
         rng,
         n_linear_samples=n_linear_samples,
+        SamplesCls=SamplesCls,
     )
 
     # FIXME: copy-pasted from function above

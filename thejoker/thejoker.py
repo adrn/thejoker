@@ -41,6 +41,8 @@ class TheJoker:
         Default: ``~/.thejoker``
     """
 
+    _samples_cls = JokerSamples
+
     @deprecated_renamed_argument(
         "random_state", "rng", since="v1.3", warning_type=DeprecationWarning
     )
@@ -237,6 +239,7 @@ class TheJoker:
                 max_posterior_samples=max_posterior_samples,
                 n_linear_samples=n_linear_samples,
                 return_all_logprobs=return_all_logprobs,
+                SamplesCls=self._samples_cls,
             )
 
         else:
@@ -252,6 +255,7 @@ class TheJoker:
                 n_batches=n_batches,
                 randomize_prior_order=randomize_prior_order,
                 return_all_logprobs=return_all_logprobs,
+                SamplesCls=self._samples_cls,
             )
 
         return samples
@@ -349,6 +353,7 @@ class TheJoker:
                 init_batch_size=init_batch_size,
                 growth_factor=growth_factor,
                 n_linear_samples=n_linear_samples,
+                SamplesCls=self._samples_cls,
             )
 
         else:
@@ -365,6 +370,7 @@ class TheJoker:
                 return_logprobs=return_logprobs,
                 n_batches=n_batches,
                 randomize_prior_order=randomize_prior_order,
+                SamplesCls=self._samples_cls,
             )
 
         return samples
